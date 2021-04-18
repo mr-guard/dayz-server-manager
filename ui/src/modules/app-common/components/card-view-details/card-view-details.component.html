@@ -1,0 +1,7 @@
+<div class="card text-white mb-4" [ngClass]="background">
+    <ng-content select=".card-body"></ng-content>
+    <div class="card-footer d-flex align-items-center justify-content-between">
+        <a class="small text-white stretched-link" [routerLink]="link">View Details</a>
+        <div class="small text-white"><fa-icon [icon]='["fas", "angle-right"]'></fa-icon></div>
+    </div>
+</div>

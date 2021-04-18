@@ -1,0 +1,32 @@
+<sb-layout-dashboard>
+    <sb-dashboard-head title="Players" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+        <li [ngbNavItem]="1">
+            <a ngbNavLink>Current Players</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <!-- <div class="card-header">
+                        <fa-icon class="mr-1" [icon]='["fas", "table"]'></fa-icon>Current Players
+                    </div> -->
+                    <div class="card-body">
+                        <sb-player-table></sb-player-table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+        <li [ngbNavItem]="2">
+            <a ngbNavLink>All Players</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <!-- <div class="card-header">
+                        <fa-icon class="mr-1" [icon]='["fas", "table"]'></fa-icon>All Players
+                    </div> -->
+                    <div class="card-body">
+                        <sb-all-player-table [pageSize]="20"></sb-all-player-table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+    </ul>
+    <div class="mt-2" [ngbNavOutlet]="nav"></div>
+</sb-layout-dashboard>

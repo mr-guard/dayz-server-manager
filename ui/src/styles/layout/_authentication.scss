@@ -1,0 +1,15 @@
+#layoutAuthentication {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-image: url("http://i.imgur.com/jIbjD.jpg");
+  background-repeat: round;
+  background-position-y: -3rem;
+  #layoutAuthentication_content {
+    min-width: 0;
+    flex-grow: 1;
+  }
+  #layoutAuthentication_footer {
+    min-width: 0;
+  }
+}

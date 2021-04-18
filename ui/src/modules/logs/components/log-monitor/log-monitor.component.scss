@@ -1,0 +1,68 @@
+$red: #C0392B;
+$red-light: #E74C3C;
+
+$orange: #F39C12;
+$orange-light: #F1C40F;
+
+$green: #27AE60;
+$green-light: #2ECC71;
+
+$blue: #2980B9;
+$blue-light: #3498DB;
+
+$light: #ECF0F1;
+$dark: #212121;
+
+$dark-title-bar: #1f1f1f;
+
+$dark-light: #3c3c3c;
+
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-y: auto;
+  font-family: "Lucida Console", Monaco,  monospace, sans-serif;
+}
+
+
+.title-bar{
+  padding: 5px;
+  font-weight: 600;
+  display: flex;
+}
+
+.dark-theme.title-bar{
+  border-bottom: solid 1px $dark-light;
+  background: $dark-title-bar ;
+}
+
+.dark-theme {
+
+  color: $light;
+  background: $dark;
+
+  .msg-info {
+    color: $blue-light;
+  }
+
+  .msg-err {
+    color: $red-light;
+  }
+
+  .msg-success {
+    color: $green-light;
+  }
+
+  .msg-warn {
+    color: $orange-light;
+  }
+}
+
+.shrinked {
+  width: 100%;
+  min-height: 60vh;
+}

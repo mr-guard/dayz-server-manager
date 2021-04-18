@@ -1,0 +1,60 @@
+<form>
+    <div class="form-group form-inline">
+        Full text search:
+        <input class="form-control ml-2" type="text" name="searchTerm"
+            [(ngModel)]="playerService.searchTerm" />
+        <span class="ml-3" *ngIf="playerService.loading$ | async">Loading...</span>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col" sbSortable="id" (sort)="onSort($event)">
+                    <span>#</span>
+                    <sb-sort-icon *ngIf='sortedColumn === "id"' [direction]="sortedDirection"></sb-sort-icon>
+                </th>
+                <th scope="col" sbSortable="name" (sort)="onSort($event)"><span>Name</span>
+                    <sb-sort-icon *ngIf='sortedColumn === "name"' [direction]="sortedDirection"></sb-sort-icon>
+                </th>
+                <th scope="col"><span>BE GUID</span></th>
+                <th scope="col"><span>IP</span></th>
+                <th scope="col" sbSortable="ping" (sort)="onSort($event)"><span>Ping</span>
+                    <sb-sort-icon *ngIf='sortedColumn === "ping"' [direction]="sortedDirection"></sb-sort-icon>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let player of players$ | async">
+                <th scope="row">{{ player.id }}</th>
+                <td>
+                    <!-- <img class="mr-2"
+                         [src]="'https://upload.wikimedia.org/wikipedia/commons/' + player.flag"
+                            style="width: 20px"
+                    /> -->
+                    <ngb-highlight [result]="player.name" [term]="playerService.searchTerm"></ngb-highlight>
+                </td>
+                <td>
+                    <ngb-highlight [result]="player.beguid" [term]="playerService.searchTerm"></ngb-highlight>
+                </td>
+                <td>
+                    <ngb-highlight [result]="player.ip + ':' + player.port"></ngb-highlight>
+                </td>
+                <td>
+                    <ngb-highlight [result]="player.ping | number"></ngb-highlight>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="d-flex justify-content-between p-2">
+        <ngb-pagination [collectionSize]="total$ | async"
+            [(page)]="playerService.page"
+            [pageSize]="playerService.pageSize"
+            [maxSize]="5"
+        ></ngb-pagination>
+        <select class="custom-select" style="width: auto"
+            name="pageSize" [(ngModel)]="playerService.pageSize">
+            <option [ngValue]="10">10 items per page</option>
+            <option [ngValue]="20">20 items per page</option>
+            <option [ngValue]="MAX_ITEMS">All</option>
+        </select>
+    </div>
+</form>

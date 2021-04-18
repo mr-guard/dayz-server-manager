@@ -1,0 +1,11 @@
+<sb-layout-dashboard>
+    <sb-dashboard-head title="Audit Events" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <sb-card>
+        <div class="card-header">
+            <fa-icon class="mr-1" [icon]='["fas", "table"]'></fa-icon>Audit Events
+        </div>
+        <div class="card-body">
+            <sb-audit-table [pageSize]="20"></sb-audit-table>
+        </div>
+    </sb-card>
+</sb-layout-dashboard>

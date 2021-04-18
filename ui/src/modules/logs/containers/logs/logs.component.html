@@ -1,0 +1,40 @@
+<sb-layout-dashboard>
+    <sb-dashboard-head title="Logs" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <sb-card>
+        <div class="card-header" style="padding: 0;">
+            <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+                <li [ngbNavItem]="1">
+                    <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>RPT Logs</a>
+                    
+                    <ng-template ngbNavContent>
+                        <sb-log-monitor [logStream]="rptStream"
+                                    title="RPT Logs"
+                                    [history]="rptLogs"
+                        ></sb-log-monitor>
+                    </ng-template>
+                </li>
+                <li [ngbNavItem]="2">
+                    <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>ADM Logs</a>
+                    
+                    <ng-template ngbNavContent>
+                        <sb-log-monitor [logStream]="admStream"
+                                    title="ADM Logs"
+                                    [history]="admLogs"
+                        ></sb-log-monitor>
+                    </ng-template>
+                </li>
+                <li [ngbNavItem]="3">
+                    <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>Script Logs</a>
+                    
+                    <ng-template ngbNavContent>
+                        <sb-log-monitor [logStream]="scriptStream"
+                                    title="Script Logs"
+                                    [history]="scriptLogs"
+                        ></sb-log-monitor>
+                    </ng-template>
+                </li>
+            </ul>
+            <div [ngbNavOutlet]="nav"></div>
+        </div>
+    </sb-card>
+</sb-layout-dashboard>

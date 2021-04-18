@@ -1,0 +1,21 @@
+// Global styling for this template
+
+html,
+body {
+  height: 100%;
+}
+
+// Set spacing on containers for page symmetry
+
+.container,
+.container-fluid {
+  padding-left: $grid-gutter-width;
+  padding-right: $grid-gutter-width;
+}
+
+.card-no-top {
+  margin-top: -7px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: 0;
+}

@@ -1,0 +1,112 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "extends": "eslint-config-bamboo",
+    "parserOptions": {
+        "ecmaVersion": 2020,
+        "sourceType": "module",
+        "project": "tsconfig.json"
+    },
+    "plugins": [
+        "@typescript-eslint"
+    ],
+    "ignorePatterns": [
+        "scripts",
+        "*.spec.ts"
+    ],
+    "rules": {
+        "indent": [
+            "error",
+            4,
+            {
+                "SwitchCase": 1
+            }
+        ],
+        "@typescript-eslint/indent": [
+            "error",
+            4
+        ],
+        "no-throw-literal": 0,
+        "@typescript-eslint/no-throw-literal": 0,
+        "accessor-pairs": "error",
+        "no-shadow": "error",
+        "no-use-before-define": "error",
+        "comma-dangle": [
+            "error",
+            "always-multiline"
+        ],
+        "comma-spacing": "error",
+        "comma-style": [
+            "error",
+            "last"
+        ],
+        "func-style": "error",
+        "no-tabs": "error",
+        "no-trailing-spaces": "error",
+        "arrow-body-style": 0,
+        "arrow-parens": [
+            "error",
+            "always"
+        ],
+        "arrow-spacing": [
+            "error",
+            {
+                "before": true,
+                "after": true
+            }
+        ],
+        "no-implicit-coercion": 0,
+        "operator-linebreak": [
+            "error",
+            "before"
+        ],
+        "@typescript-eslint/prefer-for-of": 0,
+        "@typescript-eslint/member-ordering": 0,
+        "@typescript-eslint/no-inferrable-types": 0,
+        "@typescript-eslint/no-extraneous-class": 0,
+        "@typescript-eslint/require-await": 0,
+        "@typescript-eslint/unified-signatures": "error",
+        "@typescript-eslint/no-use-before-define": [
+            "error",
+            {
+                "typedefs": false,
+                "functions": false
+            }
+        ],
+        "@typescript-eslint/explicit-function-return-type": [
+            "error",
+            {
+                "allowExpressions": true,
+                "allowTypedFunctionExpressions": true
+            }
+        ],
+        "@typescript-eslint/explicit-member-accessibility": [
+            "error",
+            {
+                "accessibility": "explicit"
+            }
+        ],
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "default",
+                "format": ["camelCase"],
+                "leadingUnderscore": "forbid",
+                "trailingUnderscore": "forbid",
+                "filter": { "regex": "^(?:VariableDeclarator|AssignmentExpression)$", "match": false }
+            },
+            {
+                "selector": "parameter",
+                "format": ["camelCase"],
+                "leadingUnderscore": "allow"
+            },
+            {
+                "selector": "property",
+                "modifiers": ["readonly"],
+                "format": ["UPPER_CASE"]
+            },
+            { "selector": "enumMember", "format": ["PascalCase"] },
+            { "selector": "typeLike", "format": ["PascalCase"] }
+        ]
+    }
+}

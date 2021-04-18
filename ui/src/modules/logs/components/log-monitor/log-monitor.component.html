@@ -1,0 +1,13 @@
+<div *ngIf="title" class="title-bar dark-theme">
+  &#9002; {{title}}
+  <div style="margin-left: auto; margin-right: auto;"></div>
+  <button class="btn btn-link btn-sm" (click)="toggleLock()" [title]="(lockToEnd ? 'Disable' : 'Enable') + ' Lock To End (auto scroll)'" >
+    <fa-icon [icon]='["fas", lockToEnd ? "lock" : "lock-open"]'></fa-icon>
+  </button>
+</div>
+<cdk-virtual-scroll-viewport [itemSize]="1" [minBufferPx]="10" [maxBufferPx]="10" class="shrinked dark-theme"
+  style="overflow-y: scroll;" #scrollView>
+  <div *cdkVirtualFor="let log of messages; let i = index;" style="display: flex; flex-direction: column;">
+    {{log.message}}
+  </div>
+</cdk-virtual-scroll-viewport>

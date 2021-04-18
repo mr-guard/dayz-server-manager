@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "declaration": false,
+        "outDir": "./dist",
+        "target": "es2015",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "downlevelIteration": true,
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "./src/**/*"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/dist",
+    ]
+}

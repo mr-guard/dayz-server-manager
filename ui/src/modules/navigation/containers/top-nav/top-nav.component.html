@@ -1,0 +1,25 @@
+<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+    <button class="btn btn-link btn-sm order-1 order-lg-0" id="sidebarToggle" data-cy="topNavToggleSideNav" (click)="toggleSideNav()">
+        <fa-icon [icon]='["fas", "bars"]'></fa-icon>
+    </button>
+    <a class="navbar-brand" routerLink="/dashboard">Server Manager</a>
+    <div class="row" style="flex-wrap: nowrap; align-items: center;">
+        <label for="tickSelect" style="color: white; margin-right: 5px; margin-bottom: 0; white-space: nowrap;">Refresh Rate: </label>
+        <select id="tickSelect" class="form-control form-control-sm" aria-label="Fetch Delay"
+            [(ngModel)]="refreshRate"
+            (ngModelChange)="onRefreshRateChange($event)"
+        >
+            <option value="10">10 sec</option>
+            <option value="20">20 sec</option>
+            <option selected value="30">30 sec</option>
+            <option value="60">60 sec</option>
+        </select>
+        <button class="btn btn-link order-1 order-lg-0" id="refresh" (click)="refreshNow()">
+            <fa-icon [icon]='["fas", "sync"]'></fa-icon>
+        </button>
+    </div>
+    <div style="margin-left: auto; margin-right: auto;"></div>
+    <button class="btn btn-link order-1 order-lg-0" id="logout" (click)="logout()">
+        <fa-icon [icon]='["fas", "sign-out-alt"]'></fa-icon>
+    </button>
+</nav>
