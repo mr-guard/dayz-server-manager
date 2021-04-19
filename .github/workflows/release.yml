@@ -19,7 +19,7 @@ jobs:
     - run: npm i
     - run: npm run postinstall
     - run: npm run buildAndPack --if-present
-    - run: zip -r server-manager.zip build/
+    - run: zip -r server-manager.zip build/*
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
