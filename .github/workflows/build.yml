@@ -1,6 +1,9 @@
 name: Build master
 
-on: [push]
+on:
+  push:
+    tags-ignore:
+      - '*'
 
 jobs:
   build:
