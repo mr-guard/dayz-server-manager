@@ -16,8 +16,8 @@ jobs:
     - run: npm i
     - run: npm run postinstall
     - run: npm run buildAndPack --if-present
-    - name: Archive artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: server-manager
-        path: build
+    # - name: Archive artifacts
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: server-manager
+    #     path: build
