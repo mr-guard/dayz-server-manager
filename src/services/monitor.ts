@@ -99,9 +99,15 @@ export class Monitor implements StatefulService {
                             this.internalServerState = ServerState.STARTED;
                         }
                     } else {
-                        // if (this.internalServerState !== ServerState.STOPPED) {
+
+                        if (this.internalServerState === ServerState.STARTING || this.serverState === ServerState.STARTED) {
+                            const msg = 'Detected possible server crash. Restarting...';
+                            Monitor.log.log(LogLevel.WARN, msg);
+                            void this.manager.discord.relayRconMessage(msg);
+                        }
+
                         this.internalServerState = ServerState.STOPPED;
-                        // }
+
                     }
 
                     if (!skipCheck) {
