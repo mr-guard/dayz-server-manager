@@ -2,9 +2,16 @@
     <sb-dashboard-head title="Maintenance" [hideBreadcrumbs]="false"></sb-dashboard-head>
     <sb-card>
         <div class="card-header">
-            <fa-icon class="mr-1" [icon]='["fas", "calendar-alt"]'></fa-icon>Maintenance (Currently just a mockup / Does not work)
+            <fa-icon class="mr-1" [icon]='["fas", "calendar-alt"]'></fa-icon>Maintenance
         </div>
         <div class="card-body">
+
+            <ngb-alert  *ngIf="outcomeBadge"
+                        [type]="outcomeBadge?.success ? 'success' : 'danger'"
+            >
+                {{ outcomeBadge.message }}
+            </ngb-alert>
+
             <strong>Updates / Backups</strong>
             <hr>
             <div class="row spaced">
@@ -27,6 +34,16 @@
             <strong>Restarts</strong>
             <hr>
             <div class="row spaced">
+                <div class="col-md-3">
+                    <button class="btn btn-primary" (click)="restartServer(false)">
+                        Restart Server
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary" title="Kills the server immediately (Use this only when its totally stuck)" (click)="restartServer(true)">
+                        Restart Server (Force)
+                    </button>
+                </div>
                 <div class="col-md-3">
                     <button class="btn btn-primary" title="Prevents the manager from restarting the server until re-enabled" (click)="lockRestarts()">
                         Lock Server Restart

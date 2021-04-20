@@ -175,9 +175,10 @@ export class Interface {
             ['restart', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.manager.monitor?.killServer(),
+                params: ['force'],
+                action: singleParamWrapper(
+                    'force',
+                    (force) => this.manager.monitor?.killServer(!!force && force !== 'false'),
                 ),
             })],
             ['isrestartlocked', RequestTemplate.build({

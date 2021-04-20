@@ -142,12 +142,12 @@ export class Monitor implements StatefulService {
         return processes.length > 0;
     }
 
-    public async killServer(): Promise<boolean> {
+    public async killServer(force?: boolean): Promise<boolean> {
         if (this.internalServerState === ServerState.STARTING || this.serverState === ServerState.STARTED) {
             this.internalServerState = ServerState.STOPPING;
         }
         const processes = await this.getDayZProcesses();
-        const success = await Promise.all(processes?.map((x) => Processes.killProcess(x.ProcessId)) ?? []);
+        const success = await Promise.all(processes?.map((x) => Processes.killProcess(x.ProcessId, force)) ?? []);
 
         // TODO check if the server needs to be force killed
 
