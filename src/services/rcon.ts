@@ -171,7 +171,7 @@ export class RCON implements StatefulService {
         fse.ensureDirSync(battleyePath);
         fs.writeFileSync(
             battleyeConfPath,
-            `RConPassword ${rConPassword}\nRestrictRCon 1`,
+            `RConPassword ${rConPassword}\nRestrictRCon 0`,
         );
     }
 
@@ -289,10 +289,7 @@ export class RCON implements StatefulService {
     }
 
     public async kickAll(): Promise<void> {
-        const players = await this.getPlayers();
-        if (players?.length) {
-            await Promise.all(players.map((player) => this.kick(player.id)));
-        }
+        await this.sendCommand(`kick -1`);
     }
 
     public async ban(player: string): Promise<void> {
