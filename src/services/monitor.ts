@@ -148,6 +148,9 @@ export class Monitor implements StatefulService {
         }
         const processes = await this.getDayZProcesses();
         const success = await Promise.all(processes?.map((x) => Processes.killProcess(x.ProcessId)) ?? []);
+
+        // TODO check if the server needs to be force killed
+
         return success.every((x) => x);
     }
 

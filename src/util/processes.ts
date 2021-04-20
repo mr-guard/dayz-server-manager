@@ -101,12 +101,12 @@ export class Processes {
         );
     }
 
-    public static killProcess(pid: string): Promise<void> {
+    public static killProcess(pid: string, force?: boolean): Promise<void> {
         return new Promise<void>((r, e) => {
             const kill = spawn(
                 'taskkill',
                 [
-                    '/F', // check if force is neccessary
+                    ...(force ? ['/F'] : []),
                     '/PID',
                     pid,
                 ],
