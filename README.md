@@ -2,17 +2,18 @@
 
 [![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/mr-guard/dayz-server-manager/)
 [![license](https://img.shields.io/github/license/mr-guard/dayz-server-manager.svg)](https://github.com/mr-guard/dayz-server-manager/blob/master/LICENSE)
-[![Size](https://badge-size.herokuapp.com/mr-guard/dayz-server-manager/master)](https://github.com/mr-guard/dayz-server-manager/blob/master)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/mr-guard/dayz-server-manager/build)
+![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)
+<!-- [![Size](https://badge-size.herokuapp.com/mr-guard/dayz-server-manager/releases/latest/download/server-manager.zip)](https://github.com/mr-guard/dayz-server-manager/releases/latest/download/server-manager.zip)-->
 
 
 [![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)
 [![GitHub commits](https://img.shields.io/github/commits-since/mr-guard/dayz-server-manager/latest.svg)](https://GitHub.com/mr-guard/dayz-server-manager/commit/)
 [![Github all releases](https://img.shields.io/github/downloads/mr-guard/dayz-server-manager/total.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)  
 
-
-[![GitHub forks](https://img.shields.io/github/forks/mr-guard/dayz-server-manager.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/mr-guard/dayz-server-manager/network/)
-[![GitHub stars](https://img.shields.io/github/stars/mr-guard/dayz-server-manager.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/mr-guard/dayz-server-manager/stargazers/)
+<!--
+[![GitHub forks](https://img.shields.io/github/forks/mr-guard/dayz-server-manager.svg?style=social&label=Fork&maxAge=2592000)](https://github.com/mr-guard/dayz-server-manager/network/)
+[![GitHub stars](https://img.shields.io/github/stars/mr-guard/dayz-server-manager.svg?style=social&label=Star&maxAge=2592000)](https://github.com/mr-guard/dayz-server-manager/stargazers/)
+-->
 
 
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
