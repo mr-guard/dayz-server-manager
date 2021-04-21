@@ -387,6 +387,13 @@ export class Interface {
                                 value: req,
                             },
                         );
+
+                        if (req.resource !== 'global') {
+                            Interface.log.log(
+                                LogLevel.IMPORTANT,
+                                `User '${req.user}' executed: ${req.resource}`,
+                            );
+                        }
                     }
 
                     return origAction(req);
