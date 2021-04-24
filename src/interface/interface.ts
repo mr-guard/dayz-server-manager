@@ -179,6 +179,8 @@ export class Interface {
                 action: singleParamWrapper(
                     'force',
                     (force) => this.manager.monitor?.killServer(!!force && force !== 'false'),
+                    true,
+                    true,
                 ),
             })],
             ['isrestartlocked', RequestTemplate.build({
