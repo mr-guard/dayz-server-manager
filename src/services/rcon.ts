@@ -171,15 +171,12 @@ export class RCON implements StatefulService {
         fse.ensureDirSync(battleyePath);
         try {
             fse.readdirSync(battleyePath).forEach((x) => {
-                console.log('BECFG: ' + x);
                 const lower = x.toLowerCase();
                 if (lower.includes('beserver') && lower.endsWith('.cfg')) {
                     fs.unlinkSync(path.join(battleyePath, x));
                 }
             });
-        } catch (e) {
-            console.error(e);
-        }
+        } catch {}
         fs.writeFileSync(
             battleyeConfPath,
             `RConPassword ${rConPassword}\nRestrictRCon 0`,
