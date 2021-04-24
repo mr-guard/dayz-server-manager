@@ -169,6 +169,17 @@ export class RCON implements StatefulService {
         const rConPassword = this.getRconPassword();
 
         fse.ensureDirSync(battleyePath);
+        try {
+            fse.readdirSync(battleyePath).forEach((x) => {
+                console.log('BECFG: ' + x);
+                const lower = x.toLowerCase();
+                if (lower.includes('beserver') && lower.endsWith('.cfg')) {
+                    fs.unlinkSync(path.join(battleyePath, x));
+                }
+            });
+        } catch (e) {
+            console.error(e);
+        }
         fs.writeFileSync(
             battleyeConfPath,
             `RConPassword ${rConPassword}\nRestrictRCon 0`,
@@ -210,6 +221,16 @@ export class RCON implements StatefulService {
         }
     }
 
+    private matchRegex(regex: RegExp, data: string): any[] {
+        const matches = [];
+        let match = null;
+        // eslint-disable-next-line no-cond-assign
+        while (match = regex.exec(data)) {
+            matches.push(match);
+        }
+        return matches;
+    }
+
     public async getBansRaw(): Promise<string | null> {
         return this.sendCommand('bans');
     }
@@ -219,29 +240,33 @@ export class RCON implements StatefulService {
         if (!data) {
             return [];
         }
-        const guidBans = data
-            .match(/(\d+)\s+([0-9a-fA-F]+)\s([perm|\d]+)\s+([\S ]+)$/gim)
+        const guidBans = this.matchRegex(
+            /(\d+)\s+([0-9a-fA-F]+)\s([perm|\d]+)\s+([\S ]+)$/gim,
+            data,
+        )
             ?.map((e) => e.slice(1, e.length - 1)) ?? [];
-        const ipBans = data
-            .match(/(\d+)\s+([0-9\.]+)\s+([perm|\d]+)\s+([\S ]+)$/gim)
+        const ipBans = this.matchRegex(
+            /(\d+)\s+([0-9\.]+)\s+([perm|\d]+)\s+([\S ]+)$/gim,
+            data,
+        )
             ?.map((e) => e.slice(1, e.length - 1)) ?? [];
 
         return [
             ...guidBans
                 .map((e) => ({
                     type: 'guid',
-                    id: e[0],
-                    ban: e[1],
-                    time: e[2],
-                    reason: e[3],
+                    id: e[1],
+                    ban: e[2],
+                    time: e[3],
+                    reason: e[4],
                 })),
             ...ipBans
                 .map((e) => ({
                     type: 'ip',
-                    id: e[0],
-                    ban: e[1],
-                    time: e[2],
-                    reason: e[3],
+                    id: e[1],
+                    ban: e[2],
+                    time: e[3],
+                    reason: e[4],
                 })),
         ];
     }
@@ -270,18 +295,21 @@ export class RCON implements StatefulService {
             return [];
         }
 
-        return data
-            .match(/(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\(\w+\)\s([\S ]+)$/gim)
-            ?.map((e) => e.slice(1, e.length - 1))
-            .map((e) => ({
-                id: e[0],
-                ip: e[1],
-                port: e[2],
-                ping: e[3],
-                beguid: e[4],
-                name: e[5]?.replace(' (Lobby)', ''),
-                lobby: !!e[5]?.includes(' (Lobby)'),
-            })) ?? [];
+        return this.matchRegex(
+            /(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\(\w+\)\s([\S ]+)$/gim,
+            data,
+        )
+            .map((e) => {
+                return {
+                    id: e[1],
+                    ip: e[2],
+                    port: e[3],
+                    ping: e[4],
+                    beguid: e[5],
+                    name: e[6]?.replace(' (Lobby)', ''),
+                    lobby: !!e[6]?.includes(' (Lobby)'),
+                };
+            }) ?? [];
     }
 
     public async kick(player: string): Promise<void> {
@@ -289,7 +317,11 @@ export class RCON implements StatefulService {
     }
 
     public async kickAll(): Promise<void> {
-        await this.sendCommand(`kick -1`);
+        // await this.sendCommand(`kick -1`);
+        const players = await this.getPlayers();
+        if (players?.length) {
+            await Promise.all(players.map((player) => this.kick(player.id)));
+        }
     }
 
     public async ban(player: string): Promise<void> {
