@@ -22,6 +22,7 @@ export class RequestTemplate {
     public level: UserLevel = 'admin';
     public method: RequestMethods = 'get';
     public params: string[] = [];
+    public paramsOptional?: boolean = false;
 
     public disableDiscord?: boolean = false;
     public discordPublic?: boolean = false;
@@ -176,10 +177,11 @@ export class Interface {
                 method: 'post',
                 level: 'manage',
                 params: ['force'],
+                paramsOptional: true,
                 action: singleParamWrapper(
                     'force',
                     (force) => this.manager.monitor?.killServer(!!force && force !== 'false'),
-                    true,
+                    false,
                     true,
                 ),
             })],

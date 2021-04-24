@@ -50,14 +50,16 @@ export class DiscordMessageHandler {
         req.user = authorId;
 
         if (handler.params?.length) {
-            if (handler.params.length !== args?.length) {
+            if (!handler.paramsOptional && handler.params.length !== args?.length) {
                 await message.reply(`Wrong param count. Usage: ${this.PREFIX}${command} ${handler.params.join(' ')}`);
                 return;
             }
 
             req.body = {};
             handler.params.forEach((x, i) => {
-                req.body[x] = args[i];
+                if (i < args.length) {
+                    req.body[x] = args[i];
+                }
             });
         }
 
