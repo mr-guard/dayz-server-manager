@@ -11,16 +11,106 @@ import { StatefulService } from '../types/service';
 
 export type ServerStateListener = (state: ServerState) => any;
 
-export class Monitor implements StatefulService {
+interface IMonitor {
+    isServerRunning(): Promise<boolean>;
+    startServer(skipPrep?: boolean): Promise<boolean>;
+}
+
+class MonitorLoop implements StatefulService {
 
     private static log = new Logger('Monitor');
 
-    // eslint-disable-next-line no-undef
-    private timeout: NodeJS.Timeout | undefined;
     private watching: boolean = false;
     private skipping: boolean = false;
     private initialStart: boolean = true;
 
+    private lockPath: string;
+
+    public constructor(
+        private monitor: IMonitor,
+        private serverPath: string,
+        private checkIntervall: number,
+        private stateListener: ServerStateListener,
+    ) {
+        this.lockPath = path.join(serverPath, 'RESTART_LOCK');
+    }
+
+    public set restartLock(lock: boolean) {
+        this.skipping = lock;
+    }
+
+    public get restartLock(): boolean {
+        return this.skipping;
+    }
+
+    public async start(): Promise<void> {
+        if (this.watching) return;
+        this.watching = true;
+
+        void this.loop();
+    }
+
+    public async stop(): Promise<void> {
+        if (!this.watching) return;
+        this.watching = false;
+    }
+
+    private async loop(): Promise<void> {
+
+        while (this.watching) {
+
+            await this.tick();
+
+            await new Promise((r) => setTimeout(r, this.checkIntervall));
+
+        }
+
+    }
+
+    private async tick(): Promise<void> {
+        try {
+            let skipCheck = false;
+
+            // User locked the server manually
+            if (!skipCheck && fs.existsSync(this.lockPath)) {
+                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
+                skipCheck = true;
+            }
+
+            // restart locked
+            if (!skipCheck && this.skipping) {
+                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
+                skipCheck = true;
+            }
+
+            // server running
+            if (await this.monitor.isServerRunning()) {
+                skipCheck = true;
+                this.initialStart = false;
+                MonitorLoop.log.log(LogLevel.INFO, 'Server running...');
+                this.stateListener(ServerState.STARTED);
+            } else {
+                this.stateListener(ServerState.STOPPED);
+            }
+
+            if (!skipCheck) {
+                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Server not found. Starting...');
+                this.stateListener(ServerState.STARTING);
+                await this.monitor.startServer(this.initialStart);
+                this.initialStart = false;
+            }
+        } catch (e) {
+            MonitorLoop.log.log(LogLevel.ERROR, 'Error during server monitor loop', e);
+        }
+    }
+
+}
+
+export class Monitor implements StatefulService, IMonitor {
+
+    private static log = new Logger('Monitor');
+
+    private watcher?: MonitorLoop;
     private lastServerCheckResult?: { ts: number; result: ProcessEntry[] };
 
     private $internalServerState: ServerState = ServerState.STOPPED;
@@ -30,6 +120,20 @@ export class Monitor implements StatefulService {
 
     private set internalServerState(state: ServerState) {
         if (this.$internalServerState === state) return;
+
+        // handle stop after running
+        if (
+            state === ServerState.STOPPED
+            && (
+                this.$internalServerState === ServerState.STARTING
+                || this.$internalServerState === ServerState.STARTED
+            )
+        ) {
+            const msg = 'Detected possible server crash. Restarting...';
+            Monitor.log.log(LogLevel.WARN, msg);
+            void this.manager.discord.relayRconMessage(msg);
+        }
+
         this.$internalServerState = state;
         this.stateListeners.forEach((x) => {
             try {
@@ -49,11 +153,11 @@ export class Monitor implements StatefulService {
     }
 
     public set restartLock(lock: boolean) {
-        this.skipping = lock;
+        this.watcher.restartLock = lock;
     }
 
     public get restartLock(): boolean {
-        return this.skipping;
+        return this.watcher.restartLock;
     }
 
     public registerStateListener(stateListener: ServerStateListener): void {
@@ -61,80 +165,25 @@ export class Monitor implements StatefulService {
     }
 
     public async start(): Promise<void> {
-        if (this.watching) return;
-        this.watching = true;
-        Monitor.log.log(LogLevel.IMPORTANT, 'Starting to watch server');
-        this.setNextTimeout();
-    }
-
-    private setNextTimeout(): void {
-        this.timeout = setTimeout(
-            async () => {
-                if (!this.watching) return;
-
-                try {
-                    const serverPath = this.manager.getServerPath();
-
-                    let skipCheck = false;
-
-                    // User locked the server manually
-                    const lockPath = path.join(serverPath, 'RESTART_LOCK');
-                    if (!skipCheck && fs.existsSync(lockPath)) {
-                        Monitor.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
-                        skipCheck = true;
-                    }
-
-                    // restart locked
-                    if (!skipCheck && this.skipping) {
-                        Monitor.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
-                        skipCheck = true;
-                    }
-
-                    // server running
-                    if (await this.isServerRunning()) {
-                        skipCheck = true;
-                        this.initialStart = false;
-                        Monitor.log.log(LogLevel.INFO, 'Server running...');
-                        if (this.internalServerState === ServerState.STARTING || this.internalServerState === ServerState.STOPPED) {
-                            this.internalServerState = ServerState.STARTED;
-                        }
-                    } else {
-
-                        if (this.internalServerState === ServerState.STARTING || this.serverState === ServerState.STARTED) {
-                            const msg = 'Detected possible server crash. Restarting...';
-                            Monitor.log.log(LogLevel.WARN, msg);
-                            void this.manager.discord.relayRconMessage(msg);
-                        }
-
-                        this.internalServerState = ServerState.STOPPED;
-
-                    }
-
-                    if (!skipCheck) {
-                        Monitor.log.log(LogLevel.IMPORTANT, 'Server not found. Starting...');
-                        this.internalServerState = ServerState.STARTING;
-                        await this.startServer(this.initialStart);
-                        this.initialStart = false;
-                    }
-                } catch (e) {
-                    Monitor.log.log(LogLevel.ERROR, 'Error during server monitor loop', e);
-                }
-
-                this.setNextTimeout();
-            },
+        if (this.watcher) return;
+        this.watcher = new MonitorLoop(
+            this,
+            this.manager.getServerPath(),
             this.manager.config.serverProcessPollIntervall,
+            (state) => {
+                this.internalServerState = state;
+            },
         );
+        await this.watcher.start();
+        Monitor.log.log(LogLevel.IMPORTANT, 'Starting to watch server');
     }
 
     public async stop(): Promise<void> {
-        if (!this.watching) return;
-        this.watching = false;
+        if (!this.watcher) return;
+        await this.watcher.stop();
+        this.watcher = undefined;
         this.stateListeners = [];
         Monitor.log.log(LogLevel.IMPORTANT, 'Stoping to watch server');
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-            this.timeout = undefined;
-        }
     }
 
     public async isServerRunning(): Promise<boolean> {
