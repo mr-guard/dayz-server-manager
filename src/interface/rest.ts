@@ -29,11 +29,7 @@ export class REST {
     public start(): Promise<void> {
         this.express = express();
 
-        if ((this.manager.config?.webPort ?? 0) > 0) {
-            this.port = this.manager.config!.webPort;
-        } else {
-            this.port = this.manager.config!.serverPort + 11;
-        }
+        this.port = this.manager.getWebPort();
 
         // middlewares
         this.express.all('*', (req, res, next) => {
@@ -128,6 +124,13 @@ export class REST {
                 },
             );
         }
+
+        this.express.post('/ingame/stats', (req, res) => {
+            if (req.params.token === this.manager.getIngameToken()) {
+                void this.manager.metrics.pushIngameStats(req.body);
+            }
+            res.send();
+        });
     }
 
     public stop(): Promise<void> {

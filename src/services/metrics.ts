@@ -22,6 +22,8 @@ export class Metrics implements StatefulService {
     };
     /* eslint-disable @typescript-eslint/naming-convention */
 
+    private ingame: any[] = [];
+
     public constructor(
         public manager: Manager,
     ) {}
@@ -147,6 +149,10 @@ export class Metrics implements StatefulService {
 
     public async fetchMetrics(type: keyof typeof MetricType, since?: number): Promise<MetricWrapper<any>[]> {
         return since ? this.metrics[type].filter((x) => x.timestamp > since) : this.metrics[type];
+    }
+
+    public async pushIngameStats(stats: any): Promise<void> {
+        this.ingame.push(stats);
     }
 
 }

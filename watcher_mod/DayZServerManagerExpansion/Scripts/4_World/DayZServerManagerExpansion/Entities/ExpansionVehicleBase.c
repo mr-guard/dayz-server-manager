@@ -1,11 +1,11 @@
-modded class CarScript
+modded class ExpansionVehicleBase
 {
-	void CarScript()
+    void ExpansionVehicleBase()
 	{
 		DayZServerManagerContainer.registerVehicle(this);
 	}
 
-    void ~CarScript()
+    void ~ExpansionVehicleBase()
 	{
 		DayZServerManagerContainer.unregisterVehicle(this);
     }

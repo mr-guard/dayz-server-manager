@@ -25,6 +25,8 @@ export class Manager {
 
     private static log = new Logger('Manager');
 
+    private readonly INGAME_TOKEN: string = `DZSM-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}`;
+
     public interface!: Interface;
 
     public rest!: REST;
@@ -154,6 +156,17 @@ export class Manager {
 
     public getHooks(type: HookType): Hook[] {
         return (this.config.hooks ?? []).filter((x) => x.type === type);
+    }
+
+    public getWebPort(): number {
+        if ((this.config?.webPort ?? 0) > 0) {
+            return this.config!.webPort;
+        }
+        return this.config!.serverPort + 11;
+    }
+
+    public getIngameToken(): string {
+        return this.INGAME_TOKEN;
     }
 
 }

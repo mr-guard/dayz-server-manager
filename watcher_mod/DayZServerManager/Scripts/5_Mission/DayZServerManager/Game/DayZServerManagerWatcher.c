@@ -49,8 +49,13 @@ class DayZServerManagerWatcher
 
     void DayZServerManagerWatcher()
     {
+		
+		Print("DayZServerManagerWatcher()");
+		
         if (!IsMissionClient())
 		{
+			Print("DayZServerManagerWatcher() - INIT");
+			
 			string port;
             GetGame().CommandlineGetParam("serverManagerPort", port);
 
@@ -63,11 +68,12 @@ class DayZServerManagerWatcher
 
             m_api = CreateRestApi();
             // m_api.EnableDebug(true);
-            m_context = m_api.GetRestContext("http://localhost:" + m_port + "/api/");
+            m_context = m_api.GetRestContext("http://localhost:" + m_port + "/ingame/");
 
 			m_serializer = new JsonSerializer();
 			
             StartLoop();
+			Print("DayZServerManagerWatcher() - INIT DONE");
         }
     }
 
@@ -75,7 +81,7 @@ class DayZServerManagerWatcher
 	{
         // m_context.SetHeader("Token", m_token);
         m_context.SetHeader("application/json");
-        m_context.POST(new ServerManagerCallback, "ingame", data);
+        m_context.POST(new ServerManagerCallback, "stats?token=" + m_token, data);
 	}
 
     float GetInterval()
@@ -103,15 +109,16 @@ class DayZServerManagerWatcher
 	
 	void Tick()
 	{
+		Print("DayZServerManagerWatcher() - TICK");
 		int i;
 		ServerManagerEntry entry;
 		
 		ServerManagerEntryContainer container = new ServerManagerEntryContainer;
 		
-		set<CarScript> allVehicles = CarScript.GetManagerAllVehicles();
+		set<EntityAI> allVehicles = ExpansionVehicleBase.GetVehicles();
 		for (i = 0; i < allVehicles.Count(); i++)
 		{
-			CarScript itrCar = allVehicles.Get(i);
+			EntityAI itrCar = allVehicles.Get(i);
 			
 			entry = new ServerManagerEntry();
 			
@@ -122,24 +129,6 @@ class DayZServerManagerWatcher
 			entry.id = itrCar.GetID();
 			entry.speed = itrCar.GetSpeed().ToString(false);
 			entry.position = itrCar.GetPosition().ToString(false);
-			
-			container.vehicles.Insert(entry);
-		}
-		
-		set<ExpansionVehicleBase> allExpansionVehicles = ExpansionVehicleBase.GetManagerAllVehicles();
-		for (i = 0; i < allExpansionVehicles.Count(); i++)
-		{
-			ExpansionVehicleBase itrVeh = allExpansionVehicles.Get(i);
-			
-			entry = new ServerManagerEntry();
-			
-			entry.entryType = "VEHICLE";
-			entry.name = itrVeh.GetName();
-			entry.damage = itrVeh.GetDamage();
-			entry.type = itrVeh.GetType();
-			entry.id = itrVeh.GetID();
-			entry.speed = itrVeh.GetSpeed().ToString(false);
-			entry.position = itrVeh.GetPosition().ToString(false);
 			
 			container.vehicles.Insert(entry);
 		}

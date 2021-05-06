@@ -15,7 +15,10 @@
     "buildAndPack": "npm run build && npm run pack",
     "startPacked": "npm run buildAndPack && npm run runPacked",
     "runPacked": "npm run mkdirExec && cd exec && bash -c './../build/dayz-server-manager.exe'",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "buildMainPbo": "bash -c 'MakePbo.exe -P -@=DayZServerManager watcher_mod/DayZServerManager/Scripts pbo/@DayZServerManager/addons/Scripts.pbo'",
+    "buildExpPbo": "bash -c 'MakePbo.exe -P -@=DayZServerManagerExpansion watcher_mod/DayZServerManagerExpansion/Scripts pbo/@DayZServerManagerExpansion/addons/Scripts.pbo'",
+    "buildPbos": "npm run buildMainPbo && npm run buildExpPbo"
   },
   "author": "",
   "license": "MIT",

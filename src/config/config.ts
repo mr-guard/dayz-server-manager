@@ -280,6 +280,11 @@ export class Config {
     public cpuCount: number = -1;
 
     /**
+     * Server Startup Params (manual)
+     */
+    public serverLaunchParams: string[] = [];
+
+    /**
      * Time (in ms) between each server check
      */
     public serverProcessPollIntervall: number = 30000;
