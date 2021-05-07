@@ -42,7 +42,7 @@ export class LogReader implements StatefulService {
     ) {}
 
     public async start(): Promise<void> {
-        this.manager.monitor.registerStateListener((x) => {
+        this.manager.monitor.registerStateListener('LogReader', (x) => {
             if (x === ServerState.STARTED) {
                 setTimeout(async () => {
                     void this.registerReaders();
