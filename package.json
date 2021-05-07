@@ -10,14 +10,14 @@
     "mkdirExec": "node scripts/mkdir.js exec",
     "buildUiIfAbsent": "node scripts/exists.js dist/ui || npm run buildUi",
     "generators": "ts-node scripts/extract-template.ts",
-    "build": "del-cli dist/* !dist/ui && tsc && npm run generators && npm run buildUiIfAbsent",
+    "build": "del-cli dist/* !dist/ui && tsc && npm run generators && npm run buildUiIfAbsent && npm run buildPbos",
     "start": "npm run build && npm run mkdirExec && cd exec && node ../dist/index.js",
     "buildAndPack": "npm run build && npm run pack",
     "startPacked": "npm run buildAndPack && npm run runPacked",
     "runPacked": "npm run mkdirExec && cd exec && bash -c './../build/dayz-server-manager.exe'",
     "lint": "eslint src --ext .ts",
-    "buildMainPbo": "bash -c 'MakePbo.exe -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts pbo/@DayZServerManager/addons/Scripts.pbo'",
-    "buildExpPbo": "bash -c 'MakePbo.exe -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts pbo/@DayZServerManagerExpansion/addons/Scripts.pbo'",
+    "buildMainPbo": "node scripts/mkdir.js dist/mods/@DayZServerManager/addons && bash -c 'makepbo -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts dist/mods/@DayZServerManager/addons/Scripts.pbo'",
+    "buildExpPbo": "node scripts/mkdir.js dist/mods/@DayZServerManagerExpansion/addons && bash -c 'makepbo -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts dist/mods/@DayZServerManagerExpansion/addons/Scripts.pbo'",
     "buildPbos": "npm run buildMainPbo && npm run buildExpPbo"
   },
   "author": "",
@@ -27,6 +27,7 @@
     "assets": [
       "dist/ui/**/*",
       "!dist/ui/stats.json",
+      "dist/mods/**/*",
       "dist/**/*.js",
       "dist/**/*.js.map",
       "dist/config/config.shema.json"

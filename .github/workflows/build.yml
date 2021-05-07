@@ -16,6 +16,20 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: '12.x'
+    - name: download mikeros tools
+      run: |
+        apt-get update
+        apt-get install liblzo2-2 libvorbis0a libvorbisfile3 libvorbisenc2 libogg0 libuchardet0
+        mkdir -p /tmp/mikero
+        curl -o /tmp/mikero/mikero.tgz https://mikero.bytex.digital/api/download?filename=depbo-tools-0.8.06-linux-64bit.tgz
+        pushd /tmp/mikero
+        tar --strip-components=1 -xvzf mikero.tgz
+        popd
+        cp -r /tmp/mikero/bin /usr/local
+        cp -r /tmp/mikero/lib /usr/local
+        ldconfig
+    - name: build pbos
+      run: npm run buildPbos
     - run: npm i
     - run: npm run postinstall
     - run: npm run buildAndPack --if-present
