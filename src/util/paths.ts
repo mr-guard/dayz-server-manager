@@ -34,19 +34,19 @@ export class Paths {
         );
     }
 
-    public static findFilesInDir(dir: string, filter: RegExp): string[] {
+    public static async findFilesInDir(dir: string, filter: RegExp): Promise<string[]> {
         const results: string[] = [];
 
         if (!fs.existsSync(dir)) {
             return results;
         }
 
-        const files = fs.readdirSync(dir);
+        const files = await fse.readdir(dir);
         for (const file of files) {
             const filename = path.join(dir, file);
-            const stat = fs.lstatSync(filename);
+            const stat = await fse.lstat(filename);
             if (stat.isDirectory()) {
-                results.push(...Paths.findFilesInDir(filename, filter));
+                results.push(...(await Paths.findFilesInDir(filename, filter)));
             } else if (filter.test(filename)) {
                 results.push(filename);
             }
@@ -93,7 +93,7 @@ export class Paths {
         }
     }
 
-    public static copyDirFromTo(source: string, target: string): boolean {
+    public static async copyDirFromTo(source: string, target: string): Promise<boolean> {
         try {
             if (fs.existsSync(target)) {
                 if (!Paths.removeLink(target)) {
@@ -102,10 +102,10 @@ export class Paths {
                 }
             }
 
-            fse.ensureDirSync(target);
+            await fse.ensureDir(target);
 
             try {
-                fse.copySync(source, target);
+                await fse.copy(source, target);
                 return true;
             } catch {
                 return false;

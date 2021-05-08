@@ -286,7 +286,7 @@ export class SteamCMD {
             } else {
                 SteamCMD.log.log(LogLevel.INFO, `Copying mod (${modId}) dir`);
                 // eslint-disable-next-line no-lonely-if
-                if (!Paths.copyDirFromTo(
+                if (!await Paths.copyDirFromTo(
                     modDir,
                     serverDir,
                 )) {
@@ -302,12 +302,9 @@ export class SteamCMD {
 
     public async installMods(): Promise<boolean> {
         const modIds = (this.manager.config?.steamWsMods ?? []);
-        for (const modId of modIds) {
-            if (!await this.installMod(modId)) {
-                return false;
-            }
-        }
-        return true;
+        return (await Promise.all(modIds.map((modId) => {
+            return this.installMod(modId);
+        }))).every((x) => x);
     }
 
     private async copyModKeys(modId: string): Promise<boolean> {
@@ -315,7 +312,7 @@ export class SteamCMD {
         const modName = this.getWsModName(modId);
         const modDir = path.join(this.getWsPath(), modId);
         SteamCMD.log.log(LogLevel.DEBUG, `Searching keys for ${modName}`);
-        const keys = Paths.findFilesInDir(modDir, /.*\.bikey/g);
+        const keys = await Paths.findFilesInDir(modDir, /.*\.bikey/g);
         for (const key of keys) {
             const keyName = path.basename(key);
             SteamCMD.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
@@ -323,7 +320,7 @@ export class SteamCMD {
             if (fs.existsSync(target)) {
                 fs.unlinkSync(target);
             }
-            fs.copyFileSync(key, target);
+            await fs.promises.copyFile(key, target);
         }
         return true;
     }
