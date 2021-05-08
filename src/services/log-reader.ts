@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as tail from 'tail';
 import { ServerState } from '../types/monitor';
 import { FileDescriptor, LogMessage, LogType, LogTypeEnum } from '../types/log-reader';
+import { reverseIndexSearch } from '../util/reverse-index-search';
 
 export interface LogContainer {
     logFiles?: FileDescriptor[];
@@ -132,7 +133,16 @@ export class LogReader implements StatefulService {
 
     public async fetchLogs(type: LogType, since?: number): Promise<LogMessage[]> {
         const logs = this.logMap[type]?.logLines ?? [];
-        return since ? logs.filter((x) => x.timestamp > since) : logs;
+        if (since && since > 0) {
+            const idx = reverseIndexSearch(logs, (x) => x.timestamp <= since);
+            if (idx !== -1) {
+                if (idx + 1 >= logs.length) {
+                    return [];
+                }
+                return logs.slice(idx + 1);
+            }
+        }
+        return logs;
     }
 
 }

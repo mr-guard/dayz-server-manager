@@ -5,6 +5,7 @@ import { MetricsContainer, MetricType, MetricWrapper } from '../types/metrics';
 import { Logger, LogLevel } from '../util/logger';
 import { StatefulService } from '../types/service';
 import { merge } from '../util/merge';
+import { reverseIndexSearch } from '../util/reverse-index-search';
 
 export class Metrics implements StatefulService {
 
@@ -148,7 +149,16 @@ export class Metrics implements StatefulService {
     }
 
     public async fetchMetrics(type: keyof typeof MetricType, since?: number): Promise<MetricWrapper<any>[]> {
-        return since ? this.metrics[type].filter((x) => x.timestamp > since) : this.metrics[type];
+        if (since && since > 0) {
+            const idx = reverseIndexSearch(this.metrics[type], (x) => x.timestamp <= since);
+            if (idx !== -1) {
+                if (idx + 1 >= this.metrics[type].length) {
+                    return [];
+                }
+                return this.metrics[type].slice(idx + 1);
+            }
+        }
+        return this.metrics[type];
     }
 
     public async pushIngameStats(stats: any): Promise<void> {
