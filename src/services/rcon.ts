@@ -81,17 +81,16 @@ export class RCON implements StatefulService {
             RCON.log.log(LogLevel.ERROR, `socket error`, err.message);
         });
 
-        if (!skipServerWait) {
-            await new Promise<void>((r) => {
-                this.manager.monitor.registerStateListener('rconInit', (state: ServerState) => {
-                    if (this.connection || state !== ServerState.STARTED) return;
-                    this.manager.monitor.removeStateListener('rconInit');
-                    r();
-                });
+        if (skipServerWait) {
+            this.setupConnection();
+        } else {
+            this.manager.monitor.registerStateListener('rconInit', (state: ServerState) => {
+                if (this.connection || state !== ServerState.STARTED) return;
+                this.manager.monitor.removeStateListener('rconInit');
+                this.setupConnection();
             });
         }
 
-        this.setupConnection();
     }
 
     private setupConnection(): void {
