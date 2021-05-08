@@ -32,6 +32,7 @@ export class RCON implements StatefulService {
     private connected: boolean = false;
 
     private connectionErrorCounter: number = 0;
+    private connectionErrorRestartEnabled: boolean = false;
 
     private fakePlayers: boolean = false;
 
@@ -44,6 +45,8 @@ export class RCON implements StatefulService {
         if (!skipBeConf) {
             this.createBattleyeConf();
         }
+
+        this.connectionErrorCounter = 0;
 
         // get free listening port
         const openListeningPort = await new Promise<number | null>((r) => {
@@ -143,7 +146,7 @@ export class RCON implements StatefulService {
 
                 // restart on connection errors
                 this.connectionErrorCounter++;
-                if (this.connectionErrorCounter >= 5) {
+                if (this.connectionErrorRestartEnabled && this.connectionErrorCounter >= 5) {
                     await this.stop();
                     void this.start(true, true);
                 }
