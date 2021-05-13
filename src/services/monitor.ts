@@ -132,7 +132,9 @@ class MonitorLoop implements StatefulService {
 
             // if the process spends very little cpu time, it probably stuck
             if (this.lastServerUsages.every((x) => (Math.abs(avg - x) < 3))) {
-                void this.monitor.manager.discord.relayRconMessage('WARNING: Server possibly got stuck!');
+                const msg = 'WARNING: Server possibly got stuck!';
+                this.log.log(LogLevel.WARN, msg);
+                void this.monitor.manager.discord.relayRconMessage(msg);
             }
         }
     }
@@ -325,7 +327,7 @@ export class Monitor implements StatefulService, IMonitor {
                 ...(this.manager.config?.serverMods ?? []),
             ];
 
-            if (this.manager.config?.serverMods?.length) {
+            if (serverMods?.length) {
                 args.push(`-servermod=${serverMods.join(';')}`);
             }
 

@@ -34,8 +34,24 @@ class ServerManagerEntry
 
 class ServerManagerEntryContainer
 {
-	autoptr array<ServerManagerEntry> players = new array<ServerManagerEntry>;
-	autoptr array<ServerManagerEntry> vehicles = new array<ServerManagerEntry>;
+	ref array<ref ServerManagerEntry> players = new array<ref ServerManagerEntry>;
+	ref array<ref ServerManagerEntry> vehicles = new array<ref ServerManagerEntry>;
+
+	void ServerManagerEntryContainer()
+	{
+	}
+
+	void ~ServerManagerEntryContainer()
+	{
+		for (int i = 0; i < players; i++)
+		{
+
+		}
+		delete players;
+
+		delete vehicles;
+	}
+
 }
 
 class DayZServerManagerWatcher
@@ -111,16 +127,16 @@ class DayZServerManagerWatcher
 	{
 		Print("DayZServerManagerWatcher() - TICK");
 		int i;
-		ServerManagerEntry entry;
 		
 		ServerManagerEntryContainer container = new ServerManagerEntryContainer;
 		
-		set<EntityAI> allVehicles = ExpansionVehicleBase.GetVehicles();
+		array<EntityAI> allVehicles;
+		DayZServerManagerContainer.GetVehicles(allVehicles);
 		for (i = 0; i < allVehicles.Count(); i++)
 		{
 			EntityAI itrCar = allVehicles.Get(i);
 			
-			entry = new ServerManagerEntry();
+			ref ServerManagerEntry entry = new ServerManagerEntry();
 			
 			entry.entryType = "VEHICLE";
 			entry.name = itrCar.GetName();
@@ -139,18 +155,18 @@ class DayZServerManagerWatcher
 		{
 			Man player = players.Get(i);
 			
-			entry = new ServerManagerEntry();
+			ServerManagerEntry playerEntry = new ServerManagerEntry();
 			
-			entry.entryType = "PLAYER";
-			entry.name = player.GetIdentity().GetName();
+			playerEntry.entryType = "PLAYER";
+			playerEntry.name = player.GetIdentity().GetName();
 			// player.GetDisplayName();
-			entry.damage = player.GetDamage();
-			entry.type = player.GetType();
-			entry.id = player.GetID();
-			entry.speed = player.GetSpeed().ToString(false);
-			entry.position = player.GetPosition().ToString(false);
+			playerEntry.damage = player.GetDamage();
+			playerEntry.type = player.GetType();
+			playerEntry.id = player.GetID();
+			playerEntry.speed = player.GetSpeed().ToString(false);
+			playerEntry.position = player.GetPosition().ToString(false);
 	
-			container.players.Insert(entry);
+			container.players.Insert(playerEntry);
 		}
 
 		string json;

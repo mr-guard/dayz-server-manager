@@ -1,14 +1,16 @@
 class DayZServerManagerContainer
 {
-	private static ref set<EntityAI> m_vehicles = new set<EntityAI>;
+	private static ref array<EntityAI> m_vehicles = new array<EntityAI>;
 	
     static void registerVehicle(EntityAI vehicle)
 	{
-		m_vehicles.Insert(vehicles);
+		// PrintToRPT("Registered: " + vehicle.GetType());
+		m_vehicles.Insert(vehicle);
 	}
 
     static void unregisterVehicle(EntityAI vehicle)
 	{
+		// PrintToRPT("UnRegistered: " + vehicle.GetType());
 		int i = m_vehicles.Find(vehicle);
 		if (i >= 0)
 		{
@@ -16,8 +18,9 @@ class DayZServerManagerContainer
 		}
     }
 
-    static set<EntityAI> GetVehicles()
+    static void GetVehicles(out array<EntityAI> vehicles)
 	{
-		return m_vehicles;
+		vehicles = new array<EntityAI>;
+		vehicles.InsertAll(m_vehicles);
 	}
 }
