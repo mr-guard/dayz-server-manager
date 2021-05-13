@@ -22,7 +22,7 @@ export type LogMap = {
 
 export class LogReader implements StatefulService {
 
-    private static log = new Logger('LogReader');
+    private log = new Logger('LogReader');
 
     /* eslint-disable @typescript-eslint/naming-convention */
     private logMap: LogMap = {
@@ -118,9 +118,12 @@ export class LogReader implements StatefulService {
             logContainer.logLines = [];
             if (logContainer.logFiles.length) {
                 logContainer.tail = new tail.Tail(logContainer.logFiles[0].file, { follow: true, fromBeginning: true, flushAtEOF: true });
+                logContainer.tail.on('error', (e) => {
+                    this.log.log(LogLevel.WARN, `Error reading ${type}`, e);
+                });
                 logContainer.tail.on('line', (line) => {
                     if (line) {
-                        LogReader.log.log(LogLevel.DEBUG, `${type} - ${line}`);
+                        this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
                         logContainer.logLines.push({
                             timestamp: new Date().valueOf(),
                             message: line,

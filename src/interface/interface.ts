@@ -4,8 +4,9 @@ import { ManagerController } from '../control/manager-controller';
 import { Request, Response } from '../types/interface';
 import { Logger, LogLevel } from '../util/logger';
 import { merge } from '../util/merge';
-import { HTTP } from '../util/status-codes';
 import { makeTable } from '../util/table';
+import { constants as HTTP } from 'http2';
+
 
 export type RequestHandler = (request: Request) => Promise<Response>;
 export type RequestMethods = 'get' | 'post' | 'put' | 'delete';
@@ -38,7 +39,7 @@ export class RequestTemplate {
 
 export class Interface {
 
-    private static log = new Logger('Manager');
+    private log = new Logger('Manager');
 
     public commandMap!: Map<string, RequestTemplate>;
 
@@ -275,7 +276,7 @@ export class Interface {
                     () => (async () => {
                         const userLevel = this.manager.getUserLevel(req.user);
                         if (userLevel) {
-                            Interface.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);
+                            this.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);
                         }
                         return userLevel;
                     })(),
@@ -298,12 +299,13 @@ export class Interface {
                 action: singleParamWrapper(
                     'config',
                     async (config) => {
-                        const errors = this.manager.writeConfig(config);
-                        if (errors?.length) {
-                            throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, errors);
+                        try {
+                            this.manager.writeConfig(config);
+                            void ManagerController.INSTANCE.run();
+                            return true;
+                        } catch (e) {
+                            throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
                         }
-                        void ManagerController.INSTANCE.run();
-                        return true;
                     },
                     true,
                     true,
@@ -393,7 +395,7 @@ export class Interface {
                         );
 
                         if (req.resource !== 'global') {
-                            Interface.log.log(
+                            this.log.log(
                                 LogLevel.IMPORTANT,
                                 `User '${req.user}' executed: ${req.resource}`,
                             );

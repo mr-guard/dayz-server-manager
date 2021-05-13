@@ -20,7 +20,9 @@ interface IMonitor {
 
 class MonitorLoop implements StatefulService {
 
-    private static log = new Logger('Monitor');
+    private log = new Logger('Monitor');
+
+    private processes = new Processes();
 
     private watching: boolean = false;
     private skipping: boolean = false;
@@ -77,13 +79,13 @@ class MonitorLoop implements StatefulService {
 
             // User locked the server manually
             if (needsRestart && fs.existsSync(this.lockPath)) {
-                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
+                this.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
                 needsRestart = false;
             }
 
             // restart locked
             if (needsRestart && this.skipping) {
-                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
+                this.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
                 needsRestart = false;
             }
 
@@ -91,14 +93,14 @@ class MonitorLoop implements StatefulService {
             if (await this.monitor.isServerRunning()) {
                 needsRestart = false;
                 this.initialStart = false;
-                MonitorLoop.log.log(LogLevel.INFO, 'Server running...');
+                this.log.log(LogLevel.INFO, 'Server running...');
                 this.stateListener(ServerState.STARTED);
             } else {
                 this.stateListener(ServerState.STOPPED);
             }
 
             if (needsRestart) {
-                MonitorLoop.log.log(LogLevel.IMPORTANT, 'Server not found. Starting...');
+                this.log.log(LogLevel.IMPORTANT, 'Server not found. Starting...');
                 this.stateListener(ServerState.STARTING);
                 await this.monitor.startServer(this.initialStart);
                 this.lastServerUsages = [];
@@ -107,7 +109,7 @@ class MonitorLoop implements StatefulService {
                 await this.checkPossibleStuckState();
             }
         } catch (e) {
-            MonitorLoop.log.log(LogLevel.ERROR, 'Error during server monitor loop', e);
+            this.log.log(LogLevel.ERROR, 'Error during server monitor loop', e);
         }
     }
 
@@ -118,7 +120,7 @@ class MonitorLoop implements StatefulService {
             this.lastServerUsages.shift();
         }
         this.lastServerUsages.push(
-            Processes.getProcessCPUSpent(processes[0]),
+            this.processes.getProcessCPUSpent(processes[0]),
         );
 
         if (this.lastServerUsages.length >= 5) {
@@ -139,7 +141,11 @@ class MonitorLoop implements StatefulService {
 
 export class Monitor implements StatefulService, IMonitor {
 
-    private static log = new Logger('Monitor');
+    private log = new Logger('Monitor');
+
+    private processes = new Processes();
+
+    private paths = new Paths();
 
     private watcher?: MonitorLoop;
     private lastServerCheckResult?: { ts: number; result: ProcessEntry[] };
@@ -161,7 +167,7 @@ export class Monitor implements StatefulService, IMonitor {
             )
         ) {
             const msg = 'Detected possible server crash. Restarting...';
-            Monitor.log.log(LogLevel.WARN, msg);
+            this.log.log(LogLevel.WARN, msg);
             void this.manager.discord.relayRconMessage(msg);
         }
 
@@ -212,7 +218,7 @@ export class Monitor implements StatefulService, IMonitor {
             },
         );
         await this.watcher.start();
-        Monitor.log.log(LogLevel.IMPORTANT, 'Starting to watch server');
+        this.log.log(LogLevel.IMPORTANT, 'Starting to watch server');
     }
 
     public async stop(): Promise<void> {
@@ -220,7 +226,7 @@ export class Monitor implements StatefulService, IMonitor {
         await this.watcher.stop();
         this.watcher = undefined;
         this.stateListeners.clear();
-        Monitor.log.log(LogLevel.IMPORTANT, 'Stoping to watch server');
+        this.log.log(LogLevel.IMPORTANT, 'Stoping to watch server');
     }
 
     public async isServerRunning(): Promise<boolean> {
@@ -233,7 +239,7 @@ export class Monitor implements StatefulService, IMonitor {
             this.internalServerState = ServerState.STOPPING;
         }
         const processes = await this.getDayZProcesses();
-        const success = await Promise.all(processes?.map((x) => Processes.killProcess(x.ProcessId, force)) ?? []);
+        const success = await Promise.all(processes?.map((x) => this.processes.killProcess(x.ProcessId, force)) ?? []);
 
         // TODO check if the server needs to be force killed
 
@@ -266,6 +272,9 @@ export class Monitor implements StatefulService, IMonitor {
             throw new Error('Mod installation failed');
         }
 
+        // ingame report
+        await this.manager.ingameReport.installMod();
+
         await this.manager.requirements.checkWinErrorReporting();
         await this.manager.requirements.checkFirewall();
     }
@@ -278,8 +287,8 @@ export class Monitor implements StatefulService, IMonitor {
             const hooks = this.manager.getHooks('beforeStart');
             if (hooks.length) {
                 for (const hook of hooks) {
-                    Monitor.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
-                    const hookOut = await Processes.spawnForOutput(
+                    this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
+                    const hookOut = await this.processes.spawnForOutput(
                         hook.program,
                         hook.params ?? [],
                         {
@@ -287,9 +296,9 @@ export class Monitor implements StatefulService, IMonitor {
                         },
                     );
                     if (hookOut?.status === 0) {
-                        Monitor.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
+                        this.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
                     } else {
-                        Monitor.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
+                        this.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
                     }
                 }
             }
@@ -312,8 +321,7 @@ export class Monitor implements StatefulService, IMonitor {
 
             // Ingame Reporting Addon
             const serverMods = [
-                '@DayZServerManager',
-                ...(modList.includes('') ? ['@DayZServerManagerExpansion'] : []),
+                ...(this.manager.ingameReport.getServerMods()),
                 ...(this.manager.config?.serverMods ?? []),
             ];
 
@@ -369,7 +377,8 @@ export class Monitor implements StatefulService, IMonitor {
             );
 
             sub.on('error', (e) => {
-                Monitor.log.log(LogLevel.IMPORTANT, 'Error while trying to start server', e);
+                this.log.log(LogLevel.IMPORTANT, 'Error while trying to start server', e);
+                r(false);
             });
 
             sub.on(
@@ -387,9 +396,9 @@ export class Monitor implements StatefulService, IMonitor {
         if (this.lastServerCheckResult?.ts && (new Date().valueOf() - this.lastServerCheckResult?.ts) < 1000) {
             processList = this.lastServerCheckResult.result;
         } else {
-            processList = await Processes.getProcessList();
+            processList = await this.processes.getProcessList();
 
-            Monitor.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
+            this.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
 
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),
@@ -397,7 +406,7 @@ export class Monitor implements StatefulService, IMonitor {
             };
         }
         return processList
-            .filter((x) => Paths.samePath(x?.ExecutablePath, this.manager.getServerExePath()))
+            .filter((x) => this.paths.samePath(x?.ExecutablePath, this.manager.getServerExePath()))
             .map((x) => {
                 if (x.CreationDate) {
                     const y = x.CreationDate.substr(0, 4);
@@ -423,7 +432,7 @@ export class Monitor implements StatefulService, IMonitor {
                 }
             }
 
-            const system = Processes.getSystemUsage();
+            const system = this.processes.getSystemUsage();
             let busy = 0;
             let idle = 0;
 
@@ -477,9 +486,9 @@ export class Monitor implements StatefulService, IMonitor {
                 const processes = await this.manager.monitor?.getDayZProcesses();
                 if (processes?.length) {
                     report.server = {
-                        cpuTotal: Processes.getProcessCPUUsage(processes[0]),
-                        cpuSpent: Processes.getProcessCPUSpent(processes[0]),
-                        uptime: Processes.getProcessUptime(processes[0]),
+                        cpuTotal: this.processes.getProcessCPUUsage(processes[0]),
+                        cpuSpent: this.processes.getProcessCPUSpent(processes[0]),
+                        uptime: this.processes.getProcessUptime(processes[0]),
                         mem: Math.floor(Number(processes[0].PrivatePageCount) / 1024 / 1024),
                     };
                 }
@@ -488,7 +497,7 @@ export class Monitor implements StatefulService, IMonitor {
             return report;
 
         } catch (e) {
-            Monitor.log.log(LogLevel.ERROR, 'Error building system report', e);
+            this.log.log(LogLevel.ERROR, 'Error building system report', e);
             return null;
         }
     }

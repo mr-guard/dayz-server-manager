@@ -4,10 +4,14 @@ import { Processes } from './processes';
 
 export class NetSH {
 
-    private static log = new Logger('NetSH');
+    private log = new Logger('NetSH');
 
-    public static async addRule(path: string): Promise<void> {
-        await Processes.spawnForOutput(
+    private processes = new Processes();
+
+    private paths = new Paths();
+
+    public async addRule(path: string): Promise<void> {
+        await this.processes.spawnForOutput(
             'netsh',
             [
                 'firewall',
@@ -20,10 +24,10 @@ export class NetSH {
         );
     }
 
-    public static async getAllRules(): Promise<{ [k: string]: string }[]> {
+    public async getAllRules(): Promise<{ [k: string]: string }[]> {
 
         try {
-            const result = await Processes.spawnForOutput(
+            const result = await this.processes.spawnForOutput(
                 'netsh',
                 [
                     'advfirewall',
@@ -56,28 +60,28 @@ export class NetSH {
                     return rule;
                 });
         } catch (e) {
-            NetSH.log.log(LogLevel.ERROR, 'Fetching firewall rules failed', e);
+            this.log.log(LogLevel.ERROR, 'Fetching firewall rules failed', e);
             return [];
         }
     }
 
-    public static async getRulesByPath(path: string): Promise<{ [k: string]: string }[]> {
+    public async getRulesByPath(path: string): Promise<{ [k: string]: string }[]> {
 
         try {
-            const result = await NetSH.getAllRules();
+            const result = await this.getAllRules();
 
             return result.filter((rule) => {
                 for (const key of Object.keys(rule)) {
                     if (
                         !!rule[key]
-                        && Paths.samePath(path, rule[key])
+                        && this.paths.samePath(path, rule[key])
                     ) return true;
                 }
                 return false;
             });
 
         } catch (e) {
-            NetSH.log.log(LogLevel.ERROR, 'Fetching firewall rules failed', e);
+            this.log.log(LogLevel.ERROR, 'Fetching firewall rules failed', e);
             return [];
         }
     }

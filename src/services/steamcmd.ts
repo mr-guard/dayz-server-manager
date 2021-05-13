@@ -10,11 +10,15 @@ import { sameDirHash } from '../util/compare-folders';
 
 export class SteamCMD {
 
-    private static log = new Logger('SteamCMD');
-
     private static readonly DAYZ_APP_ID = '221100';
     private static readonly DAYZ_SERVER_APP_ID = '223350';
     private static readonly DAYZ_EXPERIMENTAL_SERVER_APP_ID = '1042420';
+
+    private log = new Logger('SteamCMD');
+
+    private paths = new Paths();
+
+    private processes = new Processes();
 
     private progressLog: boolean = true;
 
@@ -25,7 +29,7 @@ export class SteamCMD {
     private getCmdPath(): string {
         let cmdFolder = this.manager.config?.steamCmdPath ?? '';
         if (!path.isAbsolute(cmdFolder)) {
-            cmdFolder = path.join(Paths.cwd(), cmdFolder);
+            cmdFolder = path.join(this.paths.cwd(), cmdFolder);
         }
         return path.join(
             cmdFolder,
@@ -43,9 +47,9 @@ export class SteamCMD {
                 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip',
                 zipPath,
             );
-            SteamCMD.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
+            this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
         } catch (e) {
-            SteamCMD.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
+            this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
             if (fs.existsSync(zipPath)) {
                 fs.unlinkSync(zipPath);
             }
@@ -54,9 +58,9 @@ export class SteamCMD {
 
         try {
             await extractzip(zipPath, { dir: path.resolve(cmdPath) });
-            SteamCMD.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
+            this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
         } catch (e) {
-            SteamCMD.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
+            this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
             if (fs.existsSync(zipPath)) {
                 fs.unlinkSync(zipPath);
             }
@@ -74,7 +78,7 @@ export class SteamCMD {
     }
 
     private async installSteamCmd(): Promise<boolean> {
-        SteamCMD.log.log(LogLevel.IMPORTANT, 'Checking/Installing SteamCMD');
+        this.log.log(LogLevel.IMPORTANT, 'Checking/Installing SteamCMD');
         return this.execute(['validate', '+quit']);
     }
 
@@ -107,7 +111,7 @@ export class SteamCMD {
         let retries = 3;
         while (retries >= 0) {
             try {
-                await Processes.spawnForOutput(
+                await this.processes.spawnForOutput(
                     this.getCmdPath(),
                     args,
                     {
@@ -132,12 +136,12 @@ export class SteamCMD {
                 if (e.status === 10 && retries > 1) {
                     // timeout && some retries left
                     retries--;
-                    SteamCMD.log.log(LogLevel.INFO, `Retrying "${argsStr}" because of timeout`);
+                    this.log.log(LogLevel.INFO, `Retrying "${argsStr}" because of timeout`);
                 } else {
-                    SteamCMD.log.log(LogLevel.ERROR, `SteamCMD "${argsStr}" failed`, e);
+                    this.log.log(LogLevel.ERROR, `SteamCMD "${argsStr}" failed`, e);
                     if (!this.progressLog) {
-                        SteamCMD.log.log(LogLevel.INFO, e.stdout);
-                        SteamCMD.log.log(LogLevel.ERROR, e.stderr);
+                        this.log.log(LogLevel.INFO, e.stdout);
+                        this.log.log(LogLevel.ERROR, e.stderr);
                     }
                     return false;
                 }
@@ -160,7 +164,7 @@ export class SteamCMD {
 
         const serverPath = this.manager.getServerPath();
         if (!fs.existsSync(serverPath)) {
-            SteamCMD.log.log(LogLevel.DEBUG, `Creating Serverfolder @ ${serverPath}`);
+            this.log.log(LogLevel.DEBUG, `Creating Serverfolder @ ${serverPath}`);
             fs.mkdirSync(serverPath);
         }
 
@@ -175,7 +179,7 @@ export class SteamCMD {
         ]);
 
         if (!success) {
-            SteamCMD.log.log(LogLevel.ERROR, 'Failed to update server');
+            this.log.log(LogLevel.ERROR, 'Failed to update server');
             return false;
         }
 
@@ -186,7 +190,7 @@ export class SteamCMD {
     private getWsBasePath(): string {
         let wsPath = this.manager.config!.steamWorkshopPath;
         if (!path.isAbsolute(wsPath)) {
-            wsPath = path.join(Paths.cwd(), wsPath);
+            wsPath = path.join(this.paths.cwd(), wsPath);
         }
         return wsPath;
     }
@@ -224,7 +228,7 @@ export class SteamCMD {
 
         const wsBasePath = this.getWsBasePath();
         if (!fs.existsSync(wsBasePath)) {
-            SteamCMD.log.log(LogLevel.DEBUG, `Creating Workshop Folder @ ${wsBasePath}`);
+            this.log.log(LogLevel.DEBUG, `Creating Workshop Folder @ ${wsBasePath}`);
             fs.mkdirSync(wsBasePath);
         }
 
@@ -240,7 +244,7 @@ export class SteamCMD {
         ]);
 
         if (!success) {
-            SteamCMD.log.log(LogLevel.ERROR, `Failed to update mod: ${modId}`);
+            this.log.log(LogLevel.ERROR, `Failed to update mod: ${modId}`);
             return false;
         }
 
@@ -270,27 +274,27 @@ export class SteamCMD {
         const modDir = path.join(this.getWsPath(), modId);
         const serverDir = path.join(this.manager.getServerPath(), modName);
         if (this.manager.config.linkModDirs) {
-            SteamCMD.log.log(LogLevel.INFO, `Linking mod (${modId}) dir`);
-            if (!Paths.linkDirsFromTo(
+            this.log.log(LogLevel.INFO, `Linking mod (${modId}) dir`);
+            if (!this.paths.linkDirsFromTo(
                 modDir,
                 serverDir,
             )) {
-                SteamCMD.log.log(LogLevel.ERROR, `Linking mod (${modId}) dir failed`);
+                this.log.log(LogLevel.ERROR, `Linking mod (${modId}) dir failed`);
                 return false;
             }
         } else {
 
             // eslint-disable-next-line no-lonely-if
             if (await sameDirHash(modDir, serverDir)) {
-                SteamCMD.log.log(LogLevel.INFO, `Skipping copy of mod (${modId}) dir because its already up to date`);
+                this.log.log(LogLevel.INFO, `Skipping copy of mod (${modId}) dir because its already up to date`);
             } else {
-                SteamCMD.log.log(LogLevel.INFO, `Copying mod (${modId}) dir`);
+                this.log.log(LogLevel.INFO, `Copying mod (${modId}) dir`);
                 // eslint-disable-next-line no-lonely-if
-                if (!await Paths.copyDirFromTo(
+                if (!await this.paths.copyDirFromTo(
                     modDir,
                     serverDir,
                 )) {
-                    SteamCMD.log.log(LogLevel.ERROR, `Copying mod (${modId}) dir failed`);
+                    this.log.log(LogLevel.ERROR, `Copying mod (${modId}) dir failed`);
                     return false;
                 }
             }
@@ -311,11 +315,11 @@ export class SteamCMD {
         const keysFolder = path.join(this.manager.getServerPath(), 'keys');
         const modName = this.getWsModName(modId);
         const modDir = path.join(this.getWsPath(), modId);
-        SteamCMD.log.log(LogLevel.DEBUG, `Searching keys for ${modName}`);
-        const keys = await Paths.findFilesInDir(modDir, /.*\.bikey/g);
+        this.log.log(LogLevel.DEBUG, `Searching keys for ${modName}`);
+        const keys = await this.paths.findFilesInDir(modDir, /.*\.bikey/g);
         for (const key of keys) {
             const keyName = path.basename(key);
-            SteamCMD.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
+            this.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
             const target = path.join(keysFolder, keyName);
             if (fs.existsSync(target)) {
                 fs.unlinkSync(target);
@@ -331,19 +335,19 @@ export class SteamCMD {
             .every((modId) => {
                 const modDir = path.join(wsPath, modId);
                 if (!fs.existsSync(modDir)) {
-                    SteamCMD.log.log(LogLevel.ERROR, `Mod ${modId} was not found`);
+                    this.log.log(LogLevel.ERROR, `Mod ${modId} was not found`);
                     return false;
                 }
 
                 const modName = this.getWsModName(modId);
                 if (!modName) {
-                    SteamCMD.log.log(LogLevel.ERROR, `Modname for ${modId} was not found`);
+                    this.log.log(LogLevel.ERROR, `Modname for ${modId} was not found`);
                     return false;
                 }
 
                 const modServerDir = path.join(this.manager.getServerPath(), modName);
                 if (!fs.existsSync(modServerDir)) {
-                    SteamCMD.log.log(LogLevel.ERROR, `Mod Link for ${modName} was not found`);
+                    this.log.log(LogLevel.ERROR, `Mod Link for ${modName} was not found`);
                     return false;
                 }
 

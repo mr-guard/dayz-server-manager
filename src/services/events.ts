@@ -5,7 +5,7 @@ import { Logger, LogLevel } from '../util/logger';
 
 export class Events implements StatefulService {
 
-    private static log = new Logger('Events');
+    private log = new Logger('Events');
 
     private tasks: cron.Job[] = [];
 
@@ -18,7 +18,7 @@ export class Events implements StatefulService {
 
             const checkAndRun = async (task: () => any): Promise<void> => {
                 if (!await this.manager?.monitor?.isServerRunning()) {
-                    Events.log.log(LogLevel.WARN, `Skipping ${event.name} because server is not running`);
+                    this.log.log(LogLevel.WARN, `Skipping ${event.name} because server is not running`);
                     return;
                 }
                 task();
@@ -68,7 +68,7 @@ export class Events implements StatefulService {
             try {
                 task.cancel();
             } catch (e) {
-                Events.log.log(LogLevel.DEBUG, `Stopping event schedule for ${task.name} failed`, e);
+                this.log.log(LogLevel.DEBUG, `Stopping event schedule for ${task.name} failed`, e);
             }
         }
         this.tasks = [];

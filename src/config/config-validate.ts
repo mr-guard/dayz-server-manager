@@ -2,6 +2,24 @@ import 'reflect-metadata';
 import * as cron from 'cron-parser';
 import { Config, EventTypeEnum } from './config';
 
+export const parseConfigFileContent = (fileContent: string): any => {
+
+    if (fileContent) {
+
+        // remove comments
+        const stripped = fileContent
+            .replace(/(\/\*\*(.|\n)*?\*\/)|(\/\/(.*))/g, '');
+
+        try {
+            return JSON.parse(stripped);
+        } catch (e) {
+            throw new Error(`Parsing config failed: ${e.message}`);
+        }
+
+    }
+    throw new Error('Config file is empty');
+};
+
 export const validateConfig = (config: Config): string[] => {
 
     const errors: string[] = [];
@@ -39,15 +57,16 @@ export const validateConfig = (config: Config): string[] => {
                 errors.push(`Event (${event.name}) has unknown event type: ${event.type}, expected one of ${JSON.stringify(Object.keys(EventTypeEnum))}`);
             }
 
-            if (!event.cron) {
+            if (event.cron) {
+                try {
+                    cron.parseExpression(event.cron);
+                } catch (e) {
+                    errors.push(`Event (${event.name}) has invalid cron format: ${e.message}`);
+                }
+            } else {
                 errors.push(`Event (${event.name}) is missing a cron format`);
             }
 
-            try {
-                cron.parseExpression(event.cron);
-            } catch (e) {
-                errors.push(`Event (${event.name}) has invalid cron format: ${e.message}`);
-            }
         }
     }
 

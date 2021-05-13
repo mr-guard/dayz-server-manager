@@ -29,12 +29,12 @@ export class SystemInfo {
 
 export class Processes {
 
-    private static log = new Logger('Processes');
+    private static readonly WMIC_VALUES = Object.keys(new ProcessEntry());
 
-    private static values = Object.keys(new ProcessEntry());
+    private log = new Logger('Processes');
 
-    public static async getProcessList(where?: string): Promise<ProcessEntry[]> {
-        const result = await Processes.spawnForOutput(
+    public async getProcessList(where?: string): Promise<ProcessEntry[]> {
+        const result = await this.spawnForOutput(
             'cmd',
             [
                 '/c',
@@ -43,7 +43,7 @@ export class Processes {
                     'process',
                     'get',
                     ...(where ? ['where', `${where}`] : []),
-                    `${Processes.values.join(',')}`,
+                    `${Processes.WMIC_VALUES.join(',')}`,
                     '/VALUE',
                 ].join(' '),
             ],
@@ -74,34 +74,34 @@ export class Processes {
         return procs;
     }
 
-    public static getProcessCPUSpent(proc: ProcessEntry): number {
+    public getProcessCPUSpent(proc: ProcessEntry): number {
         return (Number(proc.UserModeTime) / 10000)
         + (Number(proc.KernelModeTime) / 10000);
     }
 
-    public static getProcessUptime(proc: ProcessEntry): number {
+    public getProcessUptime(proc: ProcessEntry): number {
         const start = new Date(proc.CreationDate).valueOf();
         const now = new Date().valueOf();
         return (now - start);
     }
 
-    public static getProcessCPUUsage(proc: ProcessEntry, prev?: ProcessEntry): number {
-        let curSpent = Processes.getProcessCPUSpent(proc);
-        let curUp = Processes.getProcessUptime(proc);
+    public getProcessCPUUsage(proc: ProcessEntry, prev?: ProcessEntry): number {
+        let curSpent = this.getProcessCPUSpent(proc);
+        let curUp = this.getProcessUptime(proc);
 
         if (prev) {
-            curSpent -= Processes.getProcessCPUSpent(proc);
-            curUp -= Processes.getProcessUptime(proc);
+            curSpent -= this.getProcessCPUSpent(proc);
+            curUp -= this.getProcessUptime(proc);
         }
 
         return Math.round(
             (
-                (curSpent / curUp) * 100
+                (curSpent / Math.max(curUp, 1)) * 100
             ) / Math.max(os.cpus().length, 1),
         );
     }
 
-    public static killProcess(pid: string, force?: boolean): Promise<void> {
+    public killProcess(pid: string, force?: boolean): Promise<void> {
         return new Promise<void>((r, e) => {
             const kill = spawn(
                 'taskkill',
@@ -121,7 +121,7 @@ export class Processes {
         });
     }
 
-    public static getSystemUsage(): SystemInfo {
+    public getSystemUsage(): SystemInfo {
         return merge(new SystemInfo(), {
             cpu: os.cpus(),
             avgLoad: os.loadavg(),
@@ -131,7 +131,7 @@ export class Processes {
         });
     }
 
-    public static async spawnForOutput(
+    public async spawnForOutput(
         cmd: string,
         args?: string[],
         opts?: {
@@ -161,7 +161,7 @@ export class Processes {
                 if (spawnedProcess.stdout) {
                     spawnedProcess.stdout.on('data', (data) => {
                         if (opts?.verbose) {
-                            Processes.log.log(LogLevel.DEBUG, `SPAWN OUT: ${data}`);
+                            this.log.log(LogLevel.DEBUG, `SPAWN OUT: ${data}`);
                         }
                         if (opts?.stdOutHandler) {
                             opts?.stdOutHandler(data);
@@ -174,7 +174,7 @@ export class Processes {
                 if (spawnedProcess.stderr) {
                     spawnedProcess.stderr.on('data', (data) => {
                         if (opts?.verbose) {
-                            Processes.log.log(LogLevel.ERROR, `SPAWN ERR: ${data}`);
+                            this.log.log(LogLevel.ERROR, `SPAWN ERR: ${data}`);
                         }
                         if (opts?.stdErrHandler) {
                             opts?.stdErrHandler(data);
@@ -184,7 +184,7 @@ export class Processes {
                 }
 
                 spawnedProcess.on('error', (error) => {
-                    Processes.log.log(LogLevel.ERROR, error.message, error);
+                    this.log.log(LogLevel.ERROR, error.message, error);
                 });
 
                 spawnedProcess.on('close', (code) => {
@@ -194,8 +194,8 @@ export class Processes {
                     }
 
                     if (opts?.verbose) {
-                        Processes.log.log(LogLevel.DEBUG, `Spawned process exited with code ${code}`);
-                        Processes.log.log(LogLevel.DEBUG, `Duration: ${new Date().valueOf() - startTS}`);
+                        this.log.log(LogLevel.DEBUG, `Spawned process exited with code ${code}`);
+                        this.log.log(LogLevel.DEBUG, `Duration: ${new Date().valueOf() - startTS}`);
                     }
 
                     if (!code || opts?.ignoreCodes?.includes(code) || opts?.dontThrow) {

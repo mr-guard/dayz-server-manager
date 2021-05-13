@@ -6,14 +6,14 @@ import * as path from 'path';
 import { loggerMiddleware } from '../middleware/logger';
 
 import { Manager } from '../control/manager';
-import { Server } from 'node:http';
+import { Server } from 'http';
 import { Request } from '../types/interface';
 import { Logger, LogLevel } from '../util/logger';
 
 
 export class REST {
 
-    private static log = new Logger('REST');
+    private log = new Logger('REST');
 
     public express: express.Application | undefined;
     public server: Server | undefined;
@@ -71,7 +71,7 @@ export class REST {
                 this.server = this.express!.listen(
                     this.port,
                     () => {
-                        REST.log.log(LogLevel.IMPORTANT, `App listening on the http://localhost:${this.port}`);
+                        this.log.log(LogLevel.IMPORTANT, `App listening on the http://localhost:${this.port}`);
                         r();
                     },
                 );
@@ -96,7 +96,7 @@ export class REST {
 
             if (command.disableRest) continue;
 
-            REST.log.log(LogLevel.DEBUG, `Registering ${command.method} ${resource}`);
+            this.log.log(LogLevel.DEBUG, `Registering ${command.method} ${resource}`);
             (this.router as any)[command.method](
                 `/${resource}`,
                 // `/${path}`,
@@ -127,7 +127,7 @@ export class REST {
 
         this.express.post('/ingame/stats', (req, res) => {
             if (req.params.token === this.manager.getIngameToken()) {
-                void this.manager.metrics.pushIngameStats(req.body);
+                void this.manager.ingameReport.processIngameReport(req.body);
             }
             res.send();
         });

@@ -6,7 +6,7 @@ import { Request } from '../types/interface';
 
 export class DiscordMessageHandler {
 
-    private static log = new Logger('Discord');
+    private log = new Logger('Discord');
     public readonly PREFIX = '!';
 
     public constructor(
@@ -30,7 +30,7 @@ export class DiscordMessageHandler {
             return;
         }
 
-        DiscordMessageHandler.log.log(LogLevel.INFO, `Command "${command}" from "${authorId}" in "${channelName}" with args: "${args?.join(' ')}"`);
+        this.log.log(LogLevel.INFO, `Command "${command}" from "${authorId}" in "${channelName}" with args: "${args?.join(' ')}"`);
 
         const handler = this.manager.interface.commandMap.get(command);
         if (!handler || handler.disableDiscord) {

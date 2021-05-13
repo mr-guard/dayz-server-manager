@@ -12,20 +12,23 @@ import { Interface } from '../interface/interface';
 import { Logger, LogLevel } from '../util/logger';
 import { Events } from '../services/events';
 import { generateConfigTemplate } from '../config/config-template';
-import { validateConfig } from '../config/config-validate';
+import { parseConfigFileContent, validateConfig } from '../config/config-validate';
 import { LogReader } from '../services/log-reader';
 import { Backups } from '../services/backups';
 import { merge } from '../util/merge';
 import { Requirements } from '../services/requirements';
+import { IngameReport } from '../services/ingame-report';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configschema = require('../config/config.schema.json');
 
 export class Manager {
 
-    private static log = new Logger('Manager');
-
     private readonly INGAME_TOKEN: string = `DZSM-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}`;
+
+    private log = new Logger('Manager');
+
+    private paths = new Paths();
 
     public interface!: Interface;
 
@@ -49,87 +52,92 @@ export class Manager {
 
     public requirements!: Requirements;
 
+    public ingameReport!: IngameReport;
+
     public config!: Config;
 
     public initDone: boolean = false;
 
-    public readConfig(): boolean {
-        const cfgPath = path.join(Paths.cwd(), 'server-manager.json');
-        Manager.log.log(LogLevel.IMPORTANT, `Trying to read config at: ${cfgPath}`);
-        if (!fs.existsSync(cfgPath)) {
-            Manager.log.log(LogLevel.ERROR, 'Cannot read config. File does not exist');
-            return false;
+    public constructor() {
+        this.initDone = false;
+    }
+
+    private getConfigFileContent(cfgPath: string): string {
+        if (fs.existsSync(cfgPath)) {
+            return fs.readFileSync(cfgPath)?.toString();
         }
-        const fileContent = fs.readFileSync(cfgPath)?.toString();
-        if ((fileContent?.length ?? 0) > 0) {
-            const stripped = fileContent
-                .replace(/(\/\*\*(.|\n)*?\*\/)|(\/\/(.*))/g, '');
+        throw new Error('Config file does not exist');
+    }
 
-            try {
-                const parsed = JSON.parse(stripped);
+    private logConfigErrors(errors: string[]): void {
+        this.log.log(LogLevel.ERROR, 'Config has errors:');
 
-                const configErrors = validateConfig(parsed);
-                if (configErrors?.length) {
-                    Manager.log.log(LogLevel.ERROR, 'Config has errors:');
+        for (const configError of errors) {
+            this.log.log(LogLevel.ERROR, configError);
+        }
+    }
 
-                    for (const configError of configErrors) {
-                        Manager.log.log(LogLevel.ERROR, configError);
-                    }
-
-                    return false;
-                }
-
-                Manager.log.log(LogLevel.IMPORTANT, 'Successfully read config');
-                this.config = merge(
-                    new Config(),
-                    parsed,
-                );
-                return true;
-            } catch (e) {
-                Manager.log.log(LogLevel.ERROR, 'Error reading config', e);
+    public readConfig(): boolean {
+        try {
+            const cfgPath = path.join(this.paths.cwd(), 'server-manager.json');
+            this.log.log(LogLevel.IMPORTANT, `Trying to read config at: ${cfgPath}`);
+            const fileContent = this.getConfigFileContent(cfgPath);
+            const parsed = parseConfigFileContent(fileContent);
+            const configErrors = validateConfig(parsed);
+            if (configErrors?.length) {
+                this.logConfigErrors(configErrors);
                 return false;
             }
-        } else {
-            Manager.log.log(LogLevel.ERROR, 'Error config was empty');
+
+            this.log.log(LogLevel.IMPORTANT, 'Successfully read config');
+
+            // apply defaults
+            this.config = merge(
+                new Config(),
+                parsed,
+            );
+
+            return true;
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, `Error reading config: ${e.message}`, e);
             return false;
         }
     }
 
-    public writeConfig(config: Config): string[] {
-        if (configschema) {
-            // apply defaults
-            config = merge(
-                new Config(),
-                config,
-            );
-            console.log(config);
+    public writeConfig(config: Config): void {
+        // apply defaults
+        config = merge(
+            new Config(),
+            config,
+        );
 
-            const configErrors = validateConfig(config);
-            if (configErrors?.length) {
-                return ['New config containes errors. Cannot replace config.', ...configErrors];
-            }
-
-            try {
-                const outPath = path.join(Paths.cwd(), 'server-manager.json');
-                fs.writeFileSync(outPath, generateConfigTemplate(configschema, config));
-
-                return [];
-            } catch (e) {
-                return [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
-            }
-        } else {
-            return ['Error config schema is not available. Cannot replace config.'];
+        const configErrors = validateConfig(config);
+        if (configErrors?.length) {
+            throw ['New config containes errors. Cannot replace config.', ...configErrors];
         }
+
+        try {
+            this.writeConfigFile(
+                generateConfigTemplate(configschema, config),
+            );
+        } catch (e) {
+            throw [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
+        }
+    }
+
+    private writeConfigFile(content: string): void {
+        const outPath = path.join(this.paths.cwd(), 'server-manager.json');
+        fs.writeFileSync(outPath, content);
     }
 
     public getServerPath(): string {
         const serverFolder = this.config?.serverPath ?? '';
         if (!serverFolder) {
-            return path.join(Paths.cwd(), 'DayZServer');
+            return path.join(this.paths.cwd(), 'DayZServer');
         }
 
         if (!path.isAbsolute(serverFolder)) {
-            return path.join(Paths.cwd(), serverFolder);
+            return path.join(this.paths.cwd(), serverFolder);
         }
         return serverFolder;
     }
@@ -151,7 +159,7 @@ export class Manager {
             return false;
         }
         const levels: UserLevel[] = ['admin', 'manage', 'moderate', 'view'];
-        return levels.indexOf(userLevel) <= levels.indexOf(level);
+        return levels.includes(userLevel) && levels.indexOf(userLevel) <= levels.indexOf(level);
     }
 
     public getHooks(type: HookType): Hook[] {

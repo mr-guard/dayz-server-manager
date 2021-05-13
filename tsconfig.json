@@ -4,11 +4,13 @@
         "declaration": false,
         "outDir": "./dist",
         "target": "es2015",
+        "sourceMap": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "downlevelIteration": true,
         "types": [
-            "node"
+            "node",
+            "mocha"
         ]
     },
     "include": [

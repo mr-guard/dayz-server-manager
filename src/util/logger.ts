@@ -17,31 +17,31 @@ const LogLevelNames = [
     'ERROR    ',
 ];
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const LogLevelFncs = [
-    console.log,
-    console.log,
-    console.log,
-    console.warn,
-    console.error,
-];
-
 export class Logger {
 
     public static readonly LOG_LEVELS: { [context: string]: LogLevel } = {};
     public static defaultLogLevel: LogLevel = LogLevel.INFO;
 
-    private readonly CONTEXT_LENGTH = 10;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    public static LogLevelFncs = [
+        console.log,
+        console.log,
+        console.log,
+        console.warn,
+        console.error,
+    ];
+
+    public readonly MAX_CONTEXT_LENGTH = 10;
 
     public constructor(
         private context: string,
     ) {}
 
     private formatContext(context: string): string {
-        if (context.length >= this.CONTEXT_LENGTH) {
-            return context.slice(0, this.CONTEXT_LENGTH);
+        if (context.length >= this.MAX_CONTEXT_LENGTH) {
+            return context.slice(0, this.MAX_CONTEXT_LENGTH);
         }
-        return context.padEnd(this.CONTEXT_LENGTH);
+        return context.padEnd(this.MAX_CONTEXT_LENGTH);
     }
 
     public log(
@@ -58,9 +58,9 @@ export class Logger {
             const fmt = `@${date} | ${LogLevelNames[level]} | ${this.formatContext(this.context)} | ${msg}`;
 
             if (data?.length) {
-                LogLevelFncs[level](fmt, data);
+                Logger.LogLevelFncs[level](fmt, data);
             } else {
-                LogLevelFncs[level](fmt);
+                Logger.LogLevelFncs[level](fmt);
             }
         }
 

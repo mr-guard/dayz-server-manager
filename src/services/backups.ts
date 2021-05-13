@@ -8,7 +8,9 @@ import { FileDescriptor } from '../types/log-reader';
 
 export class Backups {
 
-    private static log = new Logger('Backups');
+    private log = new Logger('Backups');
+
+    private paths = new Paths();
 
     public constructor(
         public manager: Manager,
@@ -21,14 +23,14 @@ export class Backups {
 
         const mpmissions = path.resolve(path.join(this.manager.getServerPath(), 'mpmissions'));
         if (!fs.existsSync(mpmissions)) {
-            Backups.log.log(LogLevel.WARN, 'Skipping backup because mpmissions folder does not exist');
+            this.log.log(LogLevel.WARN, 'Skipping backup because mpmissions folder does not exist');
             return;
         }
 
         const now = new Date();
         const curMarker = `mpmissions_${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
 
-        Backups.log.log(LogLevel.IMPORTANT, `Creating backup ${curMarker}`);
+        this.log.log(LogLevel.IMPORTANT, `Creating backup ${curMarker}`);
 
         const curBackup = path.join(backups, curMarker);
         await fse.ensureDir(curBackup);
@@ -41,7 +43,7 @@ export class Backups {
         if (path.isAbsolute(this.manager.config.backupPath)) {
             return this.manager.config.backupPath;
         }
-        return path.resolve(path.join(Paths.cwd(), this.manager.config.backupPath));
+        return path.resolve(path.join(this.paths.cwd(), this.manager.config.backupPath));
     }
 
     public async getBackups(): Promise<FileDescriptor[]> {

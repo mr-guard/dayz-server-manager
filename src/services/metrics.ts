@@ -9,8 +9,9 @@ import { reverseIndexSearch } from '../util/reverse-index-search';
 
 export class Metrics implements StatefulService {
 
-    private static log = new Logger('Metrics');
     private static readonly METRICS_FILE = 'server-manager-metrics';
+
+    private log = new Logger('Metrics');
 
     private interval: any;
     private tickCount: number = 0;
@@ -20,10 +21,10 @@ export class Metrics implements StatefulService {
         AUDIT: [],
         PLAYERS: [],
         SYSTEM: [],
+        INGAME_PLAYERS: [],
+        INGAME_VEHICLES: [],
     };
     /* eslint-disable @typescript-eslint/naming-convention */
-
-    private ingame: any[] = [];
 
     public constructor(
         public manager: Manager,
@@ -77,7 +78,7 @@ export class Metrics implements StatefulService {
 
     private async tick(): Promise<void> {
 
-        Metrics.log.log(LogLevel.DEBUG, 'Tick');
+        this.log.log(LogLevel.DEBUG, 'Tick');
 
         await this.pushMetric(MetricType.PLAYERS, () => this.manager.rcon.getPlayers());
 
@@ -103,7 +104,7 @@ export class Metrics implements StatefulService {
             JSON.stringify(this.metricsContainer!),
             (err, compressed) => {
                 if (err) {
-                    Metrics.log.log(LogLevel.ERROR, 'Failed to compress metrics', err);
+                    this.log.log(LogLevel.ERROR, 'Failed to compress metrics', err);
                     return;
                 }
                 fs.writeFile(
@@ -111,7 +112,7 @@ export class Metrics implements StatefulService {
                     compressed,
                     (writeErr) => {
                         if (writeErr) {
-                            Metrics.log.log(LogLevel.ERROR, 'Failed to write metrics', writeErr);
+                            this.log.log(LogLevel.ERROR, 'Failed to write metrics', writeErr);
                         }
                     },
                 );
@@ -159,10 +160,6 @@ export class Metrics implements StatefulService {
             }
         }
         return this.metrics[type];
-    }
-
-    public async pushIngameStats(stats: any): Promise<void> {
-        this.ingame.push(stats);
     }
 
 }

@@ -5,6 +5,8 @@ export enum MetricType {
     SYSTEM = 'SYSTEM',
     PLAYERS = 'PLAYERS',
     AUDIT = 'AUDIT',
+    INGAME_PLAYERS = 'INGAME_PLAYERS',
+    INGAME_VEHICLES = 'INGAME_VEHICLES',
 }
 
 export interface MetricWrapper<T> {

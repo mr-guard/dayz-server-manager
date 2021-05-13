@@ -12,12 +12,13 @@ import { Events } from '../services/events';
 import { LogReader } from '../services/log-reader';
 import { Backups } from '../services/backups';
 import { Requirements } from '../services/requirements';
+import { IngameReport } from '../services/ingame-report';
 
 export class ManagerController {
 
     public static readonly INSTANCE = new ManagerController();
 
-    private static log = new Logger('Manager');
+    private log = new Logger('Manager');
 
     private manager: Manager | undefined;
 
@@ -47,12 +48,12 @@ export class ManagerController {
 
     private async stopCurrent(): Promise<void> {
         if (this.manager) {
-            ManagerController.log.log(LogLevel.DEBUG, 'Stopping all running services..');
+            this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
             for (const service of this.STATEFUL_SERVICES) {
-                ManagerController.log.log(LogLevel.DEBUG, `Stopping ${service}..`);
+                this.log.log(LogLevel.DEBUG, `Stopping ${service}..`);
                 await (this.manager[service] as StatefulService)?.stop();
             }
-            ManagerController.log.log(LogLevel.DEBUG, 'All running services stopped..');
+            this.log.log(LogLevel.DEBUG, 'All running services stopped..');
             this.manager = undefined;
         }
     }
@@ -60,7 +61,7 @@ export class ManagerController {
     private async startCurrent(): Promise<void> {
         if (this.manager) {
             for (const service of this.STATEFUL_SERVICES) {
-                ManagerController.log.log(LogLevel.DEBUG, `Starting ${service}..`);
+                this.log.log(LogLevel.DEBUG, `Starting ${service}..`);
                 await (this.manager[service] as StatefulService)?.start();
             }
         }
@@ -83,7 +84,7 @@ export class ManagerController {
         process.title = `Server-Manager ${this.manager.getServerExePath()}`;
 
 
-        ManagerController.log.log(LogLevel.DEBUG, 'Setting up services..');
+        this.log.log(LogLevel.DEBUG, 'Setting up services..');
         this.manager.interface = new Interface(this.manager);
 
         // rest api
@@ -116,8 +117,11 @@ export class ManagerController {
         // requirement checks
         this.manager.requirements = new Requirements(this.manager);
 
+        // ingame report
+        this.manager.ingameReport = new IngameReport(this.manager);
+
         // init
-        ManagerController.log.log(LogLevel.DEBUG, 'Services are set up');
+        this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {
 
             // check firewall, but let the server boot if its not there (could be manually set to ports)
@@ -127,7 +131,7 @@ export class ManagerController {
             const vcRedistOk = await this.manager.requirements.checkVcRedist();
             const directXOk = await this.manager.requirements.checkDirectX();
             if (!vcRedistOk || !directXOk) {
-                ManagerController.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
+                this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
                 process.exit(0);
             }
 
@@ -136,12 +140,14 @@ export class ManagerController {
 
             // eslint-disable-next-line no-negated-condition
             if (!this.skipInitialCheck && !await this.manager.monitor.isServerRunning()) {
-                ManagerController.log.log(LogLevel.IMPORTANT, 'Initially checking SteamCMD, Server Installation and Mods. Please wait. This may take some minutes...');
+                this.log.log(LogLevel.IMPORTANT, 'Initially checking SteamCMD, Server Installation and Mods. Please wait. This may take some minutes...');
                 const steamCmdOk = await this.manager.steamCmd.checkSteamCmd();
                 if (!steamCmdOk) {
                     throw new Error('SteamCMD init failed');
                 }
 
+                // ingame report mod
+                await this.manager.ingameReport.installMod();
                 // Server
                 if (!await this.manager.steamCmd.checkServer() || this.manager.config.updateServerOnStartup) {
                     if (!await this.manager.steamCmd.updateServer()) {
@@ -151,6 +157,7 @@ export class ManagerController {
                 if (!await this.manager.steamCmd.checkServer()) {
                     throw new Error('Server installation failed');
                 }
+
 
                 // Mods
                 if (!await this.manager.steamCmd.checkMods() || this.manager.config.updateModsOnStartup) {
@@ -165,18 +172,18 @@ export class ManagerController {
                     throw new Error('Mod installation failed');
                 }
             } else {
-                ManagerController.log.log(LogLevel.IMPORTANT, 'Skipping initial SteamCMD check because the server is already running');
+                this.log.log(LogLevel.IMPORTANT, 'Skipping initial SteamCMD check because the server is already running');
             }
 
-            ManagerController.log.log(LogLevel.DEBUG, 'Initial Check done. Starting Init..');
+            this.log.log(LogLevel.DEBUG, 'Initial Check done. Starting Init..');
             await this.startCurrent();
 
             this.manager.initDone = true;
-            ManagerController.log.log(LogLevel.IMPORTANT, 'Server Manager initialized successfully');
-            ManagerController.log.log(LogLevel.IMPORTANT, 'Waiting for first server monitor tick..');
+            this.log.log(LogLevel.IMPORTANT, 'Server Manager initialized successfully');
+            this.log.log(LogLevel.IMPORTANT, 'Waiting for first server monitor tick..');
 
         } catch (e) {
-            ManagerController.log.log(LogLevel.ERROR, e?.message, e);
+            this.log.log(LogLevel.ERROR, e?.message, e);
             process.exit(1);
         }
     }

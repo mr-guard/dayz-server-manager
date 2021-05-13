@@ -24,7 +24,7 @@ export class RCON implements StatefulService {
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
 
-    private static log = new Logger('RCON');
+    private log = new Logger('RCON');
 
     private socket: Socket | undefined;
     private connection: Connection | undefined;
@@ -69,19 +69,19 @@ export class RCON implements StatefulService {
 
         this.socket.on('listening', (socket) => {
             const addr = socket.address();
-            RCON.log.log(LogLevel.IMPORTANT, `Listening on ${typeof addr === 'string' ? addr : `${addr.address}:${addr.port}`}`);
+            this.log.log(LogLevel.IMPORTANT, `Listening on ${typeof addr === 'string' ? addr : `${addr.address}:${addr.port}`}`);
         });
 
         this.socket.on('received', (resolved, packet /* , buffer, connection, info */) => {
-            RCON.log.log(LogLevel.DEBUG, `received`, packet);
+            this.log.log(LogLevel.DEBUG, `received`, packet);
         });
 
         this.socket.on('sent', (packet /* , buffer, bytes, connection */) => {
-            RCON.log.log(LogLevel.DEBUG, `sent`, packet);
+            this.log.log(LogLevel.DEBUG, `sent`, packet);
         });
 
         this.socket.on('error', (err) => {
-            RCON.log.log(LogLevel.ERROR, `socket error`, err.message);
+            this.log.log(LogLevel.ERROR, `socket error`, err.message);
         });
 
         if (skipServerWait) {
@@ -119,30 +119,30 @@ export class RCON implements StatefulService {
         );
 
         this.connection.on('message', (message /* , packet */) => {
-            RCON.log.log(LogLevel.DEBUG, `message`, message);
+            this.log.log(LogLevel.DEBUG, `message`, message);
             void this.manager.discord?.relayRconMessage(message);
         });
 
         this.connection.on('command', (data, resolved, packet) => {
-            RCON.log.log(LogLevel.DEBUG, `command packet`, packet);
+            this.log.log(LogLevel.DEBUG, `command packet`, packet);
         });
 
         this.connection.on('disconnected', (reason) => {
             if (reason instanceof Error && reason?.message?.includes('Server connection timed out')) {
-                RCON.log.log(LogLevel.ERROR, `disconnected`, reason.message);
+                this.log.log(LogLevel.ERROR, `disconnected`, reason.message);
             } else {
-                RCON.log.log(LogLevel.ERROR, `disconnected`, reason);
+                this.log.log(LogLevel.ERROR, `disconnected`, reason);
             }
             this.connected = false;
         });
 
         this.connection.on('debug', (data) => {
-            RCON.log.log(LogLevel.DEBUG, 'debug', data);
+            this.log.log(LogLevel.DEBUG, 'debug', data);
         });
 
         this.connection.on('error', async (err) => {
             if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
-                RCON.log.log(LogLevel.ERROR, `connection error`, err.message);
+                this.log.log(LogLevel.ERROR, `connection error`, err.message);
 
                 // restart on connection errors
                 this.connectionErrorCounter++;
@@ -152,12 +152,12 @@ export class RCON implements StatefulService {
                 }
 
             } else {
-                RCON.log.log(LogLevel.ERROR, `connection error`, err);
+                this.log.log(LogLevel.ERROR, `connection error`, err);
             }
         });
 
         this.connection?.on('connected', () => {
-            RCON.log.log(LogLevel.IMPORTANT, 'connected');
+            this.log.log(LogLevel.IMPORTANT, 'connected');
             this.connected = true;
             void this.sendCommand('say -1 Big Brother Connected.');
         });
@@ -214,9 +214,9 @@ export class RCON implements StatefulService {
         let response: IPacketResponse = null;
         try {
             response = await this.connection.command(command);
-            RCON.log.log(LogLevel.DEBUG, `response to ${response.command}:\n${response.data}`);
+            this.log.log(LogLevel.DEBUG, `response to ${response.command}:\n${response.data}`);
         } catch (e) {
-            RCON.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
+            this.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
         }
 
         return response?.data ?? null;
