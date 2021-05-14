@@ -8,6 +8,7 @@ import { Logger, LogLevel } from '../util/logger';
 import { RconBan, RconPlayer } from '../types/rcon';
 import { StatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
+import { matchRegex } from '../util/match-regex';
 
 export class BattleyeConf {
 
@@ -192,7 +193,7 @@ export class RCON implements StatefulService {
 
         fse.ensureDirSync(battleyePath);
         try {
-            fse.readdirSync(battleyePath).forEach((x) => {
+            fs.readdirSync(battleyePath).forEach((x) => {
                 const lower = x.toLowerCase();
                 if (lower.includes('beserver') && lower.endsWith('.cfg')) {
                     fs.unlinkSync(path.join(battleyePath, x));
@@ -244,16 +245,6 @@ export class RCON implements StatefulService {
         }
     }
 
-    private matchRegex(regex: RegExp, data: string): any[] {
-        const matches = [];
-        let match = null;
-        // eslint-disable-next-line no-cond-assign
-        while (match = regex.exec(data)) {
-            matches.push(match);
-        }
-        return matches;
-    }
-
     public async getBansRaw(): Promise<string | null> {
         return this.sendCommand('bans');
     }
@@ -263,12 +254,12 @@ export class RCON implements StatefulService {
         if (!data) {
             return [];
         }
-        const guidBans = this.matchRegex(
+        const guidBans = matchRegex(
             /(\d+)\s+([0-9a-fA-F]+)\s([perm|\d]+)\s+([\S ]+)$/gim,
             data,
         )
             ?.map((e) => e.slice(1, e.length - 1)) ?? [];
-        const ipBans = this.matchRegex(
+        const ipBans = matchRegex(
             /(\d+)\s+([0-9\.]+)\s+([perm|\d]+)\s+([\S ]+)$/gim,
             data,
         )
@@ -318,7 +309,7 @@ export class RCON implements StatefulService {
             return [];
         }
 
-        return this.matchRegex(
+        return matchRegex(
             /(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\(\w+\)\s([\S ]+)$/gim,
             data,
         )

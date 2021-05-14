@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { ServerState } from '@common/models';
-import { AppCommonService } from '@common/services';
+import { MetricType, MetricTypeEnum, MetricWrapper, RconPlayer, ServerState, SystemReport } from '@common/models';
+import { ApiFetcher, AppCommonService } from '@common/services';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
     selector: 'sb-dashboard-cards',
@@ -18,8 +20,7 @@ export class DashboardCardsComponent implements OnInit {
         // ignore
     }
 
-    public serverStateToStyle(s: ServerState): string {
-        /* eslint-disable indent */
+    public serverStateToStyle(s?: ServerState): string {
         switch (s) {
             case ServerState.STARTED: {
                 return 'bg-success';
@@ -31,7 +32,32 @@ export class DashboardCardsComponent implements OnInit {
                 return 'bg-danger';
             }
         }
-        /* eslint-enable indent */
+    }
+
+    public get playerStream(): Observable<MetricWrapper<RconPlayer[]> | null> {
+        return this.getFetcher(MetricTypeEnum.PLAYERS).latestData;
+    }
+
+    public get systemStream(): Observable<MetricWrapper<SystemReport> | null> {
+        return this.getFetcher(MetricTypeEnum.SYSTEM).latestData;
+    }
+
+    public get memStream(): Observable<number> {
+        return this.systemStream.pipe(
+            map((x) => {
+                if (x?.value?.system) {
+                    const sys = x?.value?.system;
+                    if (sys.mem && sys.memTotal) {
+                        return (sys.mem / sys.memTotal) * 100;
+                    }
+                }
+                return 0;
+            }),
+        );
+    }
+
+    private getFetcher(type: MetricType): ApiFetcher<MetricType, MetricWrapper<any>> {
+        return this.commonService.getApiFetcher<MetricType, MetricWrapper<any>>(type);
     }
 
 }

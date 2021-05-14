@@ -1,7 +1,7 @@
 import { Manager } from '../control/manager';
 import * as fs from 'fs';
 import * as zlip from 'zlib';
-import { MetricsContainer, MetricType, MetricWrapper } from '../types/metrics';
+import { MetricsContainer, MetricType, MetricTypeEnum, MetricWrapper } from '../types/metrics';
 import { Logger, LogLevel } from '../util/logger';
 import { StatefulService } from '../types/service';
 import { merge } from '../util/merge';
@@ -52,7 +52,7 @@ export class Metrics implements StatefulService {
         }
     }
 
-    public pushMetricValue<T extends MetricWrapper<any>>(type: keyof typeof MetricType, value: T): void {
+    public pushMetricValue<T extends MetricWrapper<any>>(type: MetricType, value: T): void {
         if (this.metricsContainer[type].length) {
             const firstTS = this.metricsContainer[type][0].timestamp;
             if ((new Date().valueOf() - firstTS) > this.manager.config.metricMaxAge) {
@@ -62,7 +62,7 @@ export class Metrics implements StatefulService {
         this.metricsContainer[type].push(value);
     }
 
-    private async pushMetric(type: keyof typeof MetricType, valueFnc: () => Promise<any>): Promise<void> {
+    private async pushMetric(type: MetricType, valueFnc: () => Promise<any>): Promise<void> {
         try {
             const value = await valueFnc();
             if (!!value) {
@@ -80,9 +80,9 @@ export class Metrics implements StatefulService {
 
         this.log.log(LogLevel.DEBUG, 'Tick');
 
-        await this.pushMetric(MetricType.PLAYERS, () => this.manager.rcon.getPlayers());
+        await this.pushMetric(MetricTypeEnum.PLAYERS, () => this.manager.rcon.getPlayers());
 
-        await this.pushMetric(MetricType.SYSTEM, () => this.manager.monitor.getSystemReport());
+        await this.pushMetric(MetricTypeEnum.SYSTEM, () => this.manager.monitor.getSystemReport());
 
         if ((this.tickCount++ % 10) === 0) {
             this.writeMetrics();
@@ -92,8 +92,8 @@ export class Metrics implements StatefulService {
 
     public deleteMetrics(maxDays: number): void {
         const delTs = new Date().valueOf() - (maxDays * 24 * 60 * 60 * 1000);
-        for (const key of Object.keys(MetricType)) {
-            this.metricsContainer[key] = this.metricsContainer[key as MetricType]
+        for (const key of Object.keys(MetricTypeEnum)) {
+            this.metricsContainer[key] = this.metricsContainer[key as MetricTypeEnum]
                 .filter((x) => x.timestamp >= delTs);
         }
         this.writeMetrics();
@@ -149,7 +149,7 @@ export class Metrics implements StatefulService {
         return this.metricsContainer;
     }
 
-    public async fetchMetrics(type: keyof typeof MetricType, since?: number): Promise<MetricWrapper<any>[]> {
+    public async fetchMetrics(type: MetricType, since?: number): Promise<MetricWrapper<any>[]> {
         if (since && since > 0) {
             const idx = reverseIndexSearch(this.metrics[type], (x) => x.timestamp <= since);
             if (idx !== -1) {

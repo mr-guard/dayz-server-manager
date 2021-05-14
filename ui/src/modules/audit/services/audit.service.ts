@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DecimalPipe } from '@angular/common';
 import { Injectable, PipeTransform } from '@angular/core';
-import { AuditEvent } from '@common/models';
+import { AuditEvent, MetricTypeEnum } from '@common/models';
 import { AppCommonService } from '@common/services';
 import { SortDirection } from '@modules/players/directives';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
@@ -85,7 +85,10 @@ export class AuditService {
     }
 
     protected listenToPlayerChanges(): void {
-        this.sub = this.appCommon.auditMetrics.subscribe(
+        this.sub = this.appCommon.getApiFetcher<
+        MetricTypeEnum.AUDIT,
+        AuditEvent
+        >(MetricTypeEnum.AUDIT).data.subscribe(
             (audits) => {
                 if (audits?.length) {
                     this.currentAudits = audits;

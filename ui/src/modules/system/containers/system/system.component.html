@@ -1,6 +1,6 @@
 <sb-layout-dashboard>
     <sb-dashboard-head title="System" [hideBreadcrumbs]="false"></sb-dashboard-head>
-    
+
     <div class="row">
         <div class="col-xl-6">
             <sb-card>
@@ -8,9 +8,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-area"]'></fa-icon>System CPU
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('system', 'cpu') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('system', 'cpu') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getSystemFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
         <div class="col-xl-6">
@@ -19,9 +19,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-area"]'></fa-icon>System RAM
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('system', 'ram') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('system', 'ram') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getSystemFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
     </div>
@@ -33,9 +33,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-bar"]'></fa-icon>DayZ CPU
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('process', 'cpu') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('process', 'cpu') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getPlayerFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
         <div class="col-lg-6">
@@ -44,9 +44,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-pie"]'></fa-icon>DayZ RAM
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('process', 'ram') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('process', 'ram') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getSystemFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
     </div>
@@ -58,9 +58,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-bar"]'></fa-icon>Manager CPU
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('manager', 'cpu') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('manager', 'cpu') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getSystemFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
         <div class="col-lg-6">
@@ -69,9 +69,9 @@
                     <fa-icon class="mr-1" [icon]='["fas", "chart-pie"]'></fa-icon>Manager RAM
                 </div>
                 <div class="card-body">
-                    <sb-charts-area [chartConf]="commonService.chart('manager', 'ram') | async"></sb-charts-area>
+                    <sb-charts-area [chartConf]="(commonService.chart('manager', 'ram') | async)!"></sb-charts-area>
                 </div>
-                <div class="card-footer small text-muted">Last Updated: {{ (commonService.lastUpdateSystem | async) | date:'medium' }}</div>
+                <div class="card-footer small text-muted">Last Updated: {{ (getSystemFetcher().lastUpdate | async) | date:'medium' }}</div>
             </sb-card>
         </div>
     </div>

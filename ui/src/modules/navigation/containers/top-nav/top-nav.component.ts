@@ -20,7 +20,7 @@ export class TopNavComponent implements OnInit {
     ) {}
 
     public ngOnInit(): void {
-        this.refreshRate = String(this.appCommon.getRefreshRate());
+        this.refreshRate = String(this.appCommon.refreshRate);
     }
 
     public toggleSideNav(): void {

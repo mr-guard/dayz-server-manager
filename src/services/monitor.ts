@@ -402,6 +402,8 @@ export class Monitor implements StatefulService, IMonitor {
 
             this.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
 
+            this.log.log(LogLevel.INFO, 'Fetched new Process list', new Error().stack);
+
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),
                 result: processList,

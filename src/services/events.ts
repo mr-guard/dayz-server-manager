@@ -2,6 +2,7 @@ import { StatefulService } from '../types/service';
 import { Manager } from '../control/manager';
 import * as cron from 'node-schedule';
 import { Logger, LogLevel } from '../util/logger';
+import { ServerState } from '../types/monitor';
 
 export class Events implements StatefulService {
 
@@ -17,8 +18,8 @@ export class Events implements StatefulService {
         for (const event of (this.manager.config.events ?? [])) {
 
             const checkAndRun = async (task: () => any): Promise<void> => {
-                if (!await this.manager?.monitor?.isServerRunning()) {
-                    this.log.log(LogLevel.WARN, `Skipping ${event.name} because server is not running`);
+                if (this.manager?.monitor?.serverState !== ServerState.STARTED) {
+                    this.log.log(LogLevel.WARN, `Skipping ${event.name} because server is not in STARTED state`);
                     return;
                 }
                 task();

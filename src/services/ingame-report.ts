@@ -1,6 +1,6 @@
 import { Manager } from '../control/manager';
 import { IngameReportContainer } from '../types/ingame-report';
-import { MetricType } from '../types/metrics';
+import { MetricTypeEnum } from '../types/metrics';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Paths } from '../util/paths';
@@ -21,7 +21,7 @@ export class IngameReport {
         const timestamp = new Date().valueOf();
 
         this.manager.metrics.pushMetricValue(
-            MetricType.INGAME_PLAYERS,
+            MetricTypeEnum.INGAME_PLAYERS,
             {
                 timestamp,
                 value: report.players,
@@ -29,7 +29,7 @@ export class IngameReport {
         );
 
         this.manager.metrics.pushMetricValue(
-            MetricType.INGAME_VEHICLES,
+            MetricTypeEnum.INGAME_VEHICLES,
             {
                 timestamp,
                 value: report.vehicles,

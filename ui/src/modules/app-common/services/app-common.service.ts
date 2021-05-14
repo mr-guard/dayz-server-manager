@@ -1,82 +1,63 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { AuditEvent, Config, LogMessage, MetricWrapper, RconPlayer, SystemReport } from '@common/models';
+import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, SystemReport } from '@common/models';
 import { AuthService } from '@modules/auth/services';
 import Chart from 'chart.js';
 import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable, of, Subject, Subscription, timer } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-@Injectable({ providedIn: 'root' })
-export class AppCommonService {
+const processError = (err: any, prefix?: string): Observable<any> => {
+    let message = '';
+    if (err.error instanceof ErrorEvent) {
+        message = err.error.message;
+    } else {
+        message = `Error Code: ${err.status}\nMessage: ${err.message}`;
+    }
+    console.error(`${prefix ? `${prefix}:` : ''}: ${message}`, err);
+    return of(null);
+};
 
-    private playerMetrics$ = new BehaviorSubject<MetricWrapper<RconPlayer[]>[] | null>(null);
-    private systemMetrics$ = new BehaviorSubject<MetricWrapper<SystemReport>[] | null>(null);
-    private auditMetrics$ = new BehaviorSubject<AuditEvent[] | null>(null);
+type ApiFetcherTypes = LogType | MetricType;
+interface Timestamped {
+    timestamp: number;
+}
 
-    private rptLogs$ = new Subject<LogMessage>();
-    private currentRptLogs$: LogMessage[] = [];
-    private scriptLogs$ = new Subject<LogMessage>();
-    private currentScriptLogs$: LogMessage[] = [];
-    private admLogs$ = new Subject<LogMessage>();
-    private currentAdmLogs$: LogMessage[] = [];
+export class ApiFetcher<K extends ApiFetcherTypes, T extends Timestamped> {
 
-    private timer: Subscription | undefined;
-    private lastUpdate: number = 0;
+    private data$ = new BehaviorSubject<T[] | null>(null);
+    private dataInserted$ = new Subject<T>();
 
-    private refreshRate = 30;
+    private apiPath: string;
 
     public constructor(
         private httpClient: HttpClient,
         private auth: AuthService,
+        private dataType: K,
     ) {
-        this.adjustRefreshRate(this.refreshRate);
-    }
-
-    public getRefreshRate(): number {
-        return this.refreshRate;
-    }
-
-    public adjustRefreshRate(rate: number): void {
-        this.refreshRate = rate;
-
-        if (this.timer && !this.timer.closed) {
-            this.timer.unsubscribe();
+        if (Object.keys(LogTypeEnum).includes(dataType)) {
+            this.apiPath = `${environment.host}/api/logs`;
+        } else if (Object.keys(MetricTypeEnum).includes(dataType)) {
+            this.apiPath = `${environment.host}/api/metrics`;
+        } else {
+            throw new Error('Unknown data type');
         }
-
-        this.timer = timer(0, this.refreshRate * 1000)
-            .subscribe(() => {
-                this.triggerUpdate();
-            });
     }
 
-    public get playerMetrics(): Observable<MetricWrapper<RconPlayer[]>[] | null> {
-        return this.playerMetrics$.asObservable();
+    public get snapshot(): T[] {
+        return [...(this.data$.value ?? [])];
     }
 
-    public get systemMetrics(): Observable<MetricWrapper<SystemReport>[] | null> {
-        return this.systemMetrics$.asObservable();
+    public get lastUpdated(): number {
+        const x = this.data$.value;
+        return x?.length ? x[x.length - 1].timestamp : 0;
     }
 
-    public get auditMetrics(): Observable<AuditEvent[] | null> {
-        return this.auditMetrics$.asObservable();
+    public get dataInserted(): Observable<T> {
+        return this.dataInserted$.asObservable();
     }
 
-    public get lastUpdateSystem(): Observable<number> {
-        return this.systemMetrics$.asObservable()
-            .pipe(
-                map((x) => x?.length ? x[x.length - 1].timestamp : 0),
-            );
-    }
-
-    public get lastUpdatePlayers(): Observable<number> {
-        return this.playerMetrics$.asObservable()
-            .pipe(
-                map((x) => x?.length ? x[x.length - 1].timestamp : 0),
-            );
-    }
-
-    private getLastOf<T>(obs: Observable<T[] | null>): Observable<T | null> {
+    private getLastOf(obs: Observable<T[] | null>): Observable<T | null> {
         return obs
             .pipe(
                 map((x) => {
@@ -88,111 +69,30 @@ export class AppCommonService {
             );
     }
 
-    public get currentPlayers(): Observable<MetricWrapper<RconPlayer[]> | null> {
-        return this.getLastOf(this.playerMetrics$.asObservable());
+    public get lastUpdate(): Observable<number> {
+        return this.getLastOf(this.data$.asObservable())
+            .pipe(
+                map((x) => x?.timestamp ?? 0),
+            );
     }
 
-    public get currentSystem(): Observable<MetricWrapper<SystemReport> | null> {
-        return this.getLastOf(this.systemMetrics$.asObservable());
+    public get data(): Observable<T[] | null> {
+        return this.data$.asObservable();
     }
 
-    public get currentRptLogs(): LogMessage[] {
-        return [...this.currentRptLogs$];
+    public get latestData(): Observable<T | null> {
+        return this.getLastOf(this.data$.asObservable());
     }
 
-    public get rptLogs(): Observable<LogMessage> {
-        return this.rptLogs$.asObservable();
-    }
-
-    public get currentAdmLogs(): LogMessage[] {
-        return [...this.currentAdmLogs$];
-    }
-
-    public get admLogs(): Observable<LogMessage> {
-        return this.admLogs$.asObservable();
-    }
-
-    public get currentScriptLogs(): LogMessage[] {
-        return [...this.currentScriptLogs$];
-    }
-
-    public get scriptLogs(): Observable<LogMessage> {
-        return this.scriptLogs$.asObservable();
-    }
-
-    public triggerUpdate(): void {
-        this.updatePlayerMetrics(this.lastUpdate);
-        this.updateSystemMetrics(this.lastUpdate);
-        this.updateAuditMetrics(this.lastUpdate);
-        this.updateRptLogs(this.lastUpdate);
-        this.updateScriptLogs(this.lastUpdate);
-        this.updateAdmLogs(this.lastUpdate);
-        this.lastUpdate = new Date().valueOf();
-    }
-
-    public updatePlayerMetrics(since?: number): void {
-        this.fetchPlayerMetrics(since).subscribe(
+    public triggerUpdate(since?: number): void {
+        this.fetchFromServer(since).subscribe(
             (next) => {
                 if (next) {
-                    this.playerMetrics$.next([...(this.playerMetrics$.getValue() ?? []), ...next]);
-                }
-            },
-            console.error,
-        );
-    }
-
-    public updateSystemMetrics(since?: number): void {
-        this.fetchSystemMetrics(since).subscribe(
-            (next) => {
-                if (next) {
-                    this.systemMetrics$.next([...(this.systemMetrics$.getValue() ?? []), ...next]);
-                }
-            },
-            console.error,
-        );
-    }
-
-    public updateAuditMetrics(since?: number): void {
-        this.fetchAuditMetrics(since).subscribe(
-            (next) => {
-                if (next) {
-                    this.auditMetrics$.next([...(this.auditMetrics$.getValue() ?? []), ...next]);
-                }
-            },
-            console.error,
-        );
-    }
-
-    public updateRptLogs(since?: number): void {
-        this.fetchRptLogs(since).subscribe(
-            (next) => {
-                if (next) {
-                    this.currentRptLogs$ = [...(this.currentRptLogs$ ?? []), ...next];
-                    next.forEach((x) => this.rptLogs$.next(x));
-                }
-            },
-            console.error,
-        );
-    }
-
-    public updateAdmLogs(since?: number): void {
-        this.fetchAdmLogs(since).subscribe(
-            (next) => {
-                if (next) {
-                    this.currentAdmLogs$ = [...(this.currentAdmLogs$ ?? []), ...next];
-                    next.forEach((x) => this.admLogs$.next(x));
-                }
-            },
-            console.error,
-        );
-    }
-
-    public updateScriptLogs(since?: number): void {
-        this.fetchScriptLogs(since).subscribe(
-            (next) => {
-                if (next) {
-                    this.currentScriptLogs$ = [...(this.currentScriptLogs$ ?? []), ...next];
-                    next.forEach((x) => this.scriptLogs$.next(x));
+                    this.data$.next([
+                        ...(this.data$.value ?? []),
+                        ...next,
+                    ]);
+                    next.forEach((x) => this.dataInserted$.next(x));
                 }
             },
             console.error,
@@ -203,111 +103,109 @@ export class AppCommonService {
         return this.auth.getAuthHeaders();
     }
 
-    private fetchPlayerMetrics(since?: number): Observable<MetricWrapper<RconPlayer[]>[]> {
-        return this.httpClient.get<MetricWrapper<RconPlayer[]>[]>(
-            `${environment.host}/api/metrics`,
+    private fetchFromServer(since?: number): Observable<T[]> {
+        return this.httpClient.get<T>(
+            this.apiPath,
             {
                 params: {
-                    type: 'PLAYERS',
+                    type: this.dataType,
                     since: String(since ?? 0),
                 },
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
             },
         ).pipe(
-            catchError((e) => this.processError(e)),
+            catchError((e) => processError(e, `Failed to fetch ${this.dataType} from ${this.apiPath}`)),
         );
     }
 
-    public fetchSystemMetrics(since?: number): Observable<MetricWrapper<SystemReport>[]> {
-        return this.httpClient.get<MetricWrapper<SystemReport>[]>(
-            `${environment.host}/api/metrics`,
-            {
-                params: {
-                    type: 'SYSTEM',
-                    since: String(since ?? 0),
-                },
-                headers: this.getAuthHeaders(),
-                withCredentials: true,
+}
+
+@Injectable({ providedIn: 'root' })
+export class AppCommonService {
+
+    /* eslint-disable @typescript-eslint/indent */
+    private apiFetchers = new Map<
+        ApiFetcherTypes,
+        ApiFetcher<
+            ApiFetcherTypes,
+            Timestamped
+        >
+    >();
+    /* eslint-enable @typescript-eslint/indent */
+
+    private timer: Subscription | undefined;
+    private lastUpdate$: number = 0;
+
+    private refreshRate$ = 30;
+
+    public constructor(
+        private httpClient: HttpClient,
+        private auth: AuthService,
+    ) {
+        this.adjustRefreshRate(this.refreshRate$);
+
+        (Object.keys(LogTypeEnum) as LogType[]).forEach(
+            (x) => {
+                this.apiFetchers.set(
+                    x,
+                    new ApiFetcher<typeof x, any>(
+                        this.httpClient,
+                        this.auth,
+                        x,
+                    ),
+                );
             },
-        ).pipe(
-            catchError((e) => this.processError(e)),
         );
-    }
 
-    public fetchAuditMetrics(since?: number): Observable<AuditEvent[]> {
-        return this.httpClient.get<AuditEvent[]>(
-            `${environment.host}/api/metrics`,
-            {
-                params: {
-                    type: 'AUDIT',
-                    since: String(since ?? 0),
-                },
-                headers: this.getAuthHeaders(),
-                withCredentials: true,
+        (Object.keys(MetricTypeEnum) as MetricType[]).forEach(
+            (x) => {
+                this.apiFetchers.set(
+                    x,
+                    new ApiFetcher<typeof x, any>(
+                        this.httpClient,
+                        this.auth,
+                        x,
+                    ),
+                );
             },
-        ).pipe(
-            catchError((e) => this.processError(e)),
         );
     }
 
-    public fetchRptLogs(since?: number): Observable<LogMessage[]> {
-        return this.httpClient.get<LogMessage[]>(
-            `${environment.host}/api/logs`,
-            {
-                params: {
-                    type: 'RPT',
-                    since: String(since ?? 0),
-                },
-                headers: this.getAuthHeaders(),
-                withCredentials: true,
-            },
-        ).pipe(
-            catchError((e) => this.processError(e)),
-        );
+    public get lastUpdate(): number {
+        return this.lastUpdate$;
     }
 
-    public fetchAdmLogs(since?: number): Observable<LogMessage[]> {
-        return this.httpClient.get<LogMessage[]>(
-            `${environment.host}/api/logs`,
-            {
-                params: {
-                    type: 'Adm',
-                    since: String(since ?? 0),
-                },
-                headers: this.getAuthHeaders(),
-                withCredentials: true,
-            },
-        ).pipe(
-            catchError((e) => this.processError(e)),
-        );
+    public get refreshRate(): number {
+        return this.refreshRate$;
     }
 
-    public fetchScriptLogs(since?: number): Observable<LogMessage[]> {
-        return this.httpClient.get<LogMessage[]>(
-            `${environment.host}/api/logs`,
-            {
-                params: {
-                    type: 'SCRIPT',
-                    since: String(since ?? 0),
-                },
-                headers: this.getAuthHeaders(),
-                withCredentials: true,
-            },
-        ).pipe(
-            catchError((e) => this.processError(e)),
-        );
-    }
+    public adjustRefreshRate(rate: number): void {
+        this.refreshRate$ = rate;
 
-    public processError(err: any): Observable<any> {
-        let message = '';
-        if (err.error instanceof ErrorEvent) {
-            message = err.error.message;
-        } else {
-            message = `Error Code: ${err.status}\nMessage: ${err.message}`;
+        if (this.timer && !this.timer.closed) {
+            this.timer.unsubscribe();
         }
-        console.error(message, err);
-        return of(null);
+
+        this.timer = timer(0, this.refreshRate$ * 1000)
+            .subscribe(() => {
+                this.triggerUpdate();
+            });
+    }
+
+    public getApiFetcher<K extends ApiFetcherTypes, T extends Timestamped>(type: ApiFetcherTypes): ApiFetcher<K, T> {
+        return this.apiFetchers.get(type)! as unknown as ApiFetcher<K, T>;
+    }
+
+    public triggerUpdate(): void {
+        this.apiFetchers.forEach((x) => {
+            x.triggerUpdate(this.lastUpdate$);
+        });
+        this.lastUpdate$ = new Date().valueOf();
+    }
+
+    private getAuthHeaders(): { [k: string]: string } {
+        return this.auth.getAuthHeaders();
     }
 
     public fetchManagerConfig(): Observable<Config> {
@@ -318,7 +216,7 @@ export class AppCommonService {
                 withCredentials: true,
             },
         ).pipe(
-            catchError((e) => this.processError(e)),
+            catchError((e) => processError(e)),
         );
     }
 
@@ -335,7 +233,7 @@ export class AppCommonService {
         );
     }
 
-    public chart(type: 'system' | 'process' | 'manager', metric: 'cpu' | 'ram'): Observable<Chart.ChartConfiguration | null> {
+    public chart(type: 'system' | 'process' | 'manager', metric: 'cpu' | 'ram'): Observable<Chart.ChartConfiguration> {
 
         const dataMapper = {
             system: {
@@ -364,14 +262,12 @@ export class AppCommonService {
             },
         }[type][metric];
 
-        return this.systemMetrics.pipe(
+        return this.getApiFetcher<MetricTypeEnum.SYSTEM, MetricWrapper<SystemReport>>(MetricTypeEnum.SYSTEM)!.data.pipe(
             map((values) => {
-
-                if (!values?.length) return null;
-
                 let last = 0;
+                const lastTime = values?.length ? values[values.length - 1].timestamp : 0;
                 const data = values?.filter((x) => {
-                    const filtered = (((x.timestamp - last) > 180000) && ((values[values.length - 1].timestamp - x.timestamp) < 3 * 60 * 60 * 1000));
+                    const filtered = (((x.timestamp - last) > 180000) && ((lastTime - x.timestamp) < 3 * 60 * 60 * 1000));
                     if (filtered) {
                         last = x.timestamp;
                     }
