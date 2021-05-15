@@ -7,8 +7,9 @@ import { Processes } from '../util/processes';
 import { download } from '../util/download';
 import { Logger, LogLevel } from '../util/logger';
 import { sameDirHash } from '../util/compare-folders';
+import { IService } from '../types/service';
 
-export class SteamCMD {
+export class SteamCMD implements IService {
 
     private static readonly DAYZ_APP_ID = '221100';
     private static readonly DAYZ_SERVER_APP_ID = '223350';

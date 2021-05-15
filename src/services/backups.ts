@@ -5,8 +5,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Paths } from '../util/paths';
 import { FileDescriptor } from '../types/log-reader';
+import { IService } from '../types/service';
 
-export class Backups {
+export class Backups implements IService {
 
     private log = new Logger('Backups');
 

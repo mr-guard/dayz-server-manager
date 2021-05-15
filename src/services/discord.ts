@@ -4,11 +4,11 @@ import {
     Message,
 } from 'discord.js';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { Logger, LogLevel } from '../util/logger';
 import { Manager } from '../control/manager';
 
-export class DiscordBot implements StatefulService {
+export class DiscordBot implements IStatefulService {
 
     private log = new Logger('Discord');
 

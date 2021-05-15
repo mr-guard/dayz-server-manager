@@ -1,18 +1,8 @@
-import { DiscordBot } from '../services/discord';
+import 'reflect-metadata';
+
 import { Manager } from './manager';
-import { Metrics } from '../services/metrics';
-import { Monitor } from '../services/monitor';
-import { RCON } from '../services/rcon';
-import { REST } from '../interface/rest';
-import { SteamCMD } from '../services/steamcmd';
-import { Interface } from '../interface/interface';
 import { Logger, LogLevel } from '../util/logger';
-import { StatefulService } from '../types/service';
-import { Events } from '../services/events';
-import { LogReader } from '../services/log-reader';
-import { Backups } from '../services/backups';
-import { Requirements } from '../services/requirements';
-import { IngameReport } from '../services/ingame-report';
+import { IStatefulService, ServiceConfig } from '../types/service';
 
 export class ManagerController {
 
@@ -24,19 +14,8 @@ export class ManagerController {
 
     private skipInitialCheck: boolean = false;
 
-    private readonly STATEFUL_SERVICES: (keyof Manager)[] = [
-        'rcon', // must be started first to create rcon conf
-        'monitor',
-        'discord',
-        'rest',
-        'metrics',
-        'events',
-        'logReader',
-    ];
-
     public constructor() {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        process.on('unhandledRejection', (reason, promise) => {
+        process.on('unhandledRejection', (reason) => {
             console.error(
                 'Unhandled Rejection:',
                 reason,
@@ -46,13 +25,31 @@ export class ManagerController {
         });
     }
 
+    private async forEachManagerServices(
+        cb: (
+            manager: Manager,
+            serviceKey: string,
+            meta: ServiceConfig,
+        ) => any,
+    ): Promise<void> {
+        const services = Reflect.getMetadata('services', this.manager);
+        for (const service of services) {
+            const meta = Reflect.getMetadata('service', this.manager, service);
+            if (meta) {
+                await cb(this.manager, service, meta);
+            }
+        }
+    }
+
     private async stopCurrent(): Promise<void> {
         if (this.manager) {
             this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
-            for (const service of this.STATEFUL_SERVICES) {
-                this.log.log(LogLevel.DEBUG, `Stopping ${service}..`);
-                await (this.manager[service] as StatefulService)?.stop();
-            }
+            await this.forEachManagerServices(async (manager, service, config) => {
+                if (config.stateful) {
+                    this.log.log(LogLevel.DEBUG, `Stopping ${service}..`);
+                    await (manager[service] as IStatefulService)?.stop();
+                }
+            });
             this.log.log(LogLevel.DEBUG, 'All running services stopped..');
             this.manager = undefined;
         }
@@ -60,10 +57,12 @@ export class ManagerController {
 
     private async startCurrent(): Promise<void> {
         if (this.manager) {
-            for (const service of this.STATEFUL_SERVICES) {
-                this.log.log(LogLevel.DEBUG, `Starting ${service}..`);
-                await (this.manager[service] as StatefulService)?.start();
-            }
+            await this.forEachManagerServices(async (manager, service, config) => {
+                if (config.stateful) {
+                    this.log.log(LogLevel.DEBUG, `Starting ${service}..`);
+                    await (manager[service] as IStatefulService)?.start();
+                }
+            });
         }
     }
 
@@ -85,40 +84,13 @@ export class ManagerController {
 
 
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
-        this.manager.interface = new Interface(this.manager);
 
-        // rest api
-        this.manager.rest = new REST(this.manager);
-
-        // discord
-        this.manager.discord = new DiscordBot(this.manager);
-
-        // rcon
-        this.manager.rcon = new RCON(this.manager);
-
-        // steamcmd
-        this.manager.steamCmd = new SteamCMD(this.manager);
-
-        // monitor
-        this.manager.monitor = new Monitor(this.manager);
-
-        // metrics
-        this.manager.metrics = new Metrics(this.manager);
-
-        // (rcon) sheduled events
-        this.manager.events = new Events(this.manager);
-
-        // logs
-        this.manager.logReader = new LogReader(this.manager);
-
-        // backups
-        this.manager.backup = new Backups(this.manager);
-
-        // requirement checks
-        this.manager.requirements = new Requirements(this.manager);
-
-        // ingame report
-        this.manager.ingameReport = new IngameReport(this.manager);
+        await this.forEachManagerServices(async (manager, service, config) => {
+            if (config.type) {
+                this.log.log(LogLevel.DEBUG, `Setting up service: ${service}`);
+                manager[service] = new config.type(manager);
+            }
+        });
 
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');

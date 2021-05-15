@@ -4,8 +4,9 @@ import { Processes } from '../util/processes';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NetSH } from '../util/netsh';
+import { IService } from '../types/service';
 
-export class Requirements {
+export class Requirements implements IService {
 
     private readonly VCREDIST_LINK = 'https://www.microsoft.com/en-us/download/details.aspx?id=52685';
     private readonly VCREDIST_MARKER_DLL = 'VCRuntime140.dll';
@@ -26,7 +27,7 @@ export class Requirements {
     private processes = new Processes();
 
     public constructor(
-        private manager: Manager,
+        public manager: Manager,
     ) {}
 
     public async checkFirewall(): Promise<boolean> {

@@ -3,11 +3,11 @@ import * as fs from 'fs';
 import * as zlip from 'zlib';
 import { MetricsContainer, MetricType, MetricTypeEnum, MetricWrapper } from '../types/metrics';
 import { Logger, LogLevel } from '../util/logger';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { merge } from '../util/merge';
 import { reverseIndexSearch } from '../util/reverse-index-search';
 
-export class Metrics implements StatefulService {
+export class Metrics implements IStatefulService {
 
     private static readonly METRICS_FILE = 'server-manager-metrics';
 

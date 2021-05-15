@@ -5,17 +5,17 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Paths } from '../util/paths';
 import { Logger, LogLevel } from '../util/logger';
+import { IService } from '../types/service';
 
-export class IngameReport {
+export class IngameReport implements IService {
 
     private log = new Logger('IngameReport');
 
     private paths = new Paths();
 
     public constructor(
-        private manager: Manager,
+        public manager: Manager,
     ) {}
-
 
     public async processIngameReport(report: IngameReportContainer): Promise<void> {
         const timestamp = new Date().valueOf();

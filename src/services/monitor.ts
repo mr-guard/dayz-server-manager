@@ -7,7 +7,7 @@ import * as path from 'path';
 import { Logger, LogLevel } from '../util/logger';
 import { ServerState, SystemReport } from '../types/monitor';
 import { MetricWrapper } from '../types/metrics';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -18,7 +18,7 @@ interface IMonitor {
     startServer(skipPrep?: boolean): Promise<boolean>;
 }
 
-class MonitorLoop implements StatefulService {
+class MonitorLoop {
 
     private log = new Logger('Monitor');
 
@@ -141,7 +141,7 @@ class MonitorLoop implements StatefulService {
 
 }
 
-export class Monitor implements StatefulService, IMonitor {
+export class Monitor implements IStatefulService, IMonitor {
 
     private log = new Logger('Monitor');
 
@@ -277,8 +277,12 @@ export class Monitor implements StatefulService, IMonitor {
         // ingame report
         await this.manager.ingameReport.installMod();
 
+        // env requirements
         await this.manager.requirements.checkWinErrorReporting();
         await this.manager.requirements.checkFirewall();
+
+        // battleye / rcon
+        await this.manager.rcon.createBattleyeConf();
     }
 
     public async startServer(skipPrep?: boolean): Promise<boolean> {
@@ -401,8 +405,6 @@ export class Monitor implements StatefulService, IMonitor {
             processList = await this.processes.getProcessList();
 
             this.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
-
-            this.log.log(LogLevel.INFO, 'Fetched new Process list', new Error().stack);
 
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),

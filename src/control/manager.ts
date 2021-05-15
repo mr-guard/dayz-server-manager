@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 import { DiscordBot } from '../services/discord';
 import { REST } from '../interface/rest';
 import { RCON } from '../services/rcon';
@@ -18,6 +20,7 @@ import { Backups } from '../services/backups';
 import { merge } from '../util/merge';
 import { Requirements } from '../services/requirements';
 import { IngameReport } from '../services/ingame-report';
+import { Service } from '../types/service';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configschema = require('../config/config.schema.json');
@@ -30,32 +33,45 @@ export class Manager {
 
     private paths = new Paths();
 
+    // services
+    @Service({ type: Interface, stateful: false })
     public interface!: Interface;
 
+    @Service({ type: REST, stateful: true })
     public rest!: REST;
 
+    @Service({ type: DiscordBot, stateful: true })
     public discord!: DiscordBot;
 
+    @Service({ type: RCON, stateful: true })
     public rcon!: RCON;
 
+    @Service({ type: SteamCMD, stateful: false })
     public steamCmd!: SteamCMD;
 
+    @Service({ type: Monitor, stateful: true })
     public monitor!: Monitor;
 
+    @Service({ type: Metrics, stateful: true })
     public metrics!: Metrics;
 
+    @Service({ type: Events, stateful: true })
     public events!: Events;
 
+    @Service({ type: LogReader, stateful: true })
     public logReader!: LogReader;
 
+    @Service({ type: Backups, stateful: false })
     public backup!: Backups;
 
+    @Service({ type: Requirements, stateful: false })
     public requirements!: Requirements;
 
+    @Service({ type: IngameReport, stateful: false })
     public ingameReport!: IngameReport;
 
+    // config
     public config!: Config;
-
     public initDone: boolean = false;
 
     public constructor() {

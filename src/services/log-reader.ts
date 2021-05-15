@@ -1,6 +1,6 @@
 
 import { Manager } from '../control/manager';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { Logger, LogLevel } from '../util/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,7 +20,7 @@ export type LogMap = {
     [Property in LogType]?: LogContainer;
 };
 
-export class LogReader implements StatefulService {
+export class LogReader implements IStatefulService {
 
     private log = new Logger('LogReader');
 

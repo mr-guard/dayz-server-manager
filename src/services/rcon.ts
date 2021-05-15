@@ -6,7 +6,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Logger, LogLevel } from '../util/logger';
 import { RconBan, RconPlayer } from '../types/rcon';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
 import { matchRegex } from '../util/match-regex';
 
@@ -21,7 +21,7 @@ export class BattleyeConf {
 
 }
 
-export class RCON implements StatefulService {
+export class RCON implements IStatefulService {
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
 
@@ -41,11 +41,7 @@ export class RCON implements StatefulService {
         public manager: Manager,
     ) {}
 
-    public async start(skipBeConf?: boolean, skipServerWait?: boolean): Promise<void> {
-
-        if (!skipBeConf) {
-            this.createBattleyeConf();
-        }
+    public async start(skipServerWait?: boolean): Promise<void> {
 
         this.connectionErrorCounter = 0;
 
@@ -149,7 +145,7 @@ export class RCON implements StatefulService {
                 this.connectionErrorCounter++;
                 if (this.connectionErrorRestartEnabled && this.connectionErrorCounter >= 5) {
                     await this.stop();
-                    void this.start(true, true);
+                    void this.start(true);
                 }
 
             } else {
@@ -172,7 +168,7 @@ export class RCON implements StatefulService {
         );
     }
 
-    private createBattleyeConf(): void {
+    public createBattleyeConf(): void {
         let battleyePath = this.manager.config?.battleyePath;
         if (!battleyePath) {
             battleyePath = 'battleye';

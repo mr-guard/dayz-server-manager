@@ -1,10 +1,10 @@
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { Manager } from '../control/manager';
 import * as cron from 'node-schedule';
 import { Logger, LogLevel } from '../util/logger';
 import { ServerState } from '../types/monitor';
 
-export class Events implements StatefulService {
+export class Events implements IStatefulService {
 
     private log = new Logger('Events');
 
