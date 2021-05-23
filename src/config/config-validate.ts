@@ -34,6 +34,15 @@ export const validateConfig = (config: Config): string[] => {
         }
     }
 
+    // check required serverCfg fields
+    for (const configKey in refConfig.serverCfg) {
+        if (Reflect.getMetadata('config-required', refConfig.serverCfg, configKey)) {
+            if (!config.serverCfg[configKey]) {
+                errors.push(`Missing required entry in serverCfg: ${configKey}`);
+            }
+        }
+    }
+
     // check types
     for (const configKey in config) {
         if (typeof config[configKey] !== typeof refConfig[configKey]) {
@@ -42,6 +51,18 @@ export const validateConfig = (config: Config): string[] => {
             const range: [number, number] | undefined = Reflect.getMetadata('config-range', refConfig, configKey);
             if (range && (config[configKey] < range[0] || config[configKey] > range[1])) {
                 errors.push(`Config out of range: ${configKey}, allowed [${range[0]},${range[1]}]`);
+            }
+        }
+    }
+
+    // check types for severCfg
+    for (const configKey in config.serverCfg) {
+        if (typeof config.serverCfg[configKey] !== typeof refConfig.serverCfg[configKey]) {
+            errors.push(`Wrong config type: serverCfg.${configKey}, allowed ${typeof refConfig.serverCfg[configKey]}`);
+        } else if (typeof config.serverCfg[configKey] === 'number') {
+            const range: [number, number] | undefined = Reflect.getMetadata('config-range', refConfig.serverCfg, configKey);
+            if (range && (config[configKey] < range[0] || config[configKey] > range[1])) {
+                errors.push(`Config out of range: serverCfg.${configKey}, allowed [${range[0]},${range[1]}]`);
             }
         }
     }
