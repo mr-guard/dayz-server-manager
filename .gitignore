@@ -8,3 +8,4 @@ src/config/config.schema.json
 .actrc
 .nyc_output
 coverage
+*.log
