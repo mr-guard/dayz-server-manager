@@ -82,7 +82,6 @@ export class ManagerController {
         }
         process.title = `Server-Manager ${this.manager.getServerExePath()}`;
 
-
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
         await this.forEachManagerServices(async (manager, service, config) => {
@@ -91,6 +90,8 @@ export class ManagerController {
                 manager[service] = new config.type(manager);
             }
         });
+
+        await this.manager.calcIngameToken();
 
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');

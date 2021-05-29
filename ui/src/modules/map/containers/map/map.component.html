@@ -1,0 +1,8 @@
+<sb-layout-dashboard>
+    <div class="map-container"
+        *ngIf="options"
+        leaflet
+        (leafletMapReady)="onMapReady($event)"
+        [leafletOptions]="options"
+    ></div>
+</sb-layout-dashboard>

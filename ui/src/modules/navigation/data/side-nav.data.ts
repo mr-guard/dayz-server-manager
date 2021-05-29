@@ -14,6 +14,7 @@ export const sideNavSections: SideNavSection[] = [
             'logs',
             'maintenance',
             'settings',
+            'map',
         ],
     },
 ];
@@ -53,5 +54,10 @@ export const sideNavItems: SideNavItems = {
         icon: 'cogs',
         text: 'Settings',
         link: '/dashboard/settings',
+    },
+    map: {
+        icon: 'map',
+        text: 'Map',
+        link: '/dashboard/map',
     },
 };

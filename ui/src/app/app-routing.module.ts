@@ -53,6 +53,12 @@ const routes: Routes = [
         loadChildren: () =>
             import('@modules/settings/settings-routing.module').then((m) => m.SettingsRoutingModule),
     },
+    {
+        path: 'dashboard/map',
+        canActivate: [AuthGuard],
+        loadChildren: () =>
+            import('@modules/map/map-routing.module').then((m) => m.MapRoutingModule),
+    },
     // {
     //     path: 'dashboard/version',
     //     loadChildren: () =>
@@ -79,7 +85,17 @@ const routes: Routes = [
 ];
 
 @NgModule({
-    imports: [RouterModule.forRoot(routes, { relativeLinkResolution: 'legacy', onSameUrlNavigation: 'reload' }), AuthModule],
+    imports: [
+        RouterModule.forRoot(
+            routes,
+            {
+                relativeLinkResolution: 'legacy',
+                onSameUrlNavigation: 'reload',
+                // enableTracing: true,
+            },
+        ),
+        AuthModule,
+    ],
     exports: [RouterModule],
 })
 export class AppRoutingModule {}

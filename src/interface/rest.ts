@@ -22,6 +22,8 @@ export class REST {
     public path = '/';
     public router = express.Router();
 
+    private readonly UI_FILES = path.join(__dirname, '../ui');
+
     public constructor(
         public manager: Manager,
     ) {}
@@ -56,7 +58,7 @@ export class REST {
         }
 
         // static content
-        this.express.use(express.static(path.join(__dirname, '../ui')));
+        this.express.use(express.static(this.UI_FILES));
 
         // controllers
         this.express.use(
@@ -82,15 +84,13 @@ export class REST {
 
     private setupRouter(): void {
 
-        this.express.get('/login', (req, res) => {
-            res.redirect(301, '/');
-        });
-        this.express.get('/dashboard/*', (req, res) => {
-            res.redirect(301, '/');
-        });
-        this.express.get('/dashboard', (req, res) => {
-            res.redirect(301, '/');
-        });
+        const handleUiFileRequest = async (req, res): Promise<any> => {
+            // res.redirect(301, '/');
+            res.sendFile(path.join(this.UI_FILES, 'index.html'));
+        };
+        this.express.get('/login', handleUiFileRequest);
+        this.express.get('/dashboard/*', handleUiFileRequest);
+        this.express.get('/dashboard', handleUiFileRequest);
 
         for (const [resource, command] of this.manager.interface!.commandMap) {
 
@@ -126,7 +126,7 @@ export class REST {
         }
 
         this.express.post('/ingame/stats', (req, res) => {
-            if (req.params.token === this.manager.getIngameToken()) {
+            if (req.query.token === this.manager.getIngameToken()) {
                 void this.manager.ingameReport.processIngameReport(req.body);
             }
             res.send();

@@ -21,13 +21,15 @@ import { merge } from '../util/merge';
 import { Requirements } from '../services/requirements';
 import { IngameReport } from '../services/ingame-report';
 import { Service } from '../types/service';
+import { Database } from '../services/database';
+import { ServerInfo } from '../types/server-info';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configschema = require('../config/config.schema.json');
 
 export class Manager {
 
-    private readonly INGAME_TOKEN: string = `DZSM-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}`;
+    private ingameToken: string;
 
     private log = new Logger('Manager');
 
@@ -69,6 +71,9 @@ export class Manager {
 
     @Service({ type: IngameReport, stateful: false })
     public ingameReport!: IngameReport;
+
+    @Service({ type: Database, stateful: true })
+    public database!: Database;
 
     // config
     public config!: Config;
@@ -189,8 +194,33 @@ export class Manager {
         return this.config!.serverPort + 11;
     }
 
+    public async calcIngameToken(): Promise<void> {
+        const procs = await this.monitor.getDayZProcesses();
+        if (procs.length && procs[0].CommandLine.includes('-serverManagerToken=')) {
+            const matches = procs[0].CommandLine.match(/-serverManagerToken=([^\s]*)/);
+            // eslint-disable-next-line prefer-destructuring
+            this.ingameToken = matches[1];
+        }
+
+        if (!this.ingameToken) {
+            this.ingameToken = `DZSM-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}`;
+        }
+
+    }
+
     public getIngameToken(): string {
-        return this.INGAME_TOKEN;
+        return this.ingameToken;
+    }
+
+    public async getServerInfo(): Promise<ServerInfo> {
+        return {
+            name: this.config.serverCfg.hostname,
+            port: this.config.serverPort,
+            worldName: this.config.serverCfg.Missions.DayZ.template.split('.')[1],
+            password: !!this.config.serverCfg.password,
+            battleye: !!this.config.serverCfg.BattlEye,
+            maxPlayers: this.config.serverCfg.maxPlayers,
+        };
     }
 
 }

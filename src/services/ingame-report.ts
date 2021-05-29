@@ -20,6 +20,8 @@ export class IngameReport implements IService {
     public async processIngameReport(report: IngameReportContainer): Promise<void> {
         const timestamp = new Date().valueOf();
 
+        this.log.log(LogLevel.INFO, `Server sent ingame report: ${report.players.length} players, ${report.vehicles.length} vehicles`);
+
         this.manager.metrics.pushMetricValue(
             MetricTypeEnum.INGAME_PLAYERS,
             {

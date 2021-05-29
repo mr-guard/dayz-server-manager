@@ -349,6 +349,15 @@ export class Interface {
                     () => this.manager.backup.getBackups(),
                 ),
             })],
+            ['serverinfo', RequestTemplate.build({
+                method: 'get',
+                level: 'view',
+                disableDiscord: true,
+                action: (req) => this.executeWithResult(
+                    req,
+                    () => this.manager.getServerInfo(),
+                ),
+            })],
         ]);
 
         // apply Init Lock

@@ -8,6 +8,7 @@ import { Logger, LogLevel } from '../util/logger';
 import { ServerState, SystemReport } from '../types/monitor';
 import { MetricWrapper } from '../types/metrics';
 import { IStatefulService } from '../types/service';
+import { ConfigParser } from '../util/config-parser';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -63,11 +64,15 @@ class MonitorLoop {
 
     private async loop(): Promise<void> {
 
+        let lastTick = 0;
         while (this.watching) {
 
-            await this.tick();
+            if ((new Date().valueOf() - lastTick) > this.checkIntervall) {
+                await this.tick();
+                lastTick = new Date().valueOf();
+            }
 
-            await new Promise((r) => setTimeout(r, this.checkIntervall));
+            await new Promise((r) => setTimeout(r, 500));
 
         }
 
@@ -248,7 +253,24 @@ export class Monitor implements IStatefulService, IMonitor {
         return success.every((x) => x);
     }
 
+    public async writeServerCfg(): Promise<void> {
+        const cfgPath = path.join(this.manager.getServerPath(), this.manager.config.serverCfgPath);
+        const content = new ConfigParser().json2cfg(this.manager.config.serverCfg);
+
+        this.log.log(LogLevel.INFO, `Writing server cfg`);
+        fs.writeFileSync(cfgPath, content);
+    }
+
     private async prepareServerStart(skipPrep?: boolean): Promise<void> {
+
+        // ingame report
+        await this.manager.ingameReport.installMod();
+
+        // battleye / rcon
+        await this.manager.rcon.createBattleyeConf();
+
+        await this.writeServerCfg();
+
         if (!!skipPrep) {
             return;
         }
@@ -274,15 +296,9 @@ export class Monitor implements IStatefulService, IMonitor {
             throw new Error('Mod installation failed');
         }
 
-        // ingame report
-        await this.manager.ingameReport.installMod();
-
         // env requirements
         await this.manager.requirements.checkWinErrorReporting();
         await this.manager.requirements.checkFirewall();
-
-        // battleye / rcon
-        await this.manager.rcon.createBattleyeConf();
     }
 
     public async startServer(skipPrep?: boolean): Promise<boolean> {

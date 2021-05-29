@@ -1,11 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, SystemReport } from '@common/models';
+import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, ServerInfo, SystemReport, isSameServerInfo } from '@common/models';
 import { AuthService } from '@modules/auth/services';
 import Chart from 'chart.js';
 import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable, of, Subject, Subscription, timer } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 
 const processError = (err: any, prefix?: string): Observable<any> => {
     let message = '';
@@ -134,6 +134,8 @@ export class AppCommonService {
     >();
     /* eslint-enable @typescript-eslint/indent */
 
+    public readonly SERVER_INFO = new BehaviorSubject<ServerInfo | undefined>(undefined);
+
     private timer: Subscription | undefined;
     private lastUpdate$: number = 0;
 
@@ -143,8 +145,6 @@ export class AppCommonService {
         private httpClient: HttpClient,
         private auth: AuthService,
     ) {
-        this.adjustRefreshRate(this.refreshRate$);
-
         (Object.keys(LogTypeEnum) as LogType[]).forEach(
             (x) => {
                 this.apiFetchers.set(
@@ -170,6 +170,9 @@ export class AppCommonService {
                 );
             },
         );
+
+        void this.fetchServerInfo().toPromise();
+        this.adjustRefreshRate(this.refreshRate$);
     }
 
     public get lastUpdate(): number {
@@ -187,10 +190,12 @@ export class AppCommonService {
             this.timer.unsubscribe();
         }
 
-        this.timer = timer(0, this.refreshRate$ * 1000)
-            .subscribe(() => {
-                this.triggerUpdate();
-            });
+        if (rate && rate > 0) {
+            this.timer = timer(0, this.refreshRate$ * 1000)
+                .subscribe(() => {
+                    this.triggerUpdate();
+                });
+        }
     }
 
     public getApiFetcher<K extends ApiFetcherTypes, T extends Timestamped>(type: ApiFetcherTypes): ApiFetcher<K, T> {
@@ -335,6 +340,23 @@ export class AppCommonService {
             }),
         );
 
+    }
+
+    public fetchServerInfo(): Observable<ServerInfo> {
+        return this.httpClient.get<ServerInfo>(
+            `${environment.host}/api/serverinfo`,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+            },
+        ).pipe(
+            catchError((e) => processError(e)),
+            tap((x) => {
+                if (!isSameServerInfo(x, this.SERVER_INFO.getValue())) {
+                    this.SERVER_INFO.next(x);
+                }
+            }),
+        );
     }
 
 }

@@ -291,20 +291,17 @@ export class ServerCfg {
     /**
      * Logs the average server FPS (value in seconds), needs to have ''-doLogs'' launch parameter active
      */
-    @Reflect.metadata('config-range', [0, 1])
-    public logAverageFps: 0 | 1 = 1;
+    public logAverageFps: number = 30;
 
     /**
      * Logs the server memory usage (value in seconds), needs to have the ''-doLogs'' launch parameter active
      */
-    @Reflect.metadata('config-range', [0, 1])
-    public logMemory: 0 | 1 = 1;
+    public logMemory: number = 30;
 
     /**
      * Logs the count of currently connected players (value in seconds), needs to have the ''-doLogs'' launch parameter active
      */
-    @Reflect.metadata('config-range', [0, 1])
-    public logPlayers: 0 | 1 = 1;
+    public logPlayers: number = 30;
 
     /**
      * Saves the server console log to a file in the folder with the other server logs
@@ -345,7 +342,6 @@ export class ServerCfg {
      */
     @Reflect.metadata('config-required', true)
     public Missions: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         DayZ: {
             template: string;
         };
@@ -786,8 +782,15 @@ export class Config {
     public metricMaxAge: number = 2_592_000;
 
     // /////////////////////////// Hooks ///////////////////////////////////////
+    /**
+     * Hooks to define custom behaviour when certain events happen
+     */
     public hooks: Hook[] = [];
 
+    // /////////////////////////// ServerCfg ///////////////////////////////////////
+    /**
+     * serverCfg
+     */
     @Reflect.metadata('config-required', true)
     public serverCfg: ServerCfg = new ServerCfg();
 

@@ -24,7 +24,10 @@
                         "tsConfig": "tsconfig.app.json",
                         "aot": false,
                         "assets": ["src/favicon.png", "src/assets"],
-                        "styles": ["src/styles/styles.scss"],
+                        "styles": [
+                            "src/styles/styles.scss",
+                            "./node_modules/leaflet/dist/leaflet.css"
+                        ],
                         "stylePreprocessorOptions": {
                             "includePaths": ["src", "./node_modules"]
                         },
@@ -86,7 +89,10 @@
                         "tsConfig": "tsconfig.spec.json",
                         "karmaConfig": "karma.conf.js",
                         "assets": ["src/favicon.png", "src/assets"],
-                        "styles": ["src/styles/styles.scss"],
+                        "styles": [
+                            "src/styles/styles.scss",
+                            "./node_modules/leaflet/dist/leaflet.css"
+                        ],
                         "stylePreprocessorOptions": {
                             "includePaths": ["src", "./node_modules"]
                         },

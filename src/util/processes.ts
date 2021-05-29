@@ -9,6 +9,7 @@ export class ProcessEntry {
     public Name: string = '';
     public ProcessId: string = '';
     public ExecutablePath: string = '';
+    public CommandLine: string = '';
     public PrivatePageCount: string = '';
     public CreationDate: string = '';
     public UserModeTime: string = '';
@@ -62,7 +63,10 @@ export class Processes {
                         (x) => x
                             .split('\n')
                             .filter((y) => !!y)
-                            .map((y) => y.split('=').map((z) => z.trim())),
+                            .map((y) => {
+                                const equalIdx = y.indexOf('=');
+                                return [y.slice(0, equalIdx).trim(), y.slice(equalIdx + 1).trim()];
+                            }),
                     )
                     .map((x: string[][]) => {
                         let proc = new ProcessEntry();
