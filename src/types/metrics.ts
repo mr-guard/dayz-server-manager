@@ -16,10 +16,6 @@ export interface MetricWrapper<T> {
     value: T;
 }
 
-export type MetricsContainer = {
-    [Property in MetricType]: MetricWrapper<any>[];
-};
-
 export interface AuditEvent extends MetricWrapper<Request> {
     user: string;
 }

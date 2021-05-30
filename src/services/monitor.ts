@@ -447,11 +447,13 @@ export class Monitor implements IStatefulService, IMonitor {
         try {
 
             let prevReport: MetricWrapper<SystemReport> | null = null;
-            if (this.manager.metrics.metrics.SYSTEM?.length) {
-                const lastReportValue = this.manager.metrics.metrics.SYSTEM[this.manager.metrics.metrics.SYSTEM.length - 1];
-                if (lastReportValue && ((new Date().valueOf() - lastReportValue.timestamp) < (15 * 60 * 1000))) {
-                    prevReport = lastReportValue;
-                }
+
+            const metrics = await this.manager.metrics.fetchMetrics(
+                'SYSTEM',
+                new Date().valueOf() - (15 * 60 * 1000),
+            );
+            if (metrics.length) {
+                prevReport = metrics[metrics.length - 1];
             }
 
             const system = this.processes.getSystemUsage();

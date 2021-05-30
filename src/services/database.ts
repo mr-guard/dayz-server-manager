@@ -54,7 +54,7 @@ export class Database implements IStatefulService {
 
     private log = new Logger('Database');
 
-    private metricsDb: Sqlite3Wrapper;
+    public metricsDb: Sqlite3Wrapper;
 
     public constructor(
         public manager: Manager,

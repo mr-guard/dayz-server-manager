@@ -22,7 +22,7 @@ export class IngameReport implements IService {
 
         this.log.log(LogLevel.INFO, `Server sent ingame report: ${report.players.length} players, ${report.vehicles.length} vehicles`);
 
-        this.manager.metrics.pushMetricValue(
+        void this.manager.metrics.pushMetricValue(
             MetricTypeEnum.INGAME_PLAYERS,
             {
                 timestamp,
@@ -30,7 +30,7 @@ export class IngameReport implements IService {
             },
         );
 
-        this.manager.metrics.pushMetricValue(
+        void this.manager.metrics.pushMetricValue(
             MetricTypeEnum.INGAME_VEHICLES,
             {
                 timestamp,
