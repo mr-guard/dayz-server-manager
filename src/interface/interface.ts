@@ -349,6 +349,30 @@ export class Interface {
                     () => this.manager.backup.getBackups(),
                 ),
             })],
+            ['writemissionfile', RequestTemplate.build({
+                method: 'post',
+                level: 'manage',
+                disableDiscord: true,
+                params: ['file', 'content'],
+                action: (req) => this.executeWithoutResult(
+                    req,
+                    () => this.manager.missionFiles.writeMissionFile(
+                        req.body.file,
+                        req.body.content,
+                    ),
+                ),
+            })],
+            ['readmissionfile', RequestTemplate.build({
+                method: 'get',
+                level: 'manage',
+                disableDiscord: true,
+                action: singleParamWrapper(
+                    'file',
+                    (file) => this.manager.missionFiles.readMissionFile(file),
+                    true,
+                    false,
+                ),
+            })],
             ['serverinfo', RequestTemplate.build({
                 method: 'get',
                 level: 'view',
@@ -394,7 +418,7 @@ export class Interface {
                     }
 
                     if (req.resource && x.method !== 'get') {
-                        this.manager.metrics.pushMetricValue(
+                        void this.manager.metrics.pushMetricValue(
                             'AUDIT',
                             {
                                 timestamp: new Date().valueOf(),

@@ -23,6 +23,7 @@ import { IngameReport } from '../services/ingame-report';
 import { Service } from '../types/service';
 import { Database } from '../services/database';
 import { ServerInfo } from '../types/server-info';
+import { MissionFiles } from '../services/mission-files';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configschema = require('../config/config.schema.json');
@@ -74,6 +75,9 @@ export class Manager {
 
     @Service({ type: Database, stateful: true })
     public database!: Database;
+
+    @Service({ type: MissionFiles, stateful: false })
+    public missionFiles!: MissionFiles;
 
     // config
     public config!: Config;
