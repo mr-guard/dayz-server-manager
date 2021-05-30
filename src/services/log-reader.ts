@@ -113,13 +113,26 @@ export class LogReader implements IStatefulService {
     private async registerReaders(): Promise<void> {
         await this.findLatestFiles();
 
-        for (const type of Object.keys(LogTypeEnum)) {
-            const logContainer = this.logMap[type as LogType];
+        const createTail = (type: string, logContainer: LogContainer, retry?: number): void => {
             logContainer.logLines = [];
-            if (logContainer.logFiles.length) {
-                logContainer.tail = new tail.Tail(logContainer.logFiles[0].file, { follow: true, fromBeginning: true, flushAtEOF: true });
+            if (logContainer.logFiles?.length) {
+                logContainer.tail = new tail.Tail(
+                    logContainer.logFiles[0].file,
+                    {
+                        follow: true,
+                        fromBeginning: true,
+                        flushAtEOF: true,
+                    },
+                );
                 logContainer.tail.on('error', (e) => {
                     this.log.log(LogLevel.WARN, `Error reading ${type}`, e);
+                    logContainer.tail.unwatch();
+                    if (!retry || retry < 1) {
+                        setTimeout(
+                            () => createTail(type, logContainer, (retry ?? 0) + 1),
+                            10000,
+                        );
+                    }
                 });
                 logContainer.tail.on('line', (line) => {
                     if (line) {
@@ -131,6 +144,11 @@ export class LogReader implements IStatefulService {
                     }
                 });
             }
+        };
+
+        for (const type of Object.keys(LogTypeEnum)) {
+            const logContainer = this.logMap[type as LogType];
+            createTail(type, logContainer);
         }
     }
 
