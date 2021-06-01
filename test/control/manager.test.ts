@@ -321,13 +321,40 @@ describe('Test class Manager', () => {
         expect(result).to.be.equal(9999);
     });
 
-    it('Manager-getIngameToken', () => {
+    it('Manager-getIngameToken', async () => {
         // Method call
         const manager = getConfiguredManager();
+
+        manager.monitor = {
+            getDayZProcesses: async () => {
+                return [];
+            },
+        } as any;
+        await manager.calcIngameToken();
+
         const result = manager.getIngameToken();
 
         // Expect result
         expect(result).to.match(/DZSM-\d+-\d+-\d+/g);
+    });
+
+    it('Manager-getIngameToken-runningProcess', async () => {
+        // Method call
+        const manager = getConfiguredManager();
+
+        manager.monitor = {
+            getDayZProcesses: async () => {
+                return [{
+                    CommandLine: 'dsfjalkdshafdsha -serverManagerToken=DZSM-1-1-1 fdhlsahfjdskla fdjksalhfd'
+                }];
+            },
+        } as any;
+        await manager.calcIngameToken();
+
+        const result = manager.getIngameToken();
+
+        // Expect result
+        expect(result).to.equal('DZSM-1-1-1');
     });
 
     it('Manager-initDone', () => {
