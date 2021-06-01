@@ -24,7 +24,18 @@ export const VALID_CONFIG = `{
         "password": "moderator"
     }],
     "rconPassword": "test123",
-    "steamUsername": "testuser"
+    "steamUsername": "testuser",
+    "serverCfg": {
+        "hostname": "Example",
+        "maxPlayers": 30,
+        "verifySignatures": 2,
+        "instanceId": 1,
+        "Missions": {
+            "DayZ": {
+                "template": "test.chernarusplus"
+            }
+        }
+    }
 }`;
 
 export const PARSER_ERROR_CONFIG = `{a: 123`;
