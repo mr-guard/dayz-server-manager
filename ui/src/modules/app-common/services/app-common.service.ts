@@ -359,4 +359,33 @@ export class AppCommonService {
         );
     }
 
+    public fetchMissionFile(): Observable<string> {
+        return this.httpClient.get<string>(
+            `${environment.host}/api/serverinfo`,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+            },
+        ).pipe(
+            catchError((e) => processError(e)),
+        );
+    }
+
+    public updateMissionFile(file: string, content: string, withBackup?: boolean): Observable<void> {
+        return this.httpClient.post(
+            `${environment.host}/api/serverinfo`,
+            {
+                file,
+                content,
+                withBackup,
+            },
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+            },
+        ).pipe(
+            catchError((e) => processError(e)),
+        );
+    }
+
 }

@@ -36,12 +36,12 @@ export class ConfigParser {
             const line = input.slice(ptr, ptr + eol).trim();
             // eslint-disable-next-line no-cond-assign
             if (classMatch = line.match(/^class\s+([a-zA-Z0-9_]+)((\s*:\s*([a-zA-Z0-9_]+)){0,1})/i)) {
-                if (this.debug) {
-                    console.log('classMatch', classMatch[1], level);
-                }
                 const nextBracket = this.find(input, ptr, '{');
                 const nextSemi = this.find(input, ptr, ';');
-                if (nextBracket < nextSemi) {
+                if (this.debug) {
+                    console.log('classMatch', classMatch[1], level, nextBracket, nextSemi);
+                }
+                if (nextBracket !== -1 && nextBracket < nextSemi) {
                     ptr += this.find(input, ptr, '{');
                     const innerStart = ptr;
                     let parenthesisCount = 1;
