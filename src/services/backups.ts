@@ -69,13 +69,7 @@ export class Backups implements IService {
         const backups = await this.getBackups();
         for (const backup of backups) {
             if ((now - backup.mtime) > (this.manager.config.backupMaxAge * 24 * 60 * 60 * 1000)) {
-                await fs.promises.rm(
-                    backup.file,
-                    {
-                        force: true,
-                        recursive: true,
-                    },
-                );
+                await this.paths.removeLink(backup.file);
             }
         }
     }

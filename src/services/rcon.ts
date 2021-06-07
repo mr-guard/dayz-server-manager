@@ -33,13 +33,16 @@ export class RCON implements IStatefulService {
     private connected: boolean = false;
 
     private connectionErrorCounter: number = 0;
-    private connectionErrorRestartEnabled: boolean = false;
-
-    private fakePlayers: boolean = false;
 
     public constructor(
         public manager: Manager,
     ) {}
+
+    private createSocket(port: number): Socket {
+        return new Socket({
+            port,
+        });
+    }
 
     public async start(skipServerWait?: boolean): Promise<void> {
 
@@ -60,9 +63,7 @@ export class RCON implements IStatefulService {
         }
 
         // create socket
-        this.socket = new Socket({
-            port: openListeningPort,
-        });
+        this.socket = this.createSocket(openListeningPort);
 
         this.socket.on('listening', (socket) => {
             const addr = socket.address();
@@ -78,7 +79,7 @@ export class RCON implements IStatefulService {
         });
 
         this.socket.on('error', (err) => {
-            this.log.log(LogLevel.ERROR, `socket error`, err.message);
+            this.log.log(LogLevel.ERROR, `socket error`, err?.message);
         });
 
         if (skipServerWait) {
@@ -141,19 +142,19 @@ export class RCON implements IStatefulService {
             if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
                 this.log.log(LogLevel.ERROR, `connection error`, err.message);
 
-                // restart on connection errors
-                this.connectionErrorCounter++;
-                if (this.connectionErrorRestartEnabled && this.connectionErrorCounter >= 5) {
-                    await this.stop();
-                    void this.start(true);
-                }
+                // restart on connection errors (disabled for now)
+                // this.connectionErrorCounter++;
+                // if (this.connectionErrorCounter >= 5) {
+                //     await this.stop();
+                //     void this.start(true);
+                // }
 
             } else {
                 this.log.log(LogLevel.ERROR, `connection error`, err);
             }
         });
 
-        this.connection?.on('connected', () => {
+        this.connection.on('connected', () => {
             this.log.log(LogLevel.IMPORTANT, 'connected');
             this.connected = true;
             void this.sendCommand('say -1 Big Brother Connected.');
@@ -233,7 +234,9 @@ export class RCON implements IStatefulService {
         if (this.socket) {
             return new Promise<void>((r) => {
                 this.socket.removeAllListeners();
-                (this.socket!['socket'] as dgram.Socket).close(() => {
+                ((this.socket!['socket'] as dgram.Socket) ?? {
+                    close: (c) => c(),
+                }).close(() => {
                     this.socket = undefined;
                     r();
                 });
@@ -286,18 +289,6 @@ export class RCON implements IStatefulService {
     }
 
     public async getPlayers(): Promise<RconPlayer[]> {
-
-        if (this.fakePlayers) {
-            return [1, 2, 3, 15, 24, 42].map((x) => ({
-                id: String(x),
-                name: `TestPlayer${x}`,
-                beguid: `111${x}-12341-124-5215125-1251251-125`,
-                ip: '127.0.0.1',
-                port: '1337',
-                ping: String(Math.round(Math.random() * 100)),
-                lobby: false,
-            }));
-        }
 
         const data = await this.getPlayersRaw();
 

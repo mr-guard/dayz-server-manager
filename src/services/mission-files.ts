@@ -29,6 +29,9 @@ export class MissionFiles implements IService {
     }
 
     public async writeMissionFile(file: string, content: string): Promise<void> {
+        if (!file || !content) {
+            return;
+        }
         const filePath = path.join(
             this.getMissionPath(),
             file,

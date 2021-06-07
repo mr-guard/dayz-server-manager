@@ -49,25 +49,31 @@ export class Interface {
         this.setupCommandMap();
     }
 
-    private setupCommandMap(): void {
-
-        const singleParamWrapper = (param: string, fnc: (p: any) => Promise<any>, result?: boolean, optional?: boolean) => {
-            return async (req: Request) => {
-                if (!optional && (!req.body || !req.body[param])) {
-                    return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param ${param}`);
-                }
-                if (result) {
-                    return this.executeWithResult(
-                        req,
-                        () => fnc(req.body[param]),
-                    );
-                }
-                return this.executeWithoutResult(
+    private singleParamWrapper(
+        param: string,
+        fnc: (p: any) => Promise<any>,
+        result?: boolean,
+        optional?: boolean,
+    ): (r: Request) => Promise<Response> {
+        return async (req: Request) => {
+            const paramVal = req.body ? req.body[param] : null;
+            if (!optional && !paramVal) {
+                return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param ${param}`);
+            }
+            if (result) {
+                return this.executeWithResult(
                     req,
-                    () => fnc(req.body[param]),
+                    () => fnc(paramVal),
                 );
-            };
+            }
+            return this.executeWithoutResult(
+                req,
+                () => fnc(paramVal),
+            );
         };
+    }
+
+    private setupCommandMap(): void {
 
         this.commandMap = new Map([
             ['ping', RequestTemplate.build({
@@ -126,7 +132,7 @@ export class Interface {
                 method: 'post',
                 level: 'moderate',
                 params: ['message'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'message',
                     (message) => this.manager.rcon?.global(message),
                 ),
@@ -143,7 +149,7 @@ export class Interface {
                 method: 'post',
                 level: 'moderate',
                 params: ['player'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'player',
                     (player) => this.manager.rcon?.kick(player),
                 ),
@@ -152,7 +158,7 @@ export class Interface {
                 method: 'post',
                 level: 'moderate',
                 params: ['player'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'player',
                     (player) => this.manager.rcon?.ban(player),
                 ),
@@ -161,7 +167,7 @@ export class Interface {
                 method: 'post',
                 level: 'moderate',
                 params: ['player'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'player',
                     (player) => this.manager.rcon?.removeBan(player),
                 ),
@@ -179,7 +185,7 @@ export class Interface {
                 level: 'manage',
                 params: ['force'],
                 paramsOptional: true,
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'force',
                     (force) => this.manager.monitor?.killServer(!!force && force !== 'false'),
                     false,
@@ -231,7 +237,7 @@ export class Interface {
                     }
                     return this.executeWithResult(
                         req,
-                        () => this.manager.metrics.fetchMetrics(req.query.type, req.body.since ? Number(req.query.since) : undefined),
+                        () => this.manager.metrics.fetchMetrics(req.query.type, req.body?.since ? Number(req.query.since) : undefined),
                     );
                 },
             })],
@@ -240,7 +246,7 @@ export class Interface {
                 level: 'admin',
                 disableDiscord: true,
                 params: ['maxAgeDays'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'maxAgeDays',
                     async (maxAgeDays) => {
                         const days = Number(maxAgeDays);
@@ -248,8 +254,8 @@ export class Interface {
                             this.manager.metrics.deleteMetrics(days);
                         }
                     },
-                    true,
-                    true,
+                    false,
+                    false,
                 ),
             })],
             ['logs', RequestTemplate.build({
@@ -273,13 +279,13 @@ export class Interface {
                 disableDiscord: true,
                 action: (req) => this.executeWithResult(
                     req,
-                    () => (async () => {
+                    async () => {
                         const userLevel = this.manager.getUserLevel(req.user);
                         if (userLevel) {
                             this.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);
                         }
                         return userLevel;
-                    })(),
+                    },
                 ),
             })],
             ['config', RequestTemplate.build({
@@ -288,7 +294,7 @@ export class Interface {
                 disableDiscord: true,
                 action: (req) => this.executeWithResult(
                     req,
-                    () => (async () => this.manager.config)(),
+                    () => Promise.resolve(this.manager.config),
                 ),
             })],
             ['updateconfig', RequestTemplate.build({
@@ -296,12 +302,12 @@ export class Interface {
                 level: 'admin',
                 disableDiscord: true,
                 params: ['config'],
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'config',
                     async (config) => {
                         try {
                             this.manager.writeConfig(config);
-                            void ManagerController.INSTANCE.run();
+                            void ManagerController.INSTANCE.start();
                             return true;
                         } catch (e) {
                             throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
@@ -357,8 +363,8 @@ export class Interface {
                 action: (req) => this.executeWithoutResult(
                     req,
                     () => this.manager.missionFiles.writeMissionFile(
-                        req.body.file,
-                        req.body.content,
+                        req.body?.file,
+                        req.body?.content,
                     ),
                 ),
             })],
@@ -366,7 +372,7 @@ export class Interface {
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                action: singleParamWrapper(
+                action: this.singleParamWrapper(
                     'file',
                     (file) => this.manager.missionFiles.readMissionFile(file),
                     true,
@@ -383,67 +389,11 @@ export class Interface {
                 ),
             })],
         ]);
-
-        // apply Init Lock
-        this.commandMap.forEach((x) => {
-            if (x.level) {
-                const origAction = x.action;
-                x.action = async (req) => {
-                    if (!this.manager.initDone) {
-                        return new Response(
-                            HTTP.HTTP_STATUS_LOCKED,
-                            'The ServerManager is currently starting...',
-                        );
-                    }
-                    return origAction(req);
-                };
-            }
-        });
-
-        // apply RBAC and audit
-        this.commandMap.forEach((x) => {
-            if (x.level) {
-                const origAction = x.action;
-                x.action = async (req) => {
-                    const user = this.manager.config?.admins?.find((admin) => admin.userId === req.user);
-                    if (
-                        !user
-                        || !req.user
-                        || !this.manager.isUserOfLevel(req.user, x.level)
-                    ) {
-                        return new Response(
-                            HTTP.HTTP_STATUS_UNAUTHORIZED,
-                            'You are not allowed to do that',
-                        );
-                    }
-
-                    if (req.resource && x.method !== 'get') {
-                        void this.manager.metrics.pushMetricValue(
-                            'AUDIT',
-                            {
-                                timestamp: new Date().valueOf(),
-                                user: user.userId,
-                                value: req,
-                            },
-                        );
-
-                        if (req.resource !== 'global') {
-                            this.log.log(
-                                LogLevel.IMPORTANT,
-                                `User '${req.user}' executed: ${req.resource}`,
-                            );
-                        }
-                    }
-
-                    return origAction(req);
-                };
-            }
-        });
     }
 
     private handleExecutionError(req: Request, error: any): Response {
         const errorMsg = `Error executing interface action: ${req.resource}`;
-        console.error(errorMsg, error);
+        this.log.log(LogLevel.ERROR, errorMsg, error);
         if (error instanceof Response) {
             return error;
         }
@@ -483,7 +433,7 @@ export class Interface {
 
     private getDayZProcesses = async (req: Request): Promise<any> => {
         const result = await this.manager.monitor?.getDayZProcesses();
-        if (!result) {
+        if (!result?.length) {
             throw new Response(
                 HTTP.HTTP_STATUS_NOT_FOUND,
                 'Could not find any processes ¯\\_(ツ)_/¯',
@@ -525,6 +475,53 @@ export class Interface {
         return this.manager.rcon?.getBans();
     };
 
+    // apply RBAC and audit
+    private async actionRbacCheck(req: Request): Promise<Response | null> {
+        const x = this.commandMap.get(req.resource);
+        if (x.level) {
+            const user = this.manager.config?.admins?.find((admin) => admin.userId === req.user);
+            if (
+                !user
+                || !req.user
+                || !this.manager.isUserOfLevel(req.user, x.level)
+            ) {
+                return new Response(
+                    HTTP.HTTP_STATUS_UNAUTHORIZED,
+                    'You are not allowed to do that',
+                );
+            }
+
+            if (req.resource && x.method !== 'get') {
+                void this.manager.metrics.pushMetricValue(
+                    'AUDIT',
+                    {
+                        timestamp: new Date().valueOf(),
+                        user: user.userId,
+                        value: req,
+                    },
+                );
+
+                if (req.resource !== 'global') {
+                    this.log.log(
+                        LogLevel.IMPORTANT,
+                        `User '${req.user}' executed: ${req.resource}`,
+                    );
+                }
+            }
+        }
+    }
+
+    // apply Init Lock
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private async actionInitCheck(req: Request): Promise<Response | null> {
+        if (!this.manager.initDone) {
+            return new Response(
+                HTTP.HTTP_STATUS_LOCKED,
+                'The ServerManager is currently starting...',
+            );
+        }
+        return null;
+    }
 
     public async execute(req: Request): Promise<Response> {
         if (!req.resource || !this.commandMap.has(req.resource)) {
@@ -532,6 +529,18 @@ export class Interface {
                 HTTP.HTTP_STATUS_BAD_REQUEST,
                 'Unkown action',
             );
+        }
+
+        const interceptors: ((r: Request) => Promise<Response | null>)[] = [
+            (r) => this.actionInitCheck(r),
+            (r) => this.actionRbacCheck(r),
+        ];
+
+        for (const interceptor of interceptors) {
+            const resp = await interceptor(req);
+            if (resp) {
+                return resp;
+            }
         }
 
         return this.commandMap.get(req.resource).action(req);

@@ -9,6 +9,11 @@ import { IService } from '../types/service';
 
 export class IngameReport implements IService {
 
+    public readonly MOD_NAME = '@DayZServerManager';
+    public readonly MOD_NAME_EXPANSION = '@DayZServerManagerExpansion';
+
+    public readonly EXPANSION_VEHICLES_MOD_ID = '2291785437';
+
     private log = new Logger('IngameReport');
 
     private paths = new Paths();
@@ -60,11 +65,11 @@ export class IngameReport implements IService {
     }
 
     public getServerMods(): string[] {
-        const mods = ['@DayZServerManager'];
+        const mods = [this.MOD_NAME];
         if (
-            this.manager.config.steamWsMods.includes('2291785437') // Expansion Vehicles
+            this.manager.config.steamWsMods.includes(this.EXPANSION_VEHICLES_MOD_ID)
         ) {
-            mods.push('@DayZServerManagerExpansion');
+            mods.push(this.MOD_NAME_EXPANSION);
         }
         return mods;
     }

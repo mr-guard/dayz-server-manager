@@ -46,6 +46,9 @@
     "include": [
       "src/**/*.ts"
     ],
+    "exclude": [
+      "src/index.ts"
+    ],
     "require": [
       "ts-node/register"
     ],
@@ -61,6 +64,7 @@
     "all": true
   },
   "mocha": {
+    "timeout": 5000,
     "extension": [
       "ts"
     ],

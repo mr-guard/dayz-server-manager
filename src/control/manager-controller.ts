@@ -41,7 +41,7 @@ export class ManagerController {
         }
     }
 
-    private async stopCurrent(): Promise<void> {
+    public async stop(): Promise<void> {
         if (this.manager) {
             this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
             await this.forEachManagerServices(async (manager, service, config) => {
@@ -66,9 +66,9 @@ export class ManagerController {
         }
     }
 
-    public async run(): Promise<void> {
+    public async start(): Promise<void> {
 
-        await this.stopCurrent();
+        await this.stop();
 
         this.manager = new Manager();
 

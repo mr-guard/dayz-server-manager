@@ -19,7 +19,9 @@ interface IMonitor {
     startServer(skipPrep?: boolean): Promise<boolean>;
 }
 
-class MonitorLoop {
+export class MonitorLoop {
+
+    private loopInterval = 500;
 
     private log = new Logger('Monitor');
 
@@ -72,7 +74,7 @@ class MonitorLoop {
                 lastTick = new Date().valueOf();
             }
 
-            await new Promise((r) => setTimeout(r, 500));
+            await new Promise((r) => setTimeout(r, this.loopInterval));
 
         }
 
@@ -120,6 +122,12 @@ class MonitorLoop {
 
     private async checkPossibleStuckState(): Promise<void> {
         const processes = await this.monitor.getDayZProcesses();
+
+        // no processes found, also means no process to be stuck
+        if (!processes?.length) {
+            this.lastServerUsages = [];
+            return;
+        }
 
         if (this.lastServerUsages.length >= 5) {
             this.lastServerUsages.shift();
@@ -214,9 +222,8 @@ export class Monitor implements IStatefulService, IMonitor {
         }
     }
 
-    public async start(): Promise<void> {
-        if (this.watcher) return;
-        this.watcher = new MonitorLoop(
+    private createWatcher(): MonitorLoop {
+        return new MonitorLoop(
             this,
             this.manager.getServerPath(),
             this.manager.config.serverProcessPollIntervall,
@@ -224,6 +231,11 @@ export class Monitor implements IStatefulService, IMonitor {
                 this.internalServerState = state;
             },
         );
+    }
+
+    public async start(): Promise<void> {
+        if (this.watcher) return;
+        this.watcher = this.createWatcher();
         await this.watcher.start();
         this.log.log(LogLevel.IMPORTANT, 'Starting to watch server');
     }
@@ -437,7 +449,11 @@ export class Monitor implements IStatefulService, IMonitor {
                     const hour = x.CreationDate.substr(8, 2);
                     const minute = x.CreationDate.substr(10, 2);
                     const second = x.CreationDate.substr(12, 2);
-                    x.CreationDate = `${y}-${m}-${d} ${hour}:${minute}:${second}`;
+                    return {
+                        ...x,
+                        // eslint-disable-next-line @typescript-eslint/naming-convention
+                        CreationDate: `${y}-${m}-${d} ${hour}:${minute}:${second}`,
+                    };
                 }
                 return x;
             });
@@ -506,8 +522,8 @@ export class Monitor implements IStatefulService, IMonitor {
                 mem: Math.floor(process.memoryUsage().heapTotal / 1024 / 1024),
             };
 
-            if (this.manager.monitor?.serverState === ServerState.STARTED) {
-                const processes = await this.manager.monitor?.getDayZProcesses();
+            if (this.serverState === ServerState.STARTED) {
+                const processes = await this.getDayZProcesses();
                 if (processes?.length) {
                     report.server = {
                         cpuTotal: this.processes.getProcessCPUUsage(processes[0]),

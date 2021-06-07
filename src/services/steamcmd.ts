@@ -1,10 +1,10 @@
 import * as fs from 'fs';
+import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as extractzip from 'extract-zip';
 import { Manager } from '../control/manager';
 import { Paths } from '../util/paths';
 import { Processes } from '../util/processes';
-import { download } from '../util/download';
+import { download, extractZip } from '../util/download';
 import { Logger, LogLevel } from '../util/logger';
 import { sameDirHash } from '../util/compare-folders';
 import { IService } from '../types/service';
@@ -14,6 +14,9 @@ export class SteamCMD implements IService {
     private static readonly DAYZ_APP_ID = '221100';
     private static readonly DAYZ_SERVER_APP_ID = '223350';
     private static readonly DAYZ_EXPERIMENTAL_SERVER_APP_ID = '1042420';
+
+    // time to wait after the zip has been extracted (to avoid errors)
+    private extractDelay = 5000;
 
     private log = new Logger('SteamCMD');
 
@@ -40,7 +43,7 @@ export class SteamCMD implements IService {
 
     private async downloadSteamCmd(): Promise<boolean> {
 
-        const cmdPath = this.manager.config!.steamCmdPath;
+        const cmdPath = path.dirname(this.getCmdPath());
         const zipPath = path.join(cmdPath, 'steamcmd.zip');
 
         try {
@@ -58,7 +61,7 @@ export class SteamCMD implements IService {
         }
 
         try {
-            await extractzip(zipPath, { dir: path.resolve(cmdPath) });
+            await extractZip(zipPath, { dir: path.resolve(cmdPath) });
             this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
         } catch (e) {
             this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
@@ -73,7 +76,7 @@ export class SteamCMD implements IService {
         }
 
         // wait for the exe not to be 'busy'
-        await new Promise((r) => setTimeout(r, 5000));
+        await new Promise((r) => setTimeout(r, this.extractDelay));
 
         return true;
     }
@@ -164,10 +167,7 @@ export class SteamCMD implements IService {
     public async updateServer(): Promise<boolean> {
 
         const serverPath = this.manager.getServerPath();
-        if (!fs.existsSync(serverPath)) {
-            this.log.log(LogLevel.DEBUG, `Creating Serverfolder @ ${serverPath}`);
-            fs.mkdirSync(serverPath);
-        }
+        fse.ensureDirSync(serverPath);
 
         const success = await this.execute([
             ...this.getLoginArgs(),
@@ -228,10 +228,7 @@ export class SteamCMD implements IService {
     public async updateMod(modId: string): Promise<boolean> {
 
         const wsBasePath = this.getWsBasePath();
-        if (!fs.existsSync(wsBasePath)) {
-            this.log.log(LogLevel.DEBUG, `Creating Workshop Folder @ ${wsBasePath}`);
-            fs.mkdirSync(wsBasePath);
-        }
+        fse.ensureDirSync(wsBasePath);
 
         const success = await this.execute([
             ...this.getLoginArgs(),

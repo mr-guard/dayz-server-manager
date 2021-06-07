@@ -53,6 +53,7 @@ export class Events implements IStatefulService {
                             }
                             case 'backup': {
                                 void this.manager.backup.createBackup();
+                                break;
                             }
                             default: {
                                 break;

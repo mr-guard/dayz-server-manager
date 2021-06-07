@@ -38,6 +38,8 @@ export class LogReader implements IStatefulService {
     };
     /* eslint-enable @typescript-eslint/naming-convention */
 
+    private initDelay = 5000;
+
     public constructor(
         public manager: Manager,
     ) {}
@@ -45,9 +47,9 @@ export class LogReader implements IStatefulService {
     public async start(): Promise<void> {
         this.manager.monitor.registerStateListener('LogReader', (x) => {
             if (x === ServerState.STARTED) {
-                setTimeout(async () => {
+                setTimeout(() => {
                     void this.registerReaders();
-                }, 5000);
+                }, this.initDelay);
             }
         });
     }

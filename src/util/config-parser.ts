@@ -112,8 +112,12 @@ export class ConfigParser {
                     }
                     ptr += 1;
                 }
-                const inner = `[${input.slice(innerStart, ptr - 1).trim()}]`;
-                output[arrMatch[1]] = JSON.parse(inner);
+                const inner = input
+                    .slice(innerStart, ptr - 1)
+                    .replace(/\{/g, '[')
+                    .replace(/\}/g, ']')
+                    .trim();
+                output[arrMatch[1]] = JSON.parse(`[${inner}]`);
                 eol = this.find(input, ptr, '\n');
             }
             ptr += eol;

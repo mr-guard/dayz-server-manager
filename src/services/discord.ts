@@ -60,7 +60,7 @@ export class DiscordBot implements IStatefulService {
             this.log.log(LogLevel.DEBUG, `Detected message: ${message.content}`);
         }
 
-        if (message.content?.startsWith('!')) {
+        if (message.content?.startsWith(this.messageHandler.PREFIX)) {
             void this.messageHandler.handleCommandMessage(message);
         }
     }

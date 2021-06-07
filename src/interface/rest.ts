@@ -28,44 +28,31 @@ export class REST {
         public manager: Manager,
     ) {}
 
+    // for easier tests
+    private createExpress(): express.Application {
+        return express();
+    }
+
     public start(): Promise<void> {
-        this.express = express();
+        this.express = this.createExpress();
 
         this.port = this.manager.getWebPort();
 
         // middlewares
-        this.express.all('*', (req, res, next) => {
-            const origin = req.header('Origin')?.toLowerCase() ?? '';
-            res.header('Access-Control-Allow-Origin', origin);
-            res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-            res.header('Access-Control-Allow-Credentials', 'true');
-
-            if (req.method?.toLowerCase() === 'options') {
-                res.sendStatus(204);
-                return;
-            }
-
-            next();
-        });
-
         this.express.use(bodyParser.json());
         this.express.use(bodyParser.urlencoded({ extended: true }));
         this.express.use(loggerMiddleware);
 
-        const users: { [k: string]: string } = {};
-        for (const user of (this.manager.config?.admins ?? [])) {
-            users[user.userId] = user.password;
-        }
-
         // static content
         this.express.use(express.static(this.UI_FILES));
+
+        this.setupExpress();
 
         // controllers
         this.express.use(
             '/api',
             this.router,
         );
-        this.router.use(basicAuth({ users, challenge: false }));
         this.setupRouter();
 
         return new Promise(
@@ -82,15 +69,49 @@ export class REST {
 
     }
 
+    private setupExpress(): void {
+        // cors
+        this.express.all('*', (req, res, next) => this.handleCors(req, res, next));
+
+        this.express.get('/login', (req, res) => this.handleUiFileRequest(req, res));
+        this.express.get('/dashboard/*', (req, res) => this.handleUiFileRequest(req, res));
+        this.express.get('/dashboard', (req, res) => this.handleUiFileRequest(req, res));
+
+        this.express.post('/ingame/stats', (req, res) => this.handleIngameRequest(req, res));
+    }
+
+    private handleCors(req: express.Request, res: express.Response, next: express.NextFunction): void {
+        const origin = req.header('Origin')?.toLowerCase() ?? '';
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+        res.header('Access-Control-Allow-Credentials', 'true');
+
+        if (req.method?.toLowerCase() === 'options') {
+            res.sendStatus(204);
+            return;
+        }
+
+        next();
+    }
+
+    private handleUiFileRequest(req: express.Request, res: express.Response): void {
+        res.sendFile(path.join(this.UI_FILES, 'index.html'));
+    }
+
+    private handleIngameRequest(req: express.Request, res: express.Response): void {
+        if (req.query?.token === this.manager.getIngameToken()) {
+            void this.manager.ingameReport.processIngameReport(req.body);
+        }
+        res.send();
+    }
+
     private setupRouter(): void {
 
-        const handleUiFileRequest = async (req, res): Promise<any> => {
-            // res.redirect(301, '/');
-            res.sendFile(path.join(this.UI_FILES, 'index.html'));
-        };
-        this.express.get('/login', handleUiFileRequest);
-        this.express.get('/dashboard/*', handleUiFileRequest);
-        this.express.get('/dashboard', handleUiFileRequest);
+        const users: { [k: string]: string } = {};
+        for (const user of (this.manager.config?.admins ?? [])) {
+            users[user.userId] = user.password;
+        }
+        this.router.use(basicAuth({ users, challenge: false }));
 
         for (const [resource, command] of this.manager.interface!.commandMap) {
 
@@ -99,38 +120,42 @@ export class REST {
             this.log.log(LogLevel.DEBUG, `Registering ${command.method} ${resource}`);
             (this.router as any)[command.method](
                 `/${resource}`,
-                // `/${path}`,
-                async (req: express.Request, res: express.Response) => {
-                    if (!this.manager.initDone) {
-                        res.sendStatus(503);
-                        return;
-                    }
-
-                    const base64Credentials = req.headers.authorization?.split(' ')[1];
-                    const username = base64Credentials
-                        ? Buffer.from(base64Credentials, 'base64')?.toString('ascii')?.split(':')[0]
-                        : '';
-
-                    const internalRequest = new Request();
-                    internalRequest.accept = req.headers.accept ?? 'application/json';
-                    internalRequest.body = req.body;
-                    internalRequest.query = req.query;
-                    internalRequest.resource = resource;
-                    internalRequest.user = username;
-
-                    const internalResponse = await this.manager.interface.execute(internalRequest);
-
-                    res.status(internalResponse.status).send(internalResponse.body);
+                (req, res) => {
+                    void this.handleCommand(
+                        req,
+                        res,
+                        resource,
+                    );
                 },
             );
         }
+    }
 
-        this.express.post('/ingame/stats', (req, res) => {
-            if (req.query.token === this.manager.getIngameToken()) {
-                void this.manager.ingameReport.processIngameReport(req.body);
-            }
-            res.send();
-        });
+    private async handleCommand(
+        req: express.Request,
+        res: express.Response,
+        resource: string,
+    ): Promise<void> {
+        if (!this.manager.initDone) {
+            res.sendStatus(503);
+            return;
+        }
+
+        const base64Credentials = req.headers.authorization?.split(' ')[1];
+        const username = base64Credentials
+            ? Buffer.from(base64Credentials, 'base64')?.toString('ascii')?.split(':')[0]
+            : '';
+
+        const internalRequest = new Request();
+        internalRequest.accept = req.headers.accept ?? 'application/json';
+        internalRequest.body = req.body;
+        internalRequest.query = req.query;
+        internalRequest.resource = resource;
+        internalRequest.user = username;
+
+        const internalResponse = await this.manager.interface.execute(internalRequest);
+
+        res.status(internalResponse.status).send(internalResponse.body);
     }
 
     public stop(): Promise<void> {

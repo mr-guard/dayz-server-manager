@@ -7,6 +7,8 @@ export class Metrics implements IStatefulService {
 
     private log = new Logger('Metrics');
 
+    private initialTimeout = 1000;
+    private timeout: any;
     private interval: any;
 
     public constructor(
@@ -27,14 +29,19 @@ export class Metrics implements IStatefulService {
             `);
         }
 
-        setTimeout(() => {
+        this.timeout = setTimeout(() => {
+            this.timeout = undefined;
             this.interval = setInterval(() => {
                 void this.tick();
             }, this.manager.config.metricPollIntervall);
-        }, 1000);
+        }, this.initialTimeout);
     }
 
     public async stop(): Promise<void> {
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = undefined;
+        }
         if (this.interval) {
             clearInterval(this.interval);
             this.interval = undefined;

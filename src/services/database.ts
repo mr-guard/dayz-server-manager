@@ -3,12 +3,19 @@ import { Manager } from '../control/manager';
 import { IStatefulService } from '../types/service';
 import { Logger, LogLevel } from '../util/logger';
 
-class Sqlite3Wrapper {
+export class Sqlite3Wrapper {
+
+    private static createDb(
+        file: string,
+        opts: sqlite3.Options,
+    ): sqlite3.Database {
+        return new sqlite3(file, opts);
+    }
 
     private db: sqlite3.Database;
 
     public constructor(file: string, readonly?: boolean) {
-        this.db = new sqlite3(file, {
+        this.db = Sqlite3Wrapper.createDb(file, {
             readonly,
         });
     }
