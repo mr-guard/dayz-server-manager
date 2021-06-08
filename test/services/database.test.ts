@@ -5,7 +5,7 @@ import * as sinon from 'sinon';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as sqlite from 'better-sqlite3';
-import { Database, Sqlite3Wrapper } from '../../src/services/database';
+import { Database, DatabaseTypes, Sqlite3Wrapper } from '../../src/services/database';
 
 describe('Test class Database', () => {
 
@@ -23,7 +23,7 @@ describe('Test class Database', () => {
                     run: sinon.stub(),
                     get: sinon.stub(),
                 }),
-                close: () => {},
+                close: sinon.stub(),
             } as any;
         }
     });
@@ -46,11 +46,16 @@ describe('Test class Database', () => {
         const db = new Database(manager as any);
 
         await db.start();
-        await db.stop();
+        expect(createCalled).to.be.false;
 
+        const metricsdb = db.getDatabase(DatabaseTypes.METRICS);
         expect(createCalled).to.be.true;
-        expect(db.metricsDb).to.be.undefined;
-        
+        expect(metricsdb).to.be.not.undefined;
+
+        await db.stop();
+        expect(db['databases']).to.be.empty;
+        expect((metricsdb['db'].close as sinon.SinonStub).callCount).to.equal(1);
+
     });
 
 });

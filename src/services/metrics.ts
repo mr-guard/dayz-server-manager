@@ -2,6 +2,7 @@ import { Manager } from '../control/manager';
 import { MetricType, MetricTypeEnum, MetricWrapper } from '../types/metrics';
 import { Logger, LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
+import { DatabaseTypes } from './database';
 
 export class Metrics implements IStatefulService {
 
@@ -21,7 +22,7 @@ export class Metrics implements IStatefulService {
         }
 
         for (const metricKey of Object.keys(MetricTypeEnum)) {
-            this.manager.database.metricsDb.run(`
+            this.manager.database.getDatabase(DatabaseTypes.METRICS).run(`
                 CREATE TABLE IF NOT EXISTS ${metricKey} (
                     timestamp UNSIGNED BIG INT PRIMARY KEY,
                     value TEXT
@@ -49,7 +50,7 @@ export class Metrics implements IStatefulService {
     }
 
     public async pushMetricValue<T extends MetricWrapper<any>>(type: MetricType, value: T): Promise<void> {
-        this.manager.database.metricsDb.run(
+        this.manager.database.getDatabase(DatabaseTypes.METRICS).run(
             `
                 INSERT INTO ${type} (timestamp, value) VALUES (?, ?)
             `,
@@ -86,7 +87,7 @@ export class Metrics implements IStatefulService {
 
         const delTs = new Date().valueOf() - (maxDays * 24 * 60 * 60 * 1000);
         for (const key of Object.keys(MetricTypeEnum)) {
-            this.manager.database.metricsDb.run(`
+            this.manager.database.getDatabase(DatabaseTypes.METRICS).run(`
                 DELETE FROM ${key} WHERE timestamp < ?
             `, delTs);
         }
@@ -94,7 +95,7 @@ export class Metrics implements IStatefulService {
     }
 
     public async fetchMetrics(type: MetricType, since?: number): Promise<MetricWrapper<any>[]> {
-        return this.manager.database.metricsDb.all(
+        return this.manager.database.getDatabase(DatabaseTypes.METRICS).all(
             `
                 SELECT * FROM ${type} WHERE timestamp > ? ORDER BY timestamp ASC
             `,

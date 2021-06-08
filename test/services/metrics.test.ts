@@ -23,11 +23,12 @@ describe('Test class Metrics', () => {
 
     it('Metrics', async () => {
 
+        const db = {
+            run: (sql) => {},
+        };
         const manager = {
             database: {
-                metricsDb: {
-                    run: (sql) => {},
-                },
+                getDatabase: (t) => db,
             },
             rcon: {
                 getPlayers: async () => [],
@@ -35,9 +36,9 @@ describe('Test class Metrics', () => {
             monitor: {
                 getSystemReport: async () => ({})
             },
-        } as any;
+        };
 
-        const metrics = new Metrics(manager);
+        const metrics = new Metrics(manager as any);
 
         await metrics.start();
         await metrics.stop();
@@ -49,11 +50,12 @@ describe('Test class Metrics', () => {
 
     it('Metrics-tick', async () => {
 
+        const db = {
+            run: sinon.stub(),
+        }
         const manager = {
             database: {
-                metricsDb: {
-                    run: sinon.stub(),
-                },
+                getDatabase: (t) => db,
             },
             rcon: {
                 getPlayers: async () => [],
@@ -76,37 +78,39 @@ describe('Test class Metrics', () => {
         expect(metrics['timeout']).to.be.undefined;
         expect(metrics['interval']).to.be.undefined;
 
-        expect(manager.database.metricsDb.run.callCount).to.be.greaterThanOrEqual(3);
+        expect(db.run.callCount).to.be.greaterThanOrEqual(3);
 
     });
 
     it('Metrics-delete', async () => {
 
+        const db = {
+            run: sinon.stub(),
+        }
         const manager = {
             database: {
-                metricsDb: {
-                    run: sinon.stub(),
-                },
+                getDatabase: (t) => db,
             },
         };
 
         const metrics = new Metrics(manager as any);
         
         await metrics.deleteMetrics(5);
-        expect(manager.database.metricsDb.run.callCount).to.be.greaterThanOrEqual(1);
+        expect(db.run.callCount).to.be.greaterThanOrEqual(1);
 
     });
 
     it('Metrics-fetch', async () => {
 
+        const db = {
+            all: sinon.stub().returns([{
+                timestamp: 1234,
+                value: '{ "test": "test" }'
+            }]),
+        };
         const manager = {
             database: {
-                metricsDb: {
-                    all: sinon.stub().returns([{
-                        timestamp: 1234,
-                        value: '{ "test": "test" }'
-                    }]),
-                },
+                getDatabase: (t) => db,
             },
         };
 
