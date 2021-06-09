@@ -28,7 +28,7 @@ export const validateConfig = (config: Config): string[] => {
     // check required fields
     for (const configKey in refConfig) {
         if (Reflect.getMetadata('config-required', refConfig, configKey)) {
-            if (!config[configKey]) {
+            if (config[configKey] === null || config[configKey] === undefined) {
                 errors.push(`Missing required entry: ${configKey}`);
             }
         }
@@ -38,7 +38,7 @@ export const validateConfig = (config: Config): string[] => {
     if (config.serverCfg) {
         for (const configKey in refConfig.serverCfg) {
             if (Reflect.getMetadata('config-required', refConfig.serverCfg, configKey)) {
-                if (!config.serverCfg[configKey]) {
+                if (config.serverCfg[configKey] === null || config.serverCfg[configKey] === undefined) {
                     errors.push(`Missing required entry in serverCfg: ${configKey}`);
                 }
             }
