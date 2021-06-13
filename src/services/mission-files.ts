@@ -28,6 +28,20 @@ export class MissionFiles implements IService {
         return String(await fse.readFile(filePath));
     }
 
+    public async readMissionDir(dir: string): Promise<string[]> {
+        const filePath = path.join(
+            this.getMissionPath(),
+            dir,
+        );
+        return (await (fse.readdir(filePath, { withFileTypes: true })))
+            .map((x) => {
+                if (x.isDirectory() && !x.name.endsWith('/')) {
+                    return `${x.name}/`;
+                }
+                return x.name;
+            });
+    }
+
     public async writeMissionFile(file: string, content: string): Promise<void> {
         if (!file || !content) {
             return;
@@ -36,6 +50,7 @@ export class MissionFiles implements IService {
             this.getMissionPath(),
             file,
         );
+        await fse.ensureDir(path.dirname(filePath));
         await fse.writeFile(filePath, content);
     }
 

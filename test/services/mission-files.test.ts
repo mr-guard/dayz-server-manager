@@ -54,6 +54,47 @@ describe('Test class MissionFiles', () => {
 
     });
 
+    it('MissionFiles-readDir', async () => {
+
+        const readMock = ImportMock.mockFunction(fse, 'readdir');
+        readMock.withArgs(
+            path.join(
+                'testserver',
+                'mpmissions',
+                'dayz.chernarusplus',
+                '/'
+            )
+        ).returns([{
+            name: 'test',
+            isDirectory: () => true,
+        },{
+            name: 'testfile',
+            isDirectory: () => false,
+        }]);
+
+        const manager = {
+            getServerPath: () => 'testserver',
+            config: {
+                serverCfg: {
+                    Missions: {
+                        DayZ: {
+                            template: 'dayz.chernarusplus',
+                        },
+                    },
+                },
+            },
+        } as any;
+
+        const files = new MissionFiles(manager);
+
+        const content = await files.readMissionDir('/');
+
+        expect(content.length).to.equal(2);
+        expect(content).to.include('test/');
+        expect(content).to.include('testfile');
+
+    });
+
     it('MissionFiles-write', async () => {
 
         const writeMock = ImportMock.mockFunction(fse, 'writeFile');
