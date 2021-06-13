@@ -40,6 +40,7 @@ interface MapInfo {
     defaultZoom: number;
     attribution: string;
     tileSize: number;
+    scale: number;
     center: [number, number];
     worldSize: number;
     preview: string;
@@ -204,7 +205,7 @@ export class MapComponent implements OnInit, OnDestroy {
         ).toPromise()) as MapInfo;
         this.mapScale = Math.ceil(
             Math.log(
-                this.info!.worldSize / (this.info!.tileSize ?? 256),
+                this.info!.worldSize / ((this.info!.tileSize ?? 256) / (this.info!.scale ?? 1)),
             ) / Math.log(2),
         );
 
