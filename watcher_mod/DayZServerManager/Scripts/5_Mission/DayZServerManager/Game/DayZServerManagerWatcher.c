@@ -69,6 +69,7 @@ class DayZServerManagerWatcher
     private string m_token;
     private string m_port;
     private ref Timer m_Timer;
+	private ref Timer m_InitTimer;
 	private ref JsonSerializer m_serializer;
 
     void DayZServerManagerWatcher()
@@ -79,37 +80,43 @@ class DayZServerManagerWatcher
 		
         if (!IsMissionClient())
 		{
-			#ifdef DZSM_DEBUG
-			PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT");
-			#endif
-			
-			string port;
-            GetGame().CommandlineGetParam("serverManagerPort", port);
-
-			m_port = port;
-
-			string token;
-            GetGame().CommandlineGetParam("serverManagerToken", token);
-
-			m_token = token;
-
-            m_api = CreateRestApi();
-            // m_api.EnableDebug(true);
-
-			string url = "http://localhost:" + m_port + "/ingame/";
-			#ifdef DZSM_DEBUG
-			PrintToRPT("DZSM ~ URL - " + url);
-			#endif
-            m_context = m_api.GetRestContext(url);
-
-			m_serializer = new JsonSerializer();
-			
-            StartLoop();
-			#ifdef DZSM_DEBUG
-			PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
-			#endif
+			m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
+			m_InitTimer.Run(5.0 * 60.0, this, "init", null, false);
         }
     }
+
+	void init()
+	{
+		#ifdef DZSM_DEBUG
+		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT");
+		#endif
+		
+		string port;
+		GetGame().CommandlineGetParam("serverManagerPort", port);
+
+		m_port = port;
+
+		string token;
+		GetGame().CommandlineGetParam("serverManagerToken", token);
+
+		m_token = token;
+
+		m_api = CreateRestApi();
+		// m_api.EnableDebug(true);
+
+		string url = "http://localhost:" + m_port + "/ingame/";
+		#ifdef DZSM_DEBUG
+		PrintToRPT("DZSM ~ URL - " + url);
+		#endif
+		m_context = m_api.GetRestContext(url);
+
+		m_serializer = new JsonSerializer();
+		
+		StartLoop();
+		#ifdef DZSM_DEBUG
+		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
+		#endif
+	}
 
     void Post(string data)
 	{
