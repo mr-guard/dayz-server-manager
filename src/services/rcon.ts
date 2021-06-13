@@ -232,14 +232,18 @@ export class RCON implements IStatefulService {
         }
 
         if (this.socket) {
-            return new Promise<void>((r) => {
-                this.socket.removeAllListeners();
-                ((this.socket!['socket'] as dgram.Socket) ?? {
-                    close: (c) => c(),
-                }).close(() => {
-                    this.socket = undefined;
-                    r();
-                });
+            return new Promise<void>((res, rej) => {
+                try {
+                    this.socket.removeAllListeners();
+                    ((this.socket!['socket'] as dgram.Socket) ?? {
+                        close: (c) => c(),
+                    }).close(() => {
+                        this.socket = undefined;
+                        res();
+                    });
+                } catch (e) {
+                    rej(e);
+                }
             });
         }
     }

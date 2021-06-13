@@ -313,114 +313,122 @@ export class Monitor implements IStatefulService, IMonitor {
         await this.manager.requirements.checkFirewall();
     }
 
+    private buildStartServerArgs(): string[] {
+        const args = [
+            '/c', 'start',
+            '/D', this.manager.getServerPath(),
+            this.manager.config!.serverExe,
+            `-config=${this.manager.config!.serverCfgPath}`,
+            `-port=${this.manager.config!.serverPort}`,
+            `-profiles=${this.manager.config!.profilesPath}`,
+        ];
+        const modList = [
+            ...(this.manager.steamCmd?.buildWsModParams() ?? []),
+            ...(this.manager.config?.localMods ?? []),
+        ];
+        if (modList?.length) {
+            args.push(`-mod=${modList.join(';')}`);
+        }
+
+        // Ingame Reporting Addon
+        const serverMods = [
+            ...(this.manager.ingameReport.getServerMods()),
+            ...(this.manager.config?.serverMods ?? []),
+        ];
+
+        if (serverMods?.length) {
+            args.push(`-servermod=${serverMods.join(';')}`);
+        }
+
+        args.push(
+            `-serverManagerPort=${this.manager.getWebPort()}`,
+            `-serverManagerToken=${this.manager.getIngameToken()}`,
+        );
+
+        if (this.manager.config?.adminLog) {
+            args.push('-adminlog');
+        }
+        if (this.manager.config?.doLogs) {
+            args.push('-dologs');
+        }
+        if (this.manager.config?.filePatching) {
+            args.push('-filePatching');
+        }
+        if (this.manager.config?.freezeCheck) {
+            args.push('-freezecheck');
+        }
+        const limitFPS = this.manager.config?.limitFPS ?? 0;
+        if (limitFPS > 0 && limitFPS < 200) {
+            args.push(`-limitFPS=${limitFPS}`);
+        }
+        const cpuCount = this.manager.config?.cpuCount ?? 0;
+        if (cpuCount && cpuCount > 0) {
+            args.push(`-cpuCount=${cpuCount}`);
+        }
+        if (this.manager.config?.netLog) {
+            args.push('-netLog');
+        }
+        if (this.manager.config?.scrAllowFileWrite) {
+            args.push('-scrAllowFileWrite');
+        }
+        if (this.manager.config?.scriptDebug) {
+            args.push('-scriptDebug');
+        }
+        if (this.manager.config?.serverLaunchParams?.length) {
+            args.push(...this.manager.config?.serverLaunchParams);
+        }
+        return args;
+    }
+
     public async startServer(skipPrep?: boolean): Promise<boolean> {
-        return new Promise(async (r) => {
+        return new Promise(async (res, rej) => {
+            try {
 
-            await this.prepareServerStart(skipPrep);
+                await this.prepareServerStart(skipPrep);
 
-            const hooks = this.manager.getHooks('beforeStart');
-            if (hooks.length) {
-                for (const hook of hooks) {
-                    this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
-                    const hookOut = await this.processes.spawnForOutput(
-                        hook.program,
-                        hook.params ?? [],
-                        {
-                            dontThrow: true,
-                        },
-                    );
-                    if (hookOut?.status === 0) {
-                        this.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
-                    } else {
-                        this.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
+                const hooks = this.manager.getHooks('beforeStart');
+                if (hooks.length) {
+                    for (const hook of hooks) {
+                        this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
+                        const hookOut = await this.processes.spawnForOutput(
+                            hook.program,
+                            hook.params ?? [],
+                            {
+                                dontThrow: true,
+                            },
+                        );
+                        if (hookOut?.status === 0) {
+                            this.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
+                        } else {
+                            this.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
+                        }
                     }
                 }
-            }
 
-            const args = [
-                '/c', 'start',
-                '/D', this.manager.getServerPath(),
-                this.manager.config!.serverExe,
-                `-config=${this.manager.config!.serverCfgPath}`,
-                `-port=${this.manager.config!.serverPort}`,
-                `-profiles=${this.manager.config!.profilesPath}`,
-            ];
-            const modList = [
-                ...(this.manager.steamCmd?.buildWsModParams() ?? []),
-                ...(this.manager.config?.localMods ?? []),
-            ];
-            if (modList?.length) {
-                args.push(`-mod=${modList.join(';')}`);
-            }
+                const args = this.buildStartServerArgs();
+                const sub = spawn(
+                    'cmd',
+                    args,
+                    {
+                        detached: true,
+                        stdio: 'ignore',
+                    },
+                );
 
-            // Ingame Reporting Addon
-            const serverMods = [
-                ...(this.manager.ingameReport.getServerMods()),
-                ...(this.manager.config?.serverMods ?? []),
-            ];
+                sub.on('error', (e) => {
+                    this.log.log(LogLevel.IMPORTANT, 'Error while trying to start server', e);
+                    res(false);
+                });
 
-            if (serverMods?.length) {
-                args.push(`-servermod=${serverMods.join(';')}`);
+                sub.on(
+                    'exit',
+                    (code) => {
+                        res(code === 0);
+                    },
+                );
+            } catch (e) {
+                rej(e);
             }
-
-            args.push(
-                `-serverManagerPort=${this.manager.getWebPort()}`,
-                `-serverManagerToken=${this.manager.getIngameToken()}`,
-            );
-
-            if (this.manager.config?.adminLog) {
-                args.push('-adminlog');
-            }
-            if (this.manager.config?.doLogs) {
-                args.push('-dologs');
-            }
-            if (this.manager.config?.filePatching) {
-                args.push('-filePatching');
-            }
-            if (this.manager.config?.freezeCheck) {
-                args.push('-freezecheck');
-            }
-            const limitFPS = this.manager.config?.limitFPS ?? 0;
-            if (limitFPS > 0 && limitFPS < 200) {
-                args.push(`-limitFPS=${limitFPS}`);
-            }
-            const cpuCount = this.manager.config?.cpuCount ?? 0;
-            if (cpuCount && cpuCount > 0) {
-                args.push(`-cpuCount=${cpuCount}`);
-            }
-            if (this.manager.config?.netLog) {
-                args.push('-netLog');
-            }
-            if (this.manager.config?.scrAllowFileWrite) {
-                args.push('-scrAllowFileWrite');
-            }
-            if (this.manager.config?.scriptDebug) {
-                args.push('-scriptDebug');
-            }
-            if (this.manager.config?.serverLaunchParams?.length) {
-                args.push(...this.manager.config?.serverLaunchParams);
-            }
-
-            const sub = spawn(
-                'cmd',
-                args,
-                {
-                    detached: true,
-                    stdio: 'ignore',
-                },
-            );
-
-            sub.on('error', (e) => {
-                this.log.log(LogLevel.IMPORTANT, 'Error while trying to start server', e);
-                r(false);
-            });
-
-            sub.on(
-                'exit',
-                (code) => {
-                    r(code === 0);
-                },
-            );
         });
 
     }

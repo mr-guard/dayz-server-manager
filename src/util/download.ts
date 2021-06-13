@@ -6,23 +6,25 @@ import * as https from 'https';
 import * as extract from 'extract-zip';
 
 export const download = (url: string, target: string): Promise<void> => {
-    return new Promise<void>((r) => {
+    return new Promise<void>((res, rej) => {
+        try {
+            const dirname = path.dirname(target);
+            fse.ensureDirSync(dirname);
 
-        const dirname = path.dirname(target);
-        fse.ensureDirSync(dirname);
-
-        const file = fs.createWriteStream(target);
-        (url.startsWith('https') ? https : http).get(
-            url,
-            (response) => {
-                response.pipe(file);
-                file.on('finish', () => {
-                    file.close();
-                    r();
-                });
-            },
-        );
-
+            const file = fs.createWriteStream(target);
+            (url.startsWith('https') ? https : http).get(
+                url,
+                (response) => {
+                    response.pipe(file);
+                    file.on('finish', () => {
+                        file.close();
+                        res();
+                    });
+                },
+            );
+        } catch (e) {
+            rej(e);
+        }
     });
 };
 
