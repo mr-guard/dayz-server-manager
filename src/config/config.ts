@@ -722,6 +722,11 @@ export class Config {
      */
     public linkModDirs: boolean = false;
 
+    /**
+     * Whether to deep compare mods instead of just checking for update timestamps
+     */
+    public copyModDeepCompare: boolean = false;
+
     // /////////////////////////// Events ///////////////////////////////////////
 
     /**

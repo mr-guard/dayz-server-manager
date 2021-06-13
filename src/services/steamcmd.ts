@@ -263,6 +263,19 @@ export class SteamCMD implements IService {
         return true;
     }
 
+    private async sameModMeta(modDir: string, serverDir: string): Promise<boolean> {
+        const modMeta = path.join(modDir, 'meta.cpp');
+        const serverMeta = path.join(serverDir, 'meta.cpp');
+        if (
+            !fs.existsSync(modMeta)
+            || !fs.existsSync(serverMeta)
+        ) {
+            return false;
+        }
+
+        return `${fs.readFileSync(modMeta)}` === `${fs.readFileSync(serverMeta)}`;
+    }
+
     public async installMod(modId: string): Promise<boolean> {
         const modName = this.getWsModName(modId);
         if (!modName) {
@@ -282,12 +295,27 @@ export class SteamCMD implements IService {
             }
         } else {
 
-            // eslint-disable-next-line no-lonely-if
-            if (await sameDirHash(modDir, serverDir)) {
+            let isUp2Date = false;
+
+            if (
+                !isUp2Date
+                && this.manager.config.copyModDeepCompare
+                && await sameDirHash(modDir, serverDir)
+            ) {
+                isUp2Date = true;
+            }
+
+            if (
+                !isUp2Date
+                && !this.manager.config.copyModDeepCompare
+            ) {
+                isUp2Date = await this.sameModMeta(modDir, serverDir);
+            }
+
+            if (isUp2Date) {
                 this.log.log(LogLevel.INFO, `Skipping copy of mod (${modId}) dir because its already up to date`);
             } else {
                 this.log.log(LogLevel.INFO, `Copying mod (${modId}) dir`);
-                // eslint-disable-next-line no-lonely-if
                 if (!await this.paths.copyDirFromTo(
                     modDir,
                     serverDir,
