@@ -17,6 +17,8 @@ export class REST {
 
     public express: express.Application | undefined;
     public server: Server | undefined;
+
+    public host: string | undefined;
     public port: number | undefined;
 
     public path = '/';
@@ -37,6 +39,7 @@ export class REST {
         this.express = this.createExpress();
 
         this.port = this.manager.getWebPort();
+        this.host = this.manager.config.publishWebServer ? '0.0.0.0' : '127.0.0.1';
 
         // middlewares
         this.express.use(bodyParser.json());
@@ -59,8 +62,9 @@ export class REST {
             (r) => {
                 this.server = this.express!.listen(
                     this.port,
+                    this.host,
                     () => {
-                        this.log.log(LogLevel.IMPORTANT, `App listening on the http://localhost:${this.port}`);
+                        this.log.log(LogLevel.IMPORTANT, `App listening on the http://${this.host}:${this.port}`);
                         r();
                     },
                 );

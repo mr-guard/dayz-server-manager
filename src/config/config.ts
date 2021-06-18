@@ -502,6 +502,19 @@ export class Config {
     @Reflect.metadata('config-range', [-1, 65535])
     public webPort: number = 0;
 
+    /**
+     * Whether or not to publish the WebUI or not
+     *
+     * if this is enabled, the webserver host is 0.0.0.0 rather than localhost
+     * this can be a security risk, so better leave this turned off if you dont know what this means
+     * and use a browser on your server to connect to the web ui via localhost
+     *
+     * if you want to publish the web ui, it is recommended to use a reverse proxy (such as nginx)
+     * and secure the connection to the reverse proxy with a SSL Cert for HTTPS
+     * (because this app wont provide HTTPS capabilities)
+     */
+    public publishWebServer: boolean = false;
+
     // /////////////////////////// Discord ////////////////////////////////////
 
     /**
