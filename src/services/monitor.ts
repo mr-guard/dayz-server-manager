@@ -173,6 +173,17 @@ export class Monitor implements IStatefulService, IMonitor {
     private set internalServerState(state: ServerState) {
         if (this.$internalServerState === state) return;
 
+        // prevent intermediate state change
+        if (
+            state === ServerState.STARTED
+            && (
+                this.$internalServerState === ServerState.STOPPING
+            )
+        ) {
+            // TODO force resume after this occurs multiple times?
+            return;
+        }
+
         // handle stop after running
         if (
             state === ServerState.STOPPED
