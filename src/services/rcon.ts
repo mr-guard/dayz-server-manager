@@ -214,7 +214,11 @@ export class RCON implements IStatefulService {
             response = await this.connection.command(command);
             this.log.log(LogLevel.DEBUG, `response to ${response.command}:\n${response.data}`);
         } catch (e) {
-            this.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
+            if (typeof e === 'object' && (e?.message as string)?.includes('Server connection timed out')) {
+                this.log.log(LogLevel.ERROR, 'Error while executing RCON command: Server connection timed out');
+            } else {
+                this.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
+            }
         }
 
         return response?.data ?? null;
