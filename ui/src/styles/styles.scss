@@ -19,3 +19,7 @@
 @import "navigation/sidenav/sidenav.scss";
 @import "navigation/sidenav/sidenav-dark.scss";
 @import "navigation/sidenav/sidenav-light.scss";
+
+@import "../../node_modules/ag-grid-community/dist/styles/ag-grid.css";
+@import "../../node_modules/ag-grid-community/dist/styles/ag-theme-alpine.css";
+@import "~@ng-select/ng-select/themes/default.theme.css";

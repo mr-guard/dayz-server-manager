@@ -9,12 +9,15 @@ import { AppCommonModule } from '@common/app-common.module';
 import { NavigationModule } from '@modules/navigation/navigation.module';
 
 /* Containers */
-import * as containers from './containers';
+import { containers, renderers } from './containers';
 
 
 /* Services */
 import * as services from './services';
 import { PlayersModule } from '@modules/players/players.module';
+import { AgGridModule } from 'ag-grid-angular';
+import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 @NgModule({
     imports: [
@@ -25,16 +28,23 @@ import { PlayersModule } from '@modules/players/players.module';
         AppCommonModule,
         NavigationModule,
         PlayersModule,
+        AgGridModule.withComponents([
+            ...renderers,
+        ]),
+        NgMultiSelectDropDownModule.forRoot(),
+        NgSelectModule,
     ],
     providers: [
         DecimalPipe,
         ...services.services,
     ],
     declarations: [
-        ...containers.containers,
+        ...containers,
+        ...renderers,
     ],
     exports: [
-        ...containers.containers,
+        ...containers,
+        ...renderers,
     ],
 })
 export class FilesModule {}
