@@ -83,12 +83,17 @@ export class SettingsComponent implements OnInit {
         });
     }
 
-    private getServerCfgProps(): Property[] {
+    public getServerCfgProps(): Property[] {
         return (this.schema.definitions.ServerCfg.propertyOrder as ServerCfgKey[])
             .filter((x) => {
                 const { type } = this.schema.definitions.ServerCfg.properties[x];
-                return ['string', 'number'].includes(type)
+
+                const included = ['string', 'number'].includes(type)
                     && !(['motd', 'motdInterval', 'Missions'] as ServerCfgKey[]).includes(x);
+
+                console.log(`${x}: ${included}`);
+
+                return included;
             })
             .map((x) => ({
                 ...(this.schema.definitions.ServerCfg.properties[x] as Property),

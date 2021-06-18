@@ -204,13 +204,31 @@
                             <pre class="small text-muted">
                                 {{ schema.properties.steamWsMods.description }}
                             </pre>
-                            <div class="row" *ngFor="let mod of config.steamWsMods; let idx = index">
-                                <div class="col-md-11">
+                            <div class="row" style="margin-bottom: 15px;" *ngFor="let mod of config.steamWsMods; let idx = index">
+                                <div class="col-md-11" *ngIf="config.steamWsMods[idx]['includes']">
                                     <input  type="text"
                                             class="form-control"
                                             [(ngModel)]="config.steamWsMods[idx]"
                                             [ngModelOptions]="{standalone: true}"
                                     >
+                                </div>
+                                <div class="col-md-11" *ngIf="!config.steamWsMods[idx]['includes']">
+                                    <div class="prefixed-input">
+                                        <label>Name</label>
+                                        <input  type="text"
+                                                class="form-control"
+                                                [(ngModel)]="config.steamWsMods[idx]['name']"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                    </div>
+                                    <div class="prefixed-input">
+                                        <label>WorkshopId</label>
+                                        <input  type="text"
+                                                class="form-control"
+                                                [(ngModel)]="config.steamWsMods[idx]['workshopId']"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                    </div>
                                 </div>
                                 <div class="col-md-1">
                                     <button class="btn btn-danger form-control" type="button" (click)="config.steamWsMods.splice(idx, 1)">
@@ -219,7 +237,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn form-control" (click)="config.steamWsMods.push('')">
+                        <button type="button" class="btn form-control" (click)="config.steamWsMods.push({name: '', workshopId: ''})">
                             <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Entry
                         </button>
                     </div>

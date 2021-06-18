@@ -7,3 +7,14 @@
 .small.text-muted {
     white-space: pre-line;
 }
+
+.prefixed-input {
+    display: flex;
+    flex-direction: row;
+    label {
+        display: flex;
+        align-self: center;
+        margin-bottom: 0;
+        margin-right: 1em;
+    }
+}
