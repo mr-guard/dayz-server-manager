@@ -81,11 +81,15 @@ export class Metrics implements IStatefulService {
 
         await this.pushMetric(MetricTypeEnum.SYSTEM, () => this.manager.monitor.getSystemReport());
 
+        if (this.manager.config.metricMaxAge && this.manager.config.metricMaxAge > 0) {
+            this.deleteMetrics(this.manager.config.metricMaxAge);
+        }
+
     }
 
-    public deleteMetrics(maxDays: number): void {
+    public deleteMetrics(maxAge: number): void {
 
-        const delTs = new Date().valueOf() - (maxDays * 24 * 60 * 60 * 1000);
+        const delTs = new Date().valueOf() - maxAge;
         for (const key of Object.keys(MetricTypeEnum)) {
             this.manager.database.getDatabase(DatabaseTypes.METRICS).run(`
                 DELETE FROM ${key} WHERE timestamp < ?

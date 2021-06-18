@@ -42,9 +42,16 @@ export class MissionFiles implements IService {
             });
     }
 
-    public async writeMissionFile(file: string, content: string): Promise<void> {
+    public async writeMissionFile(
+        file: string,
+        content: string,
+        createBackup?: boolean,
+    ): Promise<void> {
         if (!file || !content) {
             return;
+        }
+        if (createBackup) {
+            await this.manager.backup.createBackup();
         }
         const filePath = path.join(
             this.getMissionPath(),

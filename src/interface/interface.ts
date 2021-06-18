@@ -237,7 +237,13 @@ export class Interface {
                     }
                     return this.executeWithResult(
                         req,
-                        () => this.manager.metrics.fetchMetrics(req.query.type, req.body?.since ? Number(req.query.since) : undefined),
+                        () => {
+                            const ts = req.query?.since ? Number(req.query.since) : undefined;
+                            return this.manager.metrics.fetchMetrics(
+                                req.query.type,
+                                ts,
+                            );
+                        },
                     );
                 },
             })],
@@ -251,7 +257,7 @@ export class Interface {
                     async (maxAgeDays) => {
                         const days = Number(maxAgeDays);
                         if (days > 0) {
-                            this.manager.metrics.deleteMetrics(days);
+                            this.manager.metrics.deleteMetrics(days * 24 * 60 * 60 * 1000);
                         }
                     },
                     false,
@@ -359,12 +365,13 @@ export class Interface {
                 method: 'post',
                 level: 'manage',
                 disableDiscord: true,
-                params: ['file', 'content'],
+                params: ['file', 'content', 'createBackup'],
                 action: (req) => this.executeWithoutResult(
                     req,
                     () => this.manager.missionFiles.writeMissionFile(
                         req.body?.file,
                         req.body?.content,
+                        req.body?.createBackup,
                     ),
                 ),
             })],
@@ -372,12 +379,30 @@ export class Interface {
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                action: this.singleParamWrapper(
-                    'file',
-                    (file) => this.manager.missionFiles.readMissionFile(file),
-                    true,
-                    false,
-                ),
+                params: ['file'],
+                action: async (req: Request) => {
+                    if (!req.query?.file) {
+                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param 'file'`);
+                    }
+                    return this.executeWithResult(
+                        req,
+                        () => this.manager.missionFiles.readMissionFile(req.query.file),
+                    );
+                },
+            })],
+            ['readmissiondir', RequestTemplate.build({
+                method: 'get',
+                level: 'manage',
+                disableDiscord: true,
+                action: async (req: Request) => {
+                    if (!req.query?.dir) {
+                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param 'dir'`);
+                    }
+                    return this.executeWithResult(
+                        req,
+                        () => this.manager.missionFiles.readMissionDir(req.query.dir),
+                    );
+                },
             })],
             ['serverinfo', RequestTemplate.build({
                 method: 'get',
