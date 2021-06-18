@@ -67,7 +67,7 @@ export class IngameReport implements IService {
     public getServerMods(): string[] {
         const mods = [this.MOD_NAME];
         if (
-            this.manager.config.steamWsMods.includes(this.EXPANSION_VEHICLES_MOD_ID)
+            this.manager.getModIdList().includes(this.EXPANSION_VEHICLES_MOD_ID)
         ) {
             mods.push(this.MOD_NAME_EXPANSION);
         }

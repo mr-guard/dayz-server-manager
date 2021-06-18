@@ -221,7 +221,7 @@ export class SteamCMD implements IService {
     }
 
     public buildWsModParams(): string[] {
-        return (this.manager.config?.steamWsMods ?? [])
+        return this.manager.getModIdList()
             .map((x) => this.getWsModName(x));
     }
 
@@ -251,7 +251,7 @@ export class SteamCMD implements IService {
     }
 
     public async updateMods(): Promise<boolean> {
-        const modIds = (this.manager.config?.steamWsMods ?? []);
+        const modIds = this.manager.getModIdList();
         // single mod updates must be run synchronously
         // updating multiple mods at once increases the chance of timeouts
         // the retry would then cause the whole process to start all over
@@ -331,7 +331,7 @@ export class SteamCMD implements IService {
     }
 
     public async installMods(): Promise<boolean> {
-        const modIds = (this.manager.config?.steamWsMods ?? []);
+        const modIds = this.manager.getModIdList();
         return (await Promise.all(modIds.map((modId) => {
             return this.installMod(modId);
         }))).every((x) => x);
@@ -357,7 +357,7 @@ export class SteamCMD implements IService {
 
     public async checkMods(): Promise<boolean> {
         const wsPath = this.getWsPath();
-        return (this.manager.config?.steamWsMods ?? [])
+        return this.manager.getModIdList()
             .every((modId) => {
                 const modDir = path.join(wsPath, modId);
                 if (!fs.existsSync(modDir)) {

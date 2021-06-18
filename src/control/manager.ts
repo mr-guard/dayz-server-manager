@@ -227,4 +227,22 @@ export class Manager {
         };
     }
 
+    public getModIdList(): string[] {
+        return (this.config?.steamWsMods ?? [])
+            .filter((x) => {
+                if (typeof x === 'string') {
+                    return !!x;
+                }
+
+                return !!x.workshopId;
+            })
+            .map((x) => {
+                if (typeof x === 'string') {
+                    return x;
+                }
+
+                return x.workshopId;
+            });
+    }
+
 }

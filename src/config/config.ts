@@ -444,6 +444,14 @@ export class Hook {
 
 }
 
+export class WorkshopMod {
+
+    public workshopId!: string;
+
+    public name?: string;
+
+}
+
 export class Config {
 
     /**
@@ -708,7 +716,7 @@ export class Config {
     /**
      * List of Mod IDs (workshop id, not modname!) the server should use
      */
-    public steamWsMods: string[] = [];
+    public steamWsMods: (string | WorkshopMod)[] = [];
 
     /**
      * Whether or not to check for mod updates on each server restart
