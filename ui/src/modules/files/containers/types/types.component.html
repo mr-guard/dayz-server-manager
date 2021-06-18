@@ -1,0 +1,158 @@
+<sb-layout-dashboard>
+    <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <sb-card>
+        <div class="card-header">
+            <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>Types
+        </div>
+        <div class="card-body" *ngIf="!loading">
+            <ngb-alert  *ngIf="outcomeBadge"
+                        [type]="outcomeBadge?.success ? 'success' : 'danger'"
+            >
+                {{ outcomeBadge.message }}
+            </ngb-alert>
+            <form (ngSubmit)="onSubmit()" #configForm="ngForm">
+                
+                <div *ngFor="let file of files">
+                    <strong>{{ file.file }}</strong>
+                    <hr>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>nominal</th>
+                                <th>lifetime</th>
+                                <th>restock</th>
+                                <th>min</th>
+                                <th>quantmin</th>
+                                <th>quantmax</th>
+                                <th>cost</th>
+                                <th>count in cargo</th>
+                                <th>count in hoarder</th>
+                                <th>count in map</th>
+                                <th>count in player</th>
+                                <th>crafted</th>
+                                <th>deloot</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let type of file.content.types.type">
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.$.name"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.nominal[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.lifetime[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.restock[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.min[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.quantmin[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.quantmax[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control"
+                                           [(ngModel)]="type.cost[0]"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.count_in_cargo"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.count_in_hoarder"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.count_in_map"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.count_in_player"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.crafted"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control"
+                                           [(ngModel)]="type.flags[0].$.deloot"
+                                           [ngModelOptions]="{standalone: true}"
+                                    >
+                                        <option [value]="'1'" [ngValue]="'1'">1</option>
+                                        <option [value]="'0'" [ngValue]="'0'">0</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                
+
+                
+                <button type="submit" class="btn btn-success"
+                    [disabled]="!configForm.form.valid">Submit</button>
+                <button type="button" class="btn btn-default" (click)="reset()">Reset</button>
+            </form>
+        </div>
+        <div class="card-body" *ngIf="loading">
+            <fa-icon [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
+        </div>
+    </sb-card>
+</sb-layout-dashboard>

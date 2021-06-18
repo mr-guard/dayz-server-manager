@@ -17,6 +17,12 @@ export const sideNavSections: SideNavSection[] = [
             'map',
         ],
     },
+    {
+        text: 'Files',
+        items: [
+            'types',
+        ],
+    },
 ];
 
 export const sideNavItems: SideNavItems = {
@@ -59,5 +65,10 @@ export const sideNavItems: SideNavItems = {
         icon: 'map',
         text: 'Map',
         link: '/dashboard/map',
+    },
+    types: {
+        icon: 'wrench',
+        text: 'Types',
+        link: '/dashboard/files/types',
     },
 };
