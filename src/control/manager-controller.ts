@@ -91,8 +91,6 @@ export class ManagerController {
             }
         });
 
-        await this.manager.calcIngameToken();
-
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {

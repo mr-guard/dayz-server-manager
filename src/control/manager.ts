@@ -30,8 +30,6 @@ const configschema = require('../config/config.schema.json');
 
 export class Manager {
 
-    private ingameToken: string;
-
     private log = new Logger('Manager');
 
     private paths = new Paths();
@@ -70,7 +68,7 @@ export class Manager {
     @Service({ type: Requirements, stateful: false })
     public requirements!: Requirements;
 
-    @Service({ type: IngameReport, stateful: false })
+    @Service({ type: IngameReport, stateful: true })
     public ingameReport!: IngameReport;
 
     @Service({ type: Database, stateful: true })
@@ -196,24 +194,6 @@ export class Manager {
             return this.config!.webPort;
         }
         return this.config!.serverPort + 11;
-    }
-
-    public async calcIngameToken(): Promise<void> {
-        const procs = await this.monitor.getDayZProcesses();
-        if (procs.length && procs[0].CommandLine.includes('-serverManagerToken=')) {
-            const matches = procs[0].CommandLine.match(/-serverManagerToken=([^\s]*)/);
-            // eslint-disable-next-line prefer-destructuring
-            this.ingameToken = matches[1];
-        }
-
-        if (!this.ingameToken) {
-            this.ingameToken = `DZSM-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}-${Math.floor(Math.random() * 100000)}`;
-        }
-
-    }
-
-    public getIngameToken(): string {
-        return this.ingameToken;
     }
 
     public async getServerInfo(): Promise<ServerInfo> {

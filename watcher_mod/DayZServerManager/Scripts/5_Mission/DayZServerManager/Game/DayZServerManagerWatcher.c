@@ -32,6 +32,7 @@ class ServerManagerEntry
 {
 	string entryType;
 	string type;
+	string category;
 	string name;
 	int id;
 	string position;	
@@ -51,12 +52,17 @@ class ServerManagerEntryContainer
 
 	void ~ServerManagerEntryContainer()
 	{
-		for (int i = 0; i < players; i++)
+		int i = 0;
+		for (i = 0; i < players.Count(); i++)
 		{
-
+			delete players.Get(i);
 		}
 		delete players;
 
+		for (i = 0; i < vehicles.Count(); i++)
+		{
+			delete vehicles.Get(i);
+		}
 		delete vehicles;
 	}
 
@@ -64,14 +70,9 @@ class ServerManagerEntryContainer
 
 class DayZServerManagerWatcher
 {
-    private ref RestApi m_api;
-    private ref RestContext m_context;
-    private string m_token;
-    private string m_port;
     private ref Timer m_Timer;
 	private ref Timer m_InitTimer;
-	private ref JsonSerializer m_serializer;
-
+	
     void DayZServerManagerWatcher()
     {
 		#ifdef DZSM_DEBUG
@@ -81,7 +82,7 @@ class DayZServerManagerWatcher
         if (!IsMissionClient())
 		{
 			m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
-			m_InitTimer.Run(5.0 * 60.0, this, "init", null, false);
+			m_InitTimer.Run(1.0 * 60.0, this, "init", null, false);
         }
     }
 
@@ -91,45 +92,9 @@ class DayZServerManagerWatcher
 		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT");
 		#endif
 		
-		string port;
-		GetGame().CommandlineGetParam("serverManagerPort", port);
-
-		m_port = port;
-
-		string token;
-		GetGame().CommandlineGetParam("serverManagerToken", token);
-
-		m_token = token;
-
-		m_api = CreateRestApi();
-		// m_api.EnableDebug(true);
-
-		string url = "http://localhost:" + m_port + "/ingame/";
-		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ URL - " + url);
-		#endif
-		m_context = m_api.GetRestContext(url);
-
-		m_serializer = new JsonSerializer();
-		
 		StartLoop();
 		#ifdef DZSM_DEBUG
 		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
-		#endif
-	}
-
-    void Post(string data)
-	{
-        // m_context.SetHeader("Token", m_token);
-        m_context.SetHeader("application/json");
-
-		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ POST");
-		#endif
-        m_context.POST(new ServerManagerCallback, "stats?token=" + m_token, data);
-		// m_context.POST_now("stats?token=" + m_token, data);
-		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ POST Done");
 		#endif
 	}
 
@@ -155,7 +120,7 @@ class DayZServerManagerWatcher
 			m_Timer.Stop();
 		}
 	}
-	
+
 	void Tick()
 	{
 		#ifdef DZSM_DEBUG
@@ -163,7 +128,7 @@ class DayZServerManagerWatcher
 		#endif
 		int i;
 		
-		ServerManagerEntryContainer container = new ServerManagerEntryContainer;
+		ref ServerManagerEntryContainer container = new ServerManagerEntryContainer;
 		
 		array<EntityAI> allVehicles;
 		DayZServerManagerContainer.GetVehicles(allVehicles);
@@ -176,6 +141,20 @@ class DayZServerManagerWatcher
 				ref ServerManagerEntry entry = new ServerManagerEntry();
 				
 				entry.entryType = "VEHICLE";
+				
+				if (itrCar.IsKindOf("ExpansionHelicopterScript"))
+				{
+					entry.category = "AIR";
+				}
+				else if (itrCar.IsKindOf("ExpansionBoatScript"))
+				{
+					entry.category = "SEA";
+				}
+				else
+				{
+					entry.category = "GROUND";
+				}
+				
 				entry.name = itrCar.GetName();
 				entry.damage = itrCar.GetDamage();
 				entry.type = itrCar.GetType();
@@ -195,9 +174,11 @@ class DayZServerManagerWatcher
 			{
 				Man player = players.Get(i);
 				
-				ServerManagerEntry playerEntry = new ServerManagerEntry();
+				ref ServerManagerEntry playerEntry = new ServerManagerEntry();
 				
 				playerEntry.entryType = "PLAYER";
+				entry.category = "MAN";
+
 				playerEntry.name = player.GetIdentity().GetName();
 				// player.GetDisplayName();
 				playerEntry.damage = player.GetDamage();
@@ -210,13 +191,13 @@ class DayZServerManagerWatcher
 			}
 		}
 
-		string json;
-		m_serializer.WriteToString(container, false, json);
+		JsonFileLoader<ref ServerManagerEntryContainer>.JsonSaveFile("$profile:DZSM-TICK.json", container);
 
 		#ifdef DZSM_DEBUG		
-		PrintToRPT("DZSM ~ TICK: " + json);
+		PrintToRPT("DZSM ~ Cleanup");
 		#endif
-		Post(json);
+		delete container;
+		
 	}
 
 }

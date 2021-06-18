@@ -340,11 +340,6 @@ export class Monitor implements IStatefulService, IMonitor {
             args.push(`-servermod=${serverMods.join(';')}`);
         }
 
-        args.push(
-            `-serverManagerPort=${this.manager.getWebPort()}`,
-            `-serverManagerToken=${this.manager.getIngameToken()}`,
-        );
-
         if (this.manager.config?.adminLog) {
             args.push('-adminlog');
         }

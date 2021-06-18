@@ -80,8 +80,6 @@ export class REST {
         this.express.get('/login', (req, res) => this.handleUiFileRequest(req, res));
         this.express.get('/dashboard/*', (req, res) => this.handleUiFileRequest(req, res));
         this.express.get('/dashboard', (req, res) => this.handleUiFileRequest(req, res));
-
-        this.express.post('/ingame/stats', (req, res) => this.handleIngameRequest(req, res));
     }
 
     private handleCors(req: express.Request, res: express.Response, next: express.NextFunction): void {
@@ -100,13 +98,6 @@ export class REST {
 
     private handleUiFileRequest(req: express.Request, res: express.Response): void {
         res.sendFile(path.join(this.UI_FILES, 'index.html'));
-    }
-
-    private handleIngameRequest(req: express.Request, res: express.Response): void {
-        if (req.query?.token === this.manager.getIngameToken()) {
-            void this.manager.ingameReport.processIngameReport(req.body);
-        }
-        res.send();
     }
 
     private setupRouter(): void {

@@ -79,6 +79,7 @@ class LayerContainer {
 interface IngameEntity {
     damage: number;
     entryType: 'VEHICLE' | 'PLAYER';
+    category: 'GROUND' | 'AIR' | 'SEA' | 'MAN';
     id: number;
     name: string;
     position: string;
@@ -145,38 +146,13 @@ export class MapComponent implements OnInit, OnDestroy {
             .subscribe(
                 (x?: ServerInfo) => {
                     if (x?.worldName && x.worldName !== this.mapName) {
-                        void this.setUpWorld(x.worldName);
+                        void this.setUpWorld(x.worldName.toLowerCase());
                     }
                 },
             );
 
         await this.appCommon.fetchServerInfo().toPromise();
 
-        this.appCommon.getApiFetcher('INGAME_PLAYERS').latestData
-            .pipe(
-                takeUntil(this.onDestroy),
-            )
-            .subscribe(
-                (data) => {
-                    if (data) {
-                        const players = (data as any).value;
-                        this.updatePlayers(players);
-                    }
-                },
-            );
-
-        this.appCommon.getApiFetcher('INGAME_VEHICLES').latestData
-            .pipe(
-                takeUntil(this.onDestroy),
-            )
-            .subscribe(
-                (data) => {
-                    if (data) {
-                        const vehicles = (data as any).value;
-                        this.updateVehicles(vehicles);
-                    }
-                },
-            );
     }
 
     private createBaseLayers(): void {
@@ -219,6 +195,32 @@ export class MapComponent implements OnInit, OnDestroy {
         };
 
         console.log('Map Setup Done');
+
+        this.appCommon.getApiFetcher('INGAME_PLAYERS').latestData
+            .pipe(
+                takeUntil(this.onDestroy),
+            )
+            .subscribe(
+                (data) => {
+                    if (data) {
+                        const players = (data as any).value;
+                        this.updatePlayers(players);
+                    }
+                },
+            );
+
+        this.appCommon.getApiFetcher('INGAME_VEHICLES').latestData
+            .pipe(
+                takeUntil(this.onDestroy),
+            )
+            .subscribe(
+                (data) => {
+                    if (data) {
+                        const vehicles = (data as any).value;
+                        this.updateVehicles(vehicles);
+                    }
+                },
+            );
     }
 
     private updateLayersControl(): void {
@@ -400,7 +402,7 @@ export class MapComponent implements OnInit, OnDestroy {
             }
 
             return {
-                name: `${x.name}\n(${detail})`,
+                name: `${x.name}\n<small>(${detail})</small>`,
                 icon,
             };
         }
@@ -453,14 +455,18 @@ export class MapComponent implements OnInit, OnDestroy {
     }
 
     private updateVehicles(vehicles: IngameEntity[]): void {
-        const layer = this.layers.get('vehicleLayer')!;
+        const layerGround = this.layers.get('vehicleLayer')!;
+        const layerAir = this.layers.get('airLayer')!;
+        const layerSea = this.layers.get('boatLayer')!;
 
         // remove absent
-        layer.markers
-            .filter((x) => !vehicles.find((vehicle) => `${vehicle.id}` === x.id))
-            .forEach((x) => {
-                layer.layer.removeLayer(x.marker);
-            });
+        for (const layer of [layerGround, layerAir, layerSea]) {
+            layer.markers
+                .filter((x) => !vehicles.find((vehicle) => `${vehicle.id}` === x.id))
+                .forEach((x) => {
+                    layer.layer.removeLayer(x.marker);
+                });
+        }
 
         for (const x of vehicles) {
 
@@ -472,11 +478,22 @@ export class MapComponent implements OnInit, OnDestroy {
                 },
             ).setContent(x.type);
 
+            let layer: LayerContainer = layerGround;
+            let iconClass: string = 'fa fa-car fa-lg';
+
+            if (x.category === 'AIR') {
+                layer = layerAir;
+                iconClass = 'fa fa-helicopter fa-lg';
+            } else if (x.category === 'SEA') {
+                layer = layerSea;
+                iconClass = 'fa fa-ship fa-lg';
+            }
+
             const m = marker(
                 this.unproject([pos[0], this.info!.worldSize - pos[2]]),
                 {
                     icon: divIcon({
-                        html: `<i class="fa fa-car fa-lg"></i>`,
+                        html: `<i class="${iconClass}"></i>`,
                         iconSize: [50, 50],
                         className: 'locationIcon',
                     }),
@@ -488,7 +505,6 @@ export class MapComponent implements OnInit, OnDestroy {
                 toolTip: t,
                 id: String(x.id),
             });
-
             layer.layer.addLayer(m);
         }
     }
