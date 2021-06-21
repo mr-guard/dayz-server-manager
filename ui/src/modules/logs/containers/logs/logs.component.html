@@ -1,11 +1,11 @@
 <sb-layout-dashboard>
     <sb-dashboard-head title="Logs" [hideBreadcrumbs]="false"></sb-dashboard-head>
-    <sb-card>
-        <div class="card-header" style="padding: 0;">
+    <sb-card background="h-100">
+        <div class="card-header log-tabs" style="padding: 0; height: 100%;">
             <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
                 <li [ngbNavItem]="1">
                     <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>RPT Logs</a>
-                    
+
                     <ng-template ngbNavContent>
                         <sb-log-monitor [logStream]="rptStream"
                                     title="RPT Logs"
@@ -15,7 +15,7 @@
                 </li>
                 <li [ngbNavItem]="2">
                     <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>ADM Logs</a>
-                    
+
                     <ng-template ngbNavContent>
                         <sb-log-monitor [logStream]="admStream"
                                     title="ADM Logs"
@@ -25,7 +25,7 @@
                 </li>
                 <li [ngbNavItem]="3">
                     <a ngbNavLink><fa-icon class="mr-1" [icon]='["fas", "clipboard-list"]'></fa-icon>Script Logs</a>
-                    
+
                     <ng-template ngbNavContent>
                         <sb-log-monitor [logStream]="scriptStream"
                                     title="Script Logs"

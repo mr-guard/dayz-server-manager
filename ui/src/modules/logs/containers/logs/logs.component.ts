@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { LogMessage, LogType, LogTypeEnum } from '@common/models';
 import { ApiFetcher, AppCommonService } from '@common/services';
 import { Observable } from 'rxjs';
@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './logs.component.html',
     styleUrls: ['logs.component.scss'],
+    encapsulation: ViewEncapsulation.None,
 })
 export class LogsComponent implements OnInit {
 

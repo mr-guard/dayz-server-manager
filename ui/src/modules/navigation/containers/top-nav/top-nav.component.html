@@ -3,7 +3,16 @@
         <fa-icon [icon]='["fas", "bars"]'></fa-icon>
     </button>
     <a class="navbar-brand" routerLink="/dashboard">Server Manager</a>
-    <div class="row" style="flex-wrap: nowrap; align-items: center;">
+
+    <sb-breadcrumbs *ngIf="!hideBreadcrumbs"></sb-breadcrumbs>
+
+    <div style="margin-left: auto; margin-right: auto;"></div>
+
+    <h2 class="page-title">{{title}}</h2>
+
+    <div style="margin-left: auto; margin-right: auto;"></div>
+
+    <div class="row" style="flex-wrap: nowrap; align-items: center; margin-left: 0; margin-right: 0.25rem">
         <label for="tickSelect" style="color: white; margin-right: 5px; margin-bottom: 0; white-space: nowrap;">Refresh Rate: </label>
         <select id="tickSelect" class="form-control form-control-sm" aria-label="Fetch Delay"
             [(ngModel)]="refreshRate"
@@ -23,7 +32,7 @@
             <fa-icon [icon]='["fas", "sync"]'></fa-icon>
         </button>
     </div>
-    <div style="margin-left: auto; margin-right: auto;"></div>
+
     <button class="btn btn-link order-1 order-lg-0" id="logout" (click)="logout()">
         <fa-icon [icon]='["fas", "sign-out-alt"]'></fa-icon>
     </button>

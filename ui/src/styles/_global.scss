@@ -7,10 +7,13 @@ body {
 
 // Set spacing on containers for page symmetry
 
-.container,
+.container {
+    padding-left: $grid-gutter-width;
+    padding-right: $grid-gutter-width;
+}
+
 .container-fluid {
-  padding-left: $grid-gutter-width;
-  padding-right: $grid-gutter-width;
+  padding: $grid-gutter-width;
 }
 
 .card-no-top {
@@ -21,16 +24,8 @@ body {
 }
 
 .map-container {
-    // background-color: rgba(38, 38, 38, 1);
-    // position: fixed;
-    // top: 0;
-    // bottom: 0;
-    // left: 0;
-    // right: 0;
-    // overflow: hidden;
-    height: 100%;
-    margin-left: -$grid-gutter-width;
-    margin-right: -$grid-gutter-width;
+    height: calc(100% +  2 * 1.5rem /*$grid-gutter-width*/);
+    margin: -$grid-gutter-width;
 }
 
 .position {
@@ -116,4 +111,9 @@ body {
 .ag-floating-filter-body input {
   font-size: 15px;
   font-weight: bold;
+}
+
+.breadcrumb {
+    margin-bottom: 0 !important;
+    padding: 0.25rem 0.5rem;
 }
