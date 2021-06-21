@@ -16,7 +16,6 @@ import { containers, renderers } from './containers';
 import * as services from './services';
 import { PlayersModule } from '@modules/players/players.module';
 import { AgGridModule } from 'ag-grid-angular';
-import { NgMultiSelectDropDownModule } from 'ng-multiselect-dropdown';
 import { NgSelectModule } from '@ng-select/ng-select';
 
 @NgModule({
@@ -31,7 +30,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
         AgGridModule.withComponents([
             ...renderers,
         ]),
-        NgMultiSelectDropDownModule.forRoot(),
         NgSelectModule,
     ],
     providers: [

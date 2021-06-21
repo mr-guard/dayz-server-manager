@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '@common/services';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
@@ -193,6 +193,7 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
     changeDetection: ChangeDetectionStrategy.Default,
     templateUrl: './types.component.html',
     styleUrls: ['types.component.scss'],
+    encapsulation: ViewEncapsulation.None,
 })
 export class TypesComponent implements OnInit {
 
@@ -207,6 +208,8 @@ export class TypesComponent implements OnInit {
 
     private coreXml: any;
     public files: { file: string; content: TypesXml }[] = [];
+
+    public activeTab = 0;
 
     public frameworkComponents = {
         checkboxRenderer: CheckboxRenderer,
