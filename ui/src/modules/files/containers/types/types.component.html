@@ -34,13 +34,42 @@
             >
                 {{ outcomeBadge.message }}
             </ngb-alert>
-            <form (ngSubmit)="onSubmit()" #configForm="ngForm" style="height: 100%">
+            <form (ngSubmit)="onSubmit()" #configForm="ngForm">
 
                 <div [ngbNavOutlet]="nav"></div>
 
-                <button type="submit" class="btn btn-success"
-                    [disabled]="!configForm.form.valid">Submit</button>
-                <button type="button" class="btn btn-default" (click)="reset()">Reset</button>
+                <div class="d-flex flex-row" style="justify-content: space-between;">
+                    <button type="button" class="btn btn-primary"
+                            (click)="reset()"
+                            [disabled]="submitting"
+                    >
+                        Reset
+                    </button>
+                    <div class="d-flex flex-row">
+                        <div class="d-flex flex-row" style="align-items: center;">
+                            <label class="form-label">Create Backup</label>
+                            <input type="checkbox" class="form-control form-control-sm mx-1"
+                                   [(ngModel)]="withBackup"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="submitting"
+                            >
+                        </div>
+                        <div class="d-flex flex-row" style="align-items: center;">
+                            <label class="form-label">Restart Server</label>
+                            <input type="checkbox" class="form-control form-control-sm mx-1"
+                                   [(ngModel)]="withRestart"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="submitting"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-success"
+                                [disabled]="!configForm.form.valid || submitting"
+                        >
+                            <fa-icon *ngIf="submitting" [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
+                            Submit
+                        </button>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="card-body" *ngIf="loading">

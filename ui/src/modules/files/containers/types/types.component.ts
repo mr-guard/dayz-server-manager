@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '@common/services';
+import { MaintenanceService } from '@modules/maintenance/services';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
 
@@ -198,6 +199,10 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
 export class TypesComponent implements OnInit {
 
     public loading = false;
+    public submitting = false;
+
+    public withBackup = false;
+    public withRestart = false;
 
     public test: string = '';
 
@@ -423,12 +428,41 @@ export class TypesComponent implements OnInit {
 
     public constructor(
         public appCommon: AppCommonService,
+        public maintenance: MaintenanceService,
     ) {}
 
-    public onSubmit(): void {
+    public async onSubmit(): Promise<void> {
+        if (this.loading || this.submitting) return;
+        this.submitting = true;
+        this.outcomeBadge = undefined;
 
-        if (this.loading) return;
-        this.loading = true;
+        try {
+
+            for (const file of this.files) {
+                const xmlContent = new xml.Builder().buildObject(file.content);
+                console.log(file.file, xmlContent);
+                await this.appCommon.updateMissionFile(
+                    file.file,
+                    xmlContent,
+                    this.withBackup,
+                ).toPromise();
+            }
+            if (this.withRestart) {
+                await this.maintenance.restartServer();
+            }
+            this.outcomeBadge = {
+                success: true,
+                message: 'Saved successfully',
+            };
+        } catch (e) {
+            console.error(e);
+            this.outcomeBadge = {
+                success: false,
+                message: `Failed to save: ${e.message}`,
+            };
+        }
+
+        this.submitting = false;
     }
 
     public ngOnInit(): void {

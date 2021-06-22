@@ -2,6 +2,12 @@
 
 .types-component {
 
+    .card-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+    }
+
     .row.spaced {
         margin-bottom: 2.5rem;
     }
@@ -28,10 +34,17 @@
     .type-tabs {
         .tab-pane {
             height: 100%;
+            width: 100%;
         }
         .tab-content {
-            height: 90%;
+            display: flex;
+            flex: 1;
             margin-bottom: 1rem;
+        }
+        form {
+            flex-direction: column;
+            display: flex;
+            flex: 1;
         }
         .tab-content > .tab-pane {
             display: unset;

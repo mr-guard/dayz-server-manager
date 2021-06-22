@@ -386,7 +386,7 @@ export class AppCommonService {
         );
     }
 
-    public updateMissionFile(file: string, content: string, withBackup?: boolean): Observable<void> {
+    public updateMissionFile(file: string, content: string, withBackup?: boolean): Observable<any> {
         return this.httpClient.post(
             `${environment.host}/api/writemissionfile`,
             {
@@ -397,9 +397,8 @@ export class AppCommonService {
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
+                responseType: 'text',
             },
-        ).pipe(
-            catchError((e) => processError(e)),
         );
     }
 

@@ -42,7 +42,7 @@ export class REST {
         this.host = this.manager.config.publishWebServer ? '0.0.0.0' : '127.0.0.1';
 
         // middlewares
-        this.express.use(bodyParser.json());
+        this.express.use(bodyParser.json({ limit: '50mb' }));
         this.express.use(bodyParser.urlencoded({ extended: true }));
         this.express.use(loggerMiddleware);
 
