@@ -241,6 +241,7 @@ export class TypesComponent implements OnInit {
                 params.data.$.name = params.newValue;
                 return true;
             },
+            minWidth: 150,
         },
         {
             headerName: 'Categories',
@@ -261,6 +262,7 @@ export class TypesComponent implements OnInit {
             cellRenderer: 'categoryRenderer',
             editable: false,
             filter: false,
+            minWidth: 175,
         },
         {
             headerName: 'Values',
@@ -281,6 +283,7 @@ export class TypesComponent implements OnInit {
             cellRenderer: 'valueRenderer',
             editable: false,
             filter: false,
+            minWidth: 175,
         },
         {
             headerName: 'Usages',
@@ -301,6 +304,7 @@ export class TypesComponent implements OnInit {
             cellRenderer: 'usageRenderer',
             editable: false,
             filter: false,
+            minWidth: 175,
         },
         {
             headerName: 'Nominal',
@@ -309,6 +313,7 @@ export class TypesComponent implements OnInit {
                 params.data.nominal[0] = String(params.newValue);
                 return true;
             },
+            minWidth: 75,
         },
         {
             headerName: 'LifeTime',
@@ -317,6 +322,7 @@ export class TypesComponent implements OnInit {
                 params.data.lifetime[0] = String(params.newValue);
                 return true;
             },
+            minWidth: 100,
         },
         {
             headerName: 'Restock',
@@ -325,6 +331,7 @@ export class TypesComponent implements OnInit {
                 params.data.restock[0] = String(params.newValue);
                 return true;
             },
+            minWidth: 75,
         },
         {
             headerName: 'Min',
@@ -333,6 +340,7 @@ export class TypesComponent implements OnInit {
                 params.data.min[0] = String(params.newValue);
                 return true;
             },
+            minWidth: 50,
         },
         {
             headerName: 'QuantMin',
@@ -357,6 +365,7 @@ export class TypesComponent implements OnInit {
                 params.data.cost[0] = String(params.newValue);
                 return true;
             },
+            minWidth: 50,
         },
         {
             headerName: 'Count in Cargo',
