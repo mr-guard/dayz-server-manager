@@ -1,6 +1,6 @@
 import * as express from 'express';
-import * as bodyParser from 'body-parser';
 import * as basicAuth from 'express-basic-auth';
+import * as compression from 'compression';
 // import * as cors from 'cors';
 import * as path from 'path';
 import { loggerMiddleware } from '../middleware/logger';
@@ -42,8 +42,9 @@ export class REST {
         this.host = this.manager.config.publishWebServer ? '0.0.0.0' : '127.0.0.1';
 
         // middlewares
-        this.express.use(bodyParser.json({ limit: '50mb' }));
-        this.express.use(bodyParser.urlencoded({ extended: true }));
+        this.express.use(compression());
+        this.express.use(express.json({ limit: '50mb' }));
+        this.express.use(express.urlencoded({ extended: true }));
         this.express.use(loggerMiddleware);
 
         // static content
