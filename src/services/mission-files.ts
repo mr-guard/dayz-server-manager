@@ -13,26 +13,34 @@ export class MissionFiles implements IService {
     ) {}
 
     public getMissionPath(): string {
-        return path.join(
+        return path.resolve(path.join(
             this.manager.getServerPath(),
             'mpmissions',
             this.manager.config.serverCfg.Missions.DayZ.template,
-        );
+        ));
     }
 
     public async readMissionFile(file: string): Promise<string> {
-        const filePath = path.join(
-            this.getMissionPath(),
+        const missionPath = this.getMissionPath();
+        const filePath = path.resolve(path.join(
+            missionPath,
             file,
-        );
+        ));
+        if (!filePath.startsWith(missionPath)) {
+            return null;
+        }
         return String(await fse.readFile(filePath));
     }
 
     public async readMissionDir(dir: string): Promise<string[]> {
-        const filePath = path.join(
-            this.getMissionPath(),
+        const missionPath = this.getMissionPath();
+        const filePath = path.resolve(path.join(
+            missionPath,
             dir,
-        );
+        ));
+        if (!filePath.startsWith(missionPath)) {
+            return [];
+        }
         return (await (fse.readdir(filePath, { withFileTypes: true })))
             .map((x) => {
                 if (x.isDirectory() && !x.name.endsWith('/')) {
@@ -50,13 +58,17 @@ export class MissionFiles implements IService {
         if (!file || !content) {
             return;
         }
+        const missionPath = this.getMissionPath();
+        const filePath = path.resolve(path.join(
+            missionPath,
+            file,
+        ));
+        if (!filePath.startsWith(missionPath)) {
+            return null;
+        }
         if (createBackup) {
             await this.manager.backup.createBackup();
         }
-        const filePath = path.join(
-            this.getMissionPath(),
-            file,
-        );
         await fse.ensureDir(path.dirname(filePath));
         await fse.writeFile(filePath, content);
     }
