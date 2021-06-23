@@ -61,8 +61,11 @@ export class CategoryRenderer implements ICellRendererAngularComp {
 
     public static CATEGORY_LIST = [
         { name: 'weapons' },
+        { name: 'explosives' },
         { name: 'clothes' },
+        { name: 'containers' },
         { name: 'tools' },
+        { name: 'vehicleparts' },
         { name: 'food' },
     ];
 
@@ -141,16 +144,19 @@ export class ValueRenderer extends CategoryRenderer implements ICellRendererAngu
 export class UsageRenderer extends CategoryRenderer implements ICellRendererAngularComp {
 
     public static USAGE_LIST = [
-        { name: 'Hunting' },
-        { name: 'Military' },
-        { name: 'Police' },
-        { name: 'Town' },
-        { name: 'School' },
+        { name: 'Coast ' },
+        { name: 'Farm ' },
+        { name: 'Firefighter ' },
+        { name: 'Hunting ' },
+        { name: 'Industrial ' },
+        { name: 'Medic ' },
+        { name: 'Military ' },
+        { name: 'Office ' },
+        { name: 'Police ' },
+        { name: 'Prison ' },
+        { name: 'School ' },
+        { name: 'Town ' },
         { name: 'Village' },
-        { name: 'Industrial' },
-        { name: 'Medic' },
-        { name: 'Farm' },
-        { name: 'Coast' },
     ];
 
     public dropdownList = UsageRenderer.USAGE_LIST;
@@ -242,6 +248,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 150,
+            headerTooltip: 'Class Name of the item',
         },
         {
             headerName: 'Categories',
@@ -263,6 +270,7 @@ export class TypesComponent implements OnInit {
             editable: false,
             filter: false,
             minWidth: 175,
+            headerTooltip: 'Categories of this item. Used to determine general usage (Must exist in area map)',
         },
         {
             headerName: 'Values',
@@ -284,6 +292,7 @@ export class TypesComponent implements OnInit {
             editable: false,
             filter: false,
             minWidth: 175,
+            headerTooltip: 'Tiers of the item (defines the quality that places new to have to spawn this item) (Must exist in area map)',
         },
         {
             headerName: 'Usages',
@@ -305,6 +314,7 @@ export class TypesComponent implements OnInit {
             editable: false,
             filter: false,
             minWidth: 175,
+            headerTooltip: 'The categories of places to spawn this item (Must exist in area map)',
         },
         {
             headerName: 'Nominal',
@@ -314,6 +324,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 75,
+            headerTooltip: 'The targeted amount of items to be spawned in world/inventories/players (must be higher or equal to min)',
         },
         {
             headerName: 'LifeTime',
@@ -323,6 +334,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 100,
+            headerTooltip: 'Despawn time of this item',
         },
         {
             headerName: 'Restock',
@@ -332,6 +344,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 75,
+            headerTooltip: 'If the minimum amount of this item is reached, the CE will wait this amount of time until its respawning again.',
         },
         {
             headerName: 'Min',
@@ -341,6 +354,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 50,
+            headerTooltip: 'Minimum amount of this item in the world',
         },
         {
             headerName: 'QuantMin',
@@ -349,6 +363,7 @@ export class TypesComponent implements OnInit {
                 params.data.quantmin[0] = String(params.newValue);
                 return true;
             },
+            headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
         },
         {
             headerName: 'QuantMax',
@@ -357,6 +372,7 @@ export class TypesComponent implements OnInit {
                 params.data.quantmax[0] = String(params.newValue);
                 return true;
             },
+            headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
         },
         {
             headerName: 'Cost',
@@ -366,6 +382,7 @@ export class TypesComponent implements OnInit {
                 return true;
             },
             minWidth: 50,
+            headerTooltip: 'Priority in the spawn queue. Pretty much always 100 unless you want to make items less likely to spawn',
         },
         {
             headerName: 'Count in Cargo',
@@ -377,6 +394,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether the total amount of this item includes items in crates, containers, vehicles, backpacks etc',
         },
         {
             headerName: 'Count in Hoarder',
@@ -388,6 +406,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether the total amount of this item includes items in stashes, tents, barrels etc',
         },
         {
             headerName: 'Count in Map',
@@ -399,6 +418,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether the total amount of this item includes items in buildings',
         },
         {
             headerName: 'Count in Player',
@@ -410,6 +430,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether the total amount of this item includes items in player inventories',
         },
         {
             headerName: 'crafted',
@@ -421,6 +442,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether this item is made by crafting',
         },
         {
             headerName: 'deloot',
@@ -432,6 +454,7 @@ export class TypesComponent implements OnInit {
             sortable: false,
             filter: false,
             cellRenderer: 'checkboxRenderer',
+            headerTooltip: 'Wether this item is spawned at dynamic events',
         },
     ];
 
@@ -449,7 +472,6 @@ export class TypesComponent implements OnInit {
 
             for (const file of this.files) {
                 const xmlContent = new xml.Builder().buildObject(file.content);
-                console.log(file.file, xmlContent);
                 await this.appCommon.updateMissionFile(
                     file.file,
                     xmlContent,
@@ -536,5 +558,51 @@ export class TypesComponent implements OnInit {
         this.loading = false;
     }
 
+    public changeAttrInPercent(attr: string, percent: string | number): void {
+        if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
+            return;
+        }
+
+        const multiplier = Number(percent) / 100.0;
+        for (const type of this.files[this.activeTab].content.types.type) {
+            try {
+                const num = Number(type[attr][0]);
+                if (num && num > 0) {
+                    type[attr][0] = String(num * multiplier);
+                }
+            } catch (e) {}
+        }
+
+        // trigger change detection
+        this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
+    }
+
+    public saveCurrentFile(): void {
+        if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
+            return;
+        }
+
+        let filename = this.files[this.activeTab].file;
+        if (filename.includes('/')) {
+            filename = filename.split('/').pop()!;
+        }
+        const xmlContent = new xml.Builder().buildObject(this.files[this.activeTab].content);
+
+        const blob = new Blob([xmlContent], { type: 'text/xml' });
+
+        /* eslint-disable no-undef */
+        // eslint-disable-next-line @typescript-eslint/dot-notation
+        if (window.navigator['msSaveOrOpenBlob']) {
+            window.navigator.msSaveBlob(blob, filename);
+        } else {
+            const elem = window.document.createElement('a');
+            elem.href = window.URL.createObjectURL(blob);
+            elem.download = filename;
+            document.body.appendChild(elem);
+            elem.click();
+            document.body.removeChild(elem);
+        }
+        /* eslint-enable no-undef */
+    }
 
 }
