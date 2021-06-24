@@ -124,7 +124,7 @@ In a nutshell:
 * (Optional) Select an icon and enter a short description for your bot
 * In the left menu, select "Bot"
 * Click "Add Bot" and confirm
-* Under "Token" copy the token by clicking on "Copy" or reveal value and STRG+C the text
+* Under "Token" copy the token by clicking on "Copy" or reveal value and copy the text
   
 
 ## Planned features / TODOs
