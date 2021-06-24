@@ -2,18 +2,11 @@
 
 [![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/mr-guard/dayz-server-manager/)
 [![license](https://img.shields.io/github/license/mr-guard/dayz-server-manager.svg)](https://github.com/mr-guard/dayz-server-manager/blob/master/LICENSE)
-![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)
-<!-- [![Size](https://badge-size.herokuapp.com/mr-guard/dayz-server-manager/releases/latest/download/server-manager.zip)](https://github.com/mr-guard/dayz-server-manager/releases/latest/download/server-manager.zip)-->
-
+![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)  
 
 [![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)
 [![GitHub commits](https://img.shields.io/github/commits-since/mr-guard/dayz-server-manager/latest.svg)](https://GitHub.com/mr-guard/dayz-server-manager/commit/)
 [![Github all releases](https://img.shields.io/github/downloads/mr-guard/dayz-server-manager/total.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)  
-
-<!--
-[![GitHub forks](https://img.shields.io/github/forks/mr-guard/dayz-server-manager.svg?style=social&label=Fork&maxAge=2592000)](https://github.com/mr-guard/dayz-server-manager/network/)
-[![GitHub stars](https://img.shields.io/github/stars/mr-guard/dayz-server-manager.svg?style=social&label=Star&maxAge=2592000)](https://github.com/mr-guard/dayz-server-manager/stargazers/)
--->
 
 
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
@@ -36,6 +29,12 @@ The goal was to break down the initial effort to a minimum while providing confi
 
 * Optionally you can add it as Windows Service instead of launching it manually
 * Make sure the "Execution Location" is the folder, where the config is located (this is not necessarily the folder where the manager executable is located)
+
+## Updating
+This app was written with backwards compatibility in mind.  
+Sometimes, however, some bracking changes to the server manager config will occur.  
+The best strategy to update is to take the config template of the new version and and modify it to match your old version.  
+This way you can not miss out on new properties which might be required.  
 
 ## Features
 * Automatically downloads and installs SteamCMD
@@ -68,6 +67,8 @@ The goal was to break down the initial effort to a minimum while providing confi
     * No need to use RDP for common tasks
   * Displays various metrics (player count, CPU/RAM usage)
   * Read Server Logs (RPT, ADM, Script Log)
+  * Shows player and vehicle position on a map
+  * allows you to edit your types.xml in the browser
 * REST API
   * Secured by basic auth
   * Fetch various infos, metrics
@@ -92,6 +93,14 @@ The goal was to break down the initial effort to a minimum while providing confi
 
 ![Web UI System](/resources/webui_system_screen.png "Web UI System")
 
+![Web UI TypesEditor](/resources/webui_types_editor_screen.png "Web UI Types Editor")
+
+![Web UI Logs](/resources/webui_logs_screen.png "Web UI Logs")
+
+![Web UI Map](/resources/webui_map_screen.png "Web UI Map")
+
+![Web UI Settings](/resources/webui_settings_screen.png "Web UI Settings")
+
 ## SteamCMD
 The server manager tries to automate every required installation step of the server.  
 However, the DayZ Server and the DayZ Workshop Mods cannot be installed without an account which owns (only for workshop mods) DayZ (the full game).  
@@ -105,11 +114,22 @@ If you are really paranoid about pasting your password somewhere, or you use ste
 * At this point you can manually login to the SteamCMD once, so the session gets cached.
 * You still need to provide the account name, otherwise a new session will be started.
 
+## Discord Token
+To obtain a discord bot token, follow the steps at: https://www.writebots.com/discord-bot-token/#Generating_Your_Token_Step-by-Step  
+
+In a nutshell:
+* login to the discord dev console: https://discordapp.com/developers/applications/
+* Click on "New Application"
+* Enter a application/bot name
+* (Optional) Select an icon and enter a short description for your bot
+* In the left menu, select "Bot"
+* Click "Add Bot" and confirm
+* Under "Token" copy the token by clicking on "Copy" or reveal value and STRG+C the text
+  
+
 ## Planned features / TODOs
-* Edit serverDZ.cfg from Web UI
 * Provide self generated/signed certificates for HTTPS
-* Tutorials for installation and configuration
-* Tutorial for discord bot token
+* Tutorials for configuration
 * More script hooks
 * Custom discord commands
 * Edit/View Bans in WebUI
