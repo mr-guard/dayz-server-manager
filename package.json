@@ -7,7 +7,7 @@
     "postinstall": "npm run installSqlite && npm run installUi",
     "installSqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v12.0.0 --arch x64 --platform win32",
     "installUi": "cd ui && npm i",
-    "pack": "del-cli dist/*.exe && pkg --out-path build .",
+    "pack": "del-cli build/*.exe && cp VERSION dist/VERSION && pkg --out-path build .",
     "buildUi": "del-cli dist/ui && cd ui && npm run build",
     "mkdirExec": "node scripts/mkdir.js exec",
     "buildUiIfAbsent": "node scripts/exists.js dist/ui || npm run buildUi",
@@ -35,6 +35,7 @@
       "dist/mods/**/*",
       "dist/**/*.js",
       "dist/**/*.js.map",
+      "dist/VERSION",
       "dist/config/config.shema.json"
     ],
     "__comment": "node12-linux-x64",

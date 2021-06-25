@@ -30,6 +30,8 @@ const configschema = require('../config/config.schema.json');
 
 export class Manager {
 
+    public readonly APP_VERSION!: string;
+
     private log = new Logger('Manager');
 
     private paths = new Paths();
@@ -79,10 +81,13 @@ export class Manager {
 
     // config
     public config!: Config;
+
     public initDone: boolean = false;
 
     public constructor() {
         this.initDone = false;
+        this.APP_VERSION = fs.readFileSync(path.join(__dirname, '../VERSION')).toString();
+        this.log.log(LogLevel.IMPORTANT, `Starting DZSM Version: ${this.APP_VERSION}`);
     }
 
     private getConfigFileContent(cfgPath: string): string {

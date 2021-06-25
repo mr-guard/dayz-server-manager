@@ -53,6 +53,7 @@ export class REST {
         this.setupExpress();
 
         // controllers
+        this.express.get('/version', (req, res) => res.send(this.manager.APP_VERSION));
         this.express.use(
             '/api',
             this.router,
