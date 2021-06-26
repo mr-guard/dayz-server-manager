@@ -2,6 +2,9 @@ name: Build master
 
 on:
   push:
+    branches:
+      - master
+      - experimental
     tags-ignore:
       - '*'
 
