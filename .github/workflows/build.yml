@@ -34,8 +34,13 @@ jobs:
     - name: Build
       run: npm run buildAndPack
     - name: Zip Artifacts
-      if: startsWith(github.ref, 'refs/tags/')
       run: zip -r server-manager.zip build/*
+    - name: Archive build artifacts
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-manager.zip
+        path: ./server-manager.zip
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')
       id: create_release
