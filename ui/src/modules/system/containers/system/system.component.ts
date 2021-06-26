@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { AppCommonService } from '@common/services';
+import { MetricType, MetricWrapper, MetricTypeEnum } from '@common/models';
+import { ApiFetcher, AppCommonService } from '@common/services';
 
 @Component({
     selector: 'sb-system',
@@ -15,6 +16,18 @@ export class SystemComponent implements OnInit {
 
     public ngOnInit(): void {
         // ignore
+    }
+
+    private getFetcher(type: MetricType): ApiFetcher<MetricType, MetricWrapper<any>> {
+        return this.commonService.getApiFetcher<MetricType, MetricWrapper<any>>(type);
+    }
+
+    public getPlayerFetcher(): ApiFetcher<MetricType, MetricWrapper<any>> {
+        return this.getFetcher(MetricTypeEnum.PLAYERS);
+    }
+
+    public getSystemFetcher(): ApiFetcher<MetricType, MetricWrapper<any>> {
+        return this.getFetcher(MetricTypeEnum.SYSTEM);
     }
 
 }

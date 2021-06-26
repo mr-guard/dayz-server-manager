@@ -1,1 +1,11 @@
 @import 'styles/variables.scss';
+
+
+.log-tabs {
+    .tab-pane {
+        height: 100%;
+    }
+    .tab-content {
+        height: 100%;
+    }
+}

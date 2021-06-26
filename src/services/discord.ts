@@ -4,13 +4,13 @@ import {
     Message,
 } from 'discord.js';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { Logger, LogLevel } from '../util/logger';
 import { Manager } from '../control/manager';
 
-export class DiscordBot implements StatefulService {
+export class DiscordBot implements IStatefulService {
 
-    private static log = new Logger('Discord');
+    private log = new Logger('Discord');
 
     public client: Client | undefined;
 
@@ -30,25 +30,25 @@ export class DiscordBot implements StatefulService {
     public async start(): Promise<void> {
 
         if (!this.manager.config.discordBotToken) {
-            DiscordBot.log.log(LogLevel.WARN, 'Not starting discord bot, because no bot token was provided');
+            this.log.log(LogLevel.WARN, 'Not starting discord bot, because no bot token was provided');
             return;
         }
 
         this.client = new Client();
         this.client.on('ready', () => this.onReady());
         if (this.debug) {
-            this.client.on('invalidated', () => DiscordBot.log.log(LogLevel.ERROR, 'invalidated'));
-            this.client.on('debug', (m) => DiscordBot.log.log(LogLevel.DEBUG, m));
-            this.client.on('warn', (m) => DiscordBot.log.log(LogLevel.WARN, m));
+            this.client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
+            this.client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
+            this.client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
         }
         this.client.on('message', (m) => this.onMessage(m));
-        this.client.on('disconnect', (d) => DiscordBot.log.log(LogLevel.ERROR, 'disconnect', d));
-        this.client.on('error', (e) => DiscordBot.log.log(LogLevel.ERROR, 'error', e));
+        this.client.on('disconnect', (d) => this.log.log(LogLevel.ERROR, 'disconnect', d));
+        this.client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
         await this.client.login(this.manager.config?.discordBotToken);
     }
 
     private onReady(): void {
-        DiscordBot.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
+        this.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
     }
 
     private onMessage(message: Message): void {
@@ -57,10 +57,10 @@ export class DiscordBot implements StatefulService {
         }
 
         if (this.debug) {
-            DiscordBot.log.log(LogLevel.DEBUG, `Detected message: ${message.content}`);
+            this.log.log(LogLevel.DEBUG, `Detected message: ${message.content}`);
         }
 
-        if (message.content?.startsWith('!')) {
+        if (message.content?.startsWith(this.messageHandler.PREFIX)) {
             void this.messageHandler.handleCommandMessage(message);
         }
     }
@@ -86,7 +86,7 @@ export class DiscordBot implements StatefulService {
             try {
                 await (x as TextChannel).send(message);
             } catch (e) {
-                DiscordBot.log.log(LogLevel.ERROR, `Error relaying message to channel: ${x.name}`, e);
+                this.log.log(LogLevel.ERROR, `Error relaying message to channel: ${x.name}`, e);
             }
         }
     }

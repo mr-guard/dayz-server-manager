@@ -1,0 +1,56 @@
+@import 'styles/variables.scss';
+
+.types-component {
+
+    .card-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+    }
+
+    .row.spaced {
+        margin-bottom: 2.5rem;
+    }
+
+    .small.text-muted {
+        white-space: pre-line;
+    }
+
+    .prefixed-input {
+        display: flex;
+        flex-direction: row;
+        label {
+            display: flex;
+            align-self: center;
+            margin-bottom: 0;
+            margin-right: 1em;
+        }
+    }
+
+    select.form-control {
+        padding: 1px;
+    }
+
+    .type-tabs {
+        .tab-pane {
+            height: 100%;
+            width: 100%;
+        }
+        .tab-content {
+            display: flex;
+            flex: 1;
+            margin-bottom: 1rem;
+        }
+        form {
+            flex-direction: column;
+            display: flex;
+            flex: 1;
+        }
+        .tab-content > .tab-pane {
+            display: unset;
+        }
+        .fade:not(.show) {
+            opacity: unset;
+        }
+    }
+}

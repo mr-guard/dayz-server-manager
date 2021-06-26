@@ -7,26 +7,24 @@ import { Logger, LogLevel } from './logger';
 
 export class Paths {
 
-    private static log = new Logger('Paths');
+    private log = new Logger('Paths');
 
-    public static cwd(): string {
+    public cwd(): string {
         return process.cwd();
     }
 
-    public static samePath(p1: string, p2: string): boolean {
+    public samePath(p1: string, p2: string): boolean {
 
         if (!p1 || !p2) return false;
 
         const p1Norm = p1
             .replace(/\\/g, '/')
             .toLowerCase()
-            .split('/')
-            .filter((x) => !!x);
+            .split('/');
         const p2Norm = p2
             .replace(/\\/g, '/')
             .toLowerCase()
-            .split('/')
-            .filter((x) => !!x);
+            .split('/');
 
         return (
             (p1Norm.length === p2Norm.length)
@@ -34,27 +32,44 @@ export class Paths {
         );
     }
 
-    public static findFilesInDir(dir: string, filter: RegExp): string[] {
+    public async findFilesInDir(dir: string, filter?: RegExp): Promise<string[]> {
         const results: string[] = [];
 
         if (!fs.existsSync(dir)) {
             return results;
         }
 
-        const files = fs.readdirSync(dir);
+        const files = await fse.readdir(dir);
         for (const file of files) {
             const filename = path.join(dir, file);
-            const stat = fs.lstatSync(filename);
+            const stat = await fse.lstat(filename);
             if (stat.isDirectory()) {
-                results.push(...Paths.findFilesInDir(filename, filter));
-            } else if (filter.test(filename)) {
+                results.push(...(await this.findFilesInDir(filename, filter)));
+            } else if (!filter || filter.test(filename)) {
                 results.push(filename);
             }
         }
         return results;
     }
 
-    public static removeLink(target: string): boolean {
+    // https://github.com/vercel/pkg/issues/420
+    public copyFromPkg(src: string, dest: string): void {
+        const stat = fs.lstatSync(src);
+        if (stat.isDirectory()) {
+            const files = fs.readdirSync(src);
+            for (const file of files) {
+                const fullPath = path.join(src, file);
+                const fullDest = path.join(dest, file);
+                this.copyFromPkg(fullPath, fullDest);
+            }
+        } else {
+            fse.ensureDirSync(path.dirname(dest));
+            const buff = fs.readFileSync(src);
+            fs.writeFileSync(dest, buff);
+        }
+    }
+
+    public removeLink(target: string): boolean {
         // cmd //c rmdir "$__TARGET_DIR"
         return (spawnSync(
             'cmd',
@@ -68,12 +83,12 @@ export class Paths {
         ).status === 0);
     }
 
-    public static linkDirsFromTo(source: string, target: string): boolean {
+    public linkDirsFromTo(source: string, target: string): boolean {
         // cmd //c mklink //j "$__TARGET_DIR" "$__SOURCE_DIR"
         try {
             if (fs.existsSync(target)) {
-                if (!Paths.removeLink(target)) {
-                    Paths.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
+                if (!this.removeLink(target)) {
+                    this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
                     return false;
                 }
             }
@@ -88,30 +103,26 @@ export class Paths {
                 ],
             ).status === 0);
         } catch (e) {
-            Paths.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
+            this.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
             return false;
         }
     }
 
-    public static copyDirFromTo(source: string, target: string): boolean {
+    public async copyDirFromTo(source: string, target: string): Promise<boolean> {
         try {
             if (fs.existsSync(target)) {
-                if (!Paths.removeLink(target)) {
-                    Paths.log.log(LogLevel.ERROR, 'Could not remove dir before creating new one');
+                if (!this.removeLink(target)) {
+                    this.log.log(LogLevel.ERROR, 'Could not remove dir before creating new one');
                     return false;
                 }
             }
 
-            fse.ensureDirSync(target);
+            await fse.ensureDir(target);
+            await fse.copy(source, target);
 
-            try {
-                fse.copySync(source, target);
-                return true;
-            } catch {
-                return false;
-            }
+            return true;
         } catch (e) {
-            Paths.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
+            this.log.log(LogLevel.ERROR, `Error copying ${source} to ${target}`, e);
             return false;
         }
     }

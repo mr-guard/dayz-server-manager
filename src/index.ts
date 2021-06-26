@@ -3,6 +3,6 @@ import { ManagerController } from './control/manager-controller';
 
 void (async () => {
 
-    await ManagerController.INSTANCE.run();
+    await ManagerController.INSTANCE.start();
 
 })();

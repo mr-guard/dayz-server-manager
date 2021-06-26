@@ -4,10 +4,9 @@ import { Processes } from '../util/processes';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NetSH } from '../util/netsh';
+import { IService } from '../types/service';
 
-export class Requirements {
-
-    private static log = new Logger('Requirements');
+export class Requirements implements IService {
 
     private readonly VCREDIST_LINK = 'https://www.microsoft.com/en-us/download/details.aspx?id=52685';
     private readonly VCREDIST_MARKER_DLL = 'VCRuntime140.dll';
@@ -21,21 +20,27 @@ export class Requirements {
     + '[HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting]\n'
     + '"DontShowUI"=dword:00000001';
 
+    private log = new Logger('Requirements');
+
+    private netSh = new NetSH();
+
+    private processes = new Processes();
+
     public constructor(
-        private manager: Manager,
+        public manager: Manager,
     ) {}
 
     public async checkFirewall(): Promise<boolean> {
-        Requirements.log.log(LogLevel.DEBUG, 'Checking Firewall');
+        this.log.log(LogLevel.DEBUG, 'Checking Firewall');
         const exePath = path.resolve(this.manager.getServerExePath());
-        const firewallRules = await NetSH.getRulesByPath(exePath);
+        const firewallRules = await this.netSh.getRulesByPath(exePath);
         if (firewallRules?.length) {
-            Requirements.log.log(LogLevel.DEBUG, 'Firewall is OK!');
+            this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
             return true;
         }
 
 
-        Requirements.log.log(
+        this.log.log(
             LogLevel.IMPORTANT,
             '\n\nFirewall rules were not found.\n'
                 + 'You can add the rules manually or by running the following command in a elevated command promt:\n\n'
@@ -46,7 +51,7 @@ export class Requirements {
     }
 
     public async checkDirectX(): Promise<boolean> {
-        Requirements.log.log(LogLevel.DEBUG, 'Checking DirectX');
+        this.log.log(LogLevel.DEBUG, 'Checking DirectX');
         const dx11Exists = this.POSSIBLE_PATHS.map((searchPath) => {
             return fs.existsSync(
                 path.resolve(
@@ -58,10 +63,10 @@ export class Requirements {
             );
         }).some((x) => x);
         if (dx11Exists) {
-            Requirements.log.log(LogLevel.DEBUG, 'DirectX is OK!');
+            this.log.log(LogLevel.DEBUG, 'DirectX is OK!');
             return true;
         }
-        Requirements.log.log(
+        this.log.log(
             LogLevel.IMPORTANT,
             '\n\nDirectX was not found.\n'
                 + 'You can install it from:\n\n'
@@ -83,10 +88,10 @@ export class Requirements {
             );
         }).some((x) => x);
         if (vcRedistExists) {
-            Requirements.log.log(LogLevel.DEBUG, 'Visual C++ Redistributable is OK!');
+            this.log.log(LogLevel.DEBUG, 'Visual C++ Redistributable is OK!');
             return true;
         }
-        Requirements.log.log(
+        this.log.log(
             LogLevel.IMPORTANT,
             '\n\nVisual C++ Redistributable was not found.\n'
                 + 'You can install it from:\n\n'
@@ -97,7 +102,7 @@ export class Requirements {
     }
 
     public async checkWinErrorReporting(): Promise<boolean> {
-        const winErrorReportingOut = await Processes.spawnForOutput(
+        const winErrorReportingOut = await this.processes.spawnForOutput(
             'REG',
             [
                 'QUERY',
@@ -114,7 +119,7 @@ export class Requirements {
                 || !winErrorReportingOut.stdout
                 || !winErrorReportingOut.stdout?.includes('0x1')
         ) {
-            Requirements.log.log(
+            this.log.log(
                 LogLevel.IMPORTANT,
                 '\n\nWindows Error Reporting Settings are not setup to avoid the server from getting stuck.\n'
                     + 'You change this by executing the fix_win_err_report.reg located in the server manager config directory.\n\n',
@@ -126,7 +131,7 @@ export class Requirements {
             return false;
         }
 
-        Requirements.log.log(LogLevel.DEBUG, 'Windows Error Reporting Settings are OK!');
+        this.log.log(LogLevel.DEBUG, 'Windows Error Reporting Settings are OK!');
         return true;
     }
 

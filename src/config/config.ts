@@ -1,6 +1,358 @@
 import 'reflect-metadata';
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+export class ServerCfg {
+
+    // General
+
+    /**
+     * Server name
+     *
+     * @required
+     */
+    @Reflect.metadata('config-required', true)
+    public hostname: string = 'EXAMPLE NAME';
+
+    /**
+     * Maximum amount of players
+     *
+     * @required
+     */
+    @Reflect.metadata('config-required', true)
+    public maxPlayers: number = 60;
+
+    /**
+     * Message of the day displayed in the in-game chat
+     */
+    public motd: string[] = [];
+
+    /**
+     * Time interval (in seconds) between each message
+     */
+    public motdInterval: number = 1;
+
+
+    // Security
+
+    /**
+     * Password to connect to the server
+     */
+    public password: string = '';
+
+    /**
+     * Password to become a server admin
+     */
+    public passwordAdmin: string = '';
+
+    /**
+     * Enable/disable whitelist (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public enableWhitelist: 0 | 1 = 0;
+
+    /**
+     * Use BattlEye
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public BattlEye: 0 | 1 = 1;
+
+    /**
+     * Verifies .pbos against .bisign files. (only 2 is supported)
+     *
+     * @required
+     */
+    @Reflect.metadata('config-required', true)
+    @Reflect.metadata('config-range', [0, 2])
+    public verifySignatures: 0 | 1 | 2 = 2;
+
+    /**
+     * When enabled, the server will allow the connection only to clients with same the .exe revision as the server (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public forceSameBuild: 0 | 1 = 1;
+
+    /**
+     * Communication protocol used with game server (use only number 1)
+     */
+    @Reflect.metadata('config-range', [1, 1])
+    public guaranteedUpdates: 1 = 1;
+
+    /**
+     * if set to 1 it will enable connection of clients with "-filePatching" launch parameter enabled
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public allowFilePatching: 0 | 1 = 0;
+
+    /**
+     * defines Steam query port
+     * should fix the issue with server not being visible in client server browser
+     */
+    public steamQueryPort: number = 2305;
+
+    /**
+     * Max ping value until server kick the user (value in milliseconds)
+     */
+    public maxPing: number = 200;
+
+    /**
+     * enable speedhack detection, values 1-10 (1 strict, 10 benevolent, can be float)
+     */
+    @Reflect.metadata('config-range', [1, 10])
+    public speedhackDetection: number = 1;
+
+    // VON
+
+    /**
+     * Enable/disable voice over network (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disableVoN: 0 | 1 = 0;
+
+    /**
+     * Voice over network codec quality, the higher the better (values 0-30)
+     */
+    @Reflect.metadata('config-range', [0, 30])
+    public vonCodecQuality: number = 20;
+
+
+    // Game
+
+    /**
+     * Toggles the 3rd person view for players (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disable3rdPerson: 0 | 1 = 0;
+
+    /**
+     * Toggles the cross-hair (value 0-1)
+     */
+    public disableCrosshair: 0 | 1 = 0;
+
+    /**
+     * set to 1 to disable damage/destruction of fence and watchtower
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disableBaseDamage: 0 | 1 = 0;
+
+    /**
+     * set to 1 to disable damage/destruction of tents, barrels, wooden crate and seachest
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disableContainerDamage: 0 | 1 = 0;
+
+    /**
+     * set to 1 to disable the respawn dialog (new characters will be spawning as random)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disableRespawnDialog: 0 | 1 = 0;
+
+    /**
+     * Sets the respawn delay (in seconds) before the player is able to get a new character on the server, when the previous one is dead
+     */
+    public respawnTime: number = 5;
+
+    /**
+     * shows info about the character using a debug window in a corner of the screen (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public enableDebugMonitor: 0 | 1 = 1;
+
+
+    // Time and weather
+
+    /**
+     * Disables personal light for all clients connected to server
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public disablePersonalLight: 0 | 1 = 1;
+
+    /**
+     * 0 for brighter night setup
+     * 1 for darker night setup
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public lightingConfig: 0 | 1 = 0;
+
+    /**
+     * Initial in-game time of the server.
+     * "SystemTime" means the local time of the machine.
+     * Another possibility is to set the time to some value in "YYYY/MM/DD/HH/MM" format, f.e. "2015/4/8/17/23".
+     */
+    public serverTime: string = 'SystemTime';
+
+    /**
+     * Accelerated Time (value 0-24)
+     * This is a time multiplier for in-game time.
+     * In this case, the time would move 24 times faster than normal, so an entire day would pass in one hour.
+     */
+    public serverTimeAcceleration: number = 12;
+
+    /**
+     * Accelerated Nigh Time - The numerical value being a multiplier (0.1-64) and also multiplied by serverTimeAcceleration value.
+     * Thus, in case it is set to 4 and serverTimeAcceleration is set to 2, night time would move 8 times faster than normal.
+     * An entire night would pass in 3 hours.
+     */
+    public serverNightTimeAcceleration: number = 1;
+
+    /**
+     * Persistent Time (value 0-1)
+     * The actual server time is saved to storage, so when active, the next server start will use the saved time value.
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public serverTimePersistent: 0 | 1 = 0;
+
+
+    // Performance
+
+    /**
+     * The number of players concurrently processed during the login process.
+     * Should prevent massive performance drop during connection when a lot of people are connecting at the same time.
+     */
+    public loginQueueConcurrentPlayers: number = 5;
+
+    /**
+     * The maximum number of players that can wait in login queue
+     */
+    public loginQueueMaxPlayers: number = 500;
+
+    /**
+     * Set limit of how much players can be simulated per frame (for server performance gain)
+     */
+    public simulatedPlayersBatch: number = 20;
+
+    /**
+     * enables multi-threaded processing of server's replication system
+     * number of worker threads is derived by settings of jobsystem in dayzSettings.xml by "maxcores" and "reservedcores" parameters (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public multithreadedReplication: 0 | 1 = 1;
+
+    /**
+     * network bubble distance for spawn of close objects with items in them (f.i. backpacks), set in meters, default value if not set is 20
+     */
+    public networkRangeClose: number = 20;
+
+    /**
+     * network bubble distance for spawn (despawn +10%) of near inventory items objects, set in meters, default value if not set is 150
+     */
+    public networkRangeNear: number = 150;
+
+    /**
+     * network bubble distance for spawn (despawn +10%) of far objects (other than inventory items), set in meters, default value if not set is 1000
+     */
+    public networkRangeFar: number = 1000;
+
+    /**
+     * network bubble distance for spawn of effects (currently only sound effects), set in meters, default value if not set is 4000
+     */
+    public networkRangeDistantEffect: number = 4000;
+
+    /**
+     * highest terrain render distance on server (if higher than "viewDistance=" in DayZ client profile, clientside parameter applies)
+     */
+    public defaultVisibility: number = 1375;
+
+    /**
+     * highest object render distance on server (if higher than "preferredObjectViewDistance=" in DayZ client profile, clientside parameter applies)
+     */
+    public defaultObjectViewDistance: number = 1375;
+
+
+    // Persistency
+
+    /**
+     * DayZ server instance id, to identify the number of instances per box and their storage folders with persistence files
+     *
+     * @required
+     */
+    @Reflect.metadata('config-required', true)
+    public instanceId = 1;
+
+    /**
+     * Disable houses/doors persistence (value true/false), usable in case of problems with persistence
+     */
+    public storeHouseStateDisabled: boolean = false;
+
+    /**
+     * Checks if the persistence files are corrupted and replaces corrupted ones with empty ones (value 0-1)
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public storageAutoFix: 0 | 1 = 1;
+
+
+    // Logs
+
+    /**
+     * Format for timestamps in the .rpt file (value Full/Short)
+     */
+    public timeStampFormat: 'Full' | 'Short' = 'Short';
+
+    /**
+     * Logs the average server FPS (value in seconds), needs to have ''-doLogs'' launch parameter active
+     */
+    public logAverageFps: number = 30;
+
+    /**
+     * Logs the server memory usage (value in seconds), needs to have the ''-doLogs'' launch parameter active
+     */
+    public logMemory: number = 30;
+
+    /**
+     * Logs the count of currently connected players (value in seconds), needs to have the ''-doLogs'' launch parameter active
+     */
+    public logPlayers: number = 30;
+
+    /**
+     * Saves the server console log to a file in the folder with the other server logs
+     */
+    public logFile: string = 'server_console.log';
+
+    /**
+     * 1 - log player hits only / 0 - log all hits ( animals/infected )
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public adminLogPlayerHitsOnly: 0 | 1 = 0;
+
+    /**
+     * 1 - log placement action ( traps, tents )
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public adminLogPlacement: 0 | 1 = 0;
+
+    /**
+     * 1 - log basebuilding actions ( build, dismantle, destroy )
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public adminLogBuildActions: 0 | 1 = 0;
+
+    /**
+     * 1 - log periodic player list with position every 5 minutes
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public adminLogPlayerList: 0 | 1 = 0;
+
+
+    /**
+     * Mission to load on server startup. <MissionName>.<TerrainName>
+     * Vanilla mission: dayzOffline.chernarusplus
+     * DLC mission: dayzOffline.enoch
+     *
+     * @required
+     */
+    @Reflect.metadata('config-required', true)
+    public Missions: {
+        DayZ: {
+            template: string;
+        };
+    } = {
+        DayZ: {
+            template: 'dayzOffline.chernarusplus',
+        },
+    };
+
+}
+
 // eslint-disable-next-line no-shadow
 export enum UserLevelEnum {
     admin = 'admin',
@@ -92,6 +444,14 @@ export class Hook {
 
 }
 
+export class WorkshopMod {
+
+    public workshopId!: string;
+
+    public name?: string;
+
+}
+
 export class Config {
 
     /**
@@ -149,6 +509,19 @@ export class Config {
      */
     @Reflect.metadata('config-range', [-1, 65535])
     public webPort: number = 0;
+
+    /**
+     * Whether or not to publish the WebUI or not
+     *
+     * if this is enabled, the webserver host is 0.0.0.0 rather than localhost
+     * this can be a security risk, so better leave this turned off if you dont know what this means
+     * and use a browser on your server to connect to the web ui via localhost
+     *
+     * if you want to publish the web ui, it is recommended to use a reverse proxy (such as nginx)
+     * and secure the connection to the reverse proxy with a SSL Cert for HTTPS
+     * (because this app wont provide HTTPS capabilities)
+     */
+    public publishWebServer: boolean = false;
 
     // /////////////////////////// Discord ////////////////////////////////////
 
@@ -280,6 +653,11 @@ export class Config {
     public cpuCount: number = -1;
 
     /**
+     * Server Startup Params (manual)
+     */
+    public serverLaunchParams: string[] = [];
+
+    /**
      * Time (in ms) between each server check
      */
     public serverProcessPollIntervall: number = 30000;
@@ -338,7 +716,7 @@ export class Config {
     /**
      * List of Mod IDs (workshop id, not modname!) the server should use
      */
-    public steamWsMods: string[] = [];
+    public steamWsMods: (string | WorkshopMod)[] = [];
 
     /**
      * Whether or not to check for mod updates on each server restart
@@ -364,6 +742,11 @@ export class Config {
      * Whether or not to use hardlink for mods instead of copying them
      */
     public linkModDirs: boolean = false;
+
+    /**
+     * Whether to deep compare mods instead of just checking for update timestamps
+     */
+    public copyModDeepCompare: boolean = false;
 
     // /////////////////////////// Events ///////////////////////////////////////
 
@@ -425,6 +808,16 @@ export class Config {
     public metricMaxAge: number = 2_592_000;
 
     // /////////////////////////// Hooks ///////////////////////////////////////
+    /**
+     * Hooks to define custom behaviour when certain events happen
+     */
     public hooks: Hook[] = [];
+
+    // /////////////////////////// ServerCfg ///////////////////////////////////////
+    /**
+     * serverCfg
+     */
+    @Reflect.metadata('config-required', true)
+    public serverCfg: ServerCfg = new ServerCfg();
 
 }

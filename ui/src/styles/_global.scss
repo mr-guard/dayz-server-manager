@@ -7,10 +7,13 @@ body {
 
 // Set spacing on containers for page symmetry
 
-.container,
+.container {
+    padding-left: $grid-gutter-width;
+    padding-right: $grid-gutter-width;
+}
+
 .container-fluid {
-  padding-left: $grid-gutter-width;
-  padding-right: $grid-gutter-width;
+  padding: $grid-gutter-width;
 }
 
 .card-no-top {
@@ -18,4 +21,99 @@ body {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   border-top: 0;
+}
+
+.map-container {
+    height: calc(100% +  2 * 1.5rem /*$grid-gutter-width*/);
+    margin: -$grid-gutter-width;
+}
+
+.position {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 2px;
+    bottom: calc(90px + 2em);
+    color: #fff;
+    left: 50%;
+    margin-left: -70px;
+    margin-bottom: 10px;
+    padding: 2px;
+    position: absolute;
+    text-align: center;
+    width: 140px;
+    z-index: 10;
+    font-family: Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+}
+
+.leaflet-tooltip {
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    color: #fff !important;
+    font-family: Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 300 !important;
+    padding-top: 0 !important;
+    text-align: center !important;
+    white-space: pre !important;
+}
+
+.locationIcon {
+    color: #fff;
+}
+
+.locationIcon > i {
+    text-align: center;
+    width: 100%;
+}
+
+.h-80 {
+  height: 80%;
+}
+
+.ag-cell-label-container {
+  /* Necessary to allow for text to grow vertically */
+  // height: 100%;
+  flex-direction: column;
+}
+
+.ag-header-cell-label {
+  /* Necessary to allow for text to grow vertically */
+  height: 100%;
+  padding: 0 !important;
+}
+
+.ag-header-cell-label .ag-header-cell-text {
+  text-overflow: unset;
+  overflow: visible;
+  /* Force the width corresponding at how much width
+  we need once the text is laid out vertically */
+  width: 30px;
+  transform: rotate(90deg);
+  margin-top: -75px;
+  /* Since we are rotating a span */
+  display: inline-block;
+}
+
+.ag-floating-filter-body input {
+  height: 49px;
+}
+
+.ag-floating-filter-button {
+  margin-top: -49px;
+}
+
+.ag-floating-filter-button button {
+  height: 49px
+}
+
+.ag-floating-filter-body input {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.breadcrumb {
+    margin-bottom: 0 !important;
+    padding: 0.25rem 0.5rem;
 }

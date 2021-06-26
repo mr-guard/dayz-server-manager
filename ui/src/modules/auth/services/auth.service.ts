@@ -26,7 +26,9 @@ export class AuthService {
             this.validateLogin(this.authHeader).then(
                 () => {
                     console.log('Login validated');
-                    void this.router.navigate(['/dashboard']);
+                    if (this.router.url.includes('login')) {
+                        void this.router.navigate(['/dashboard']);
+                    }
                 },
                 (err) => {
                     console.error('Login invalidated', err);

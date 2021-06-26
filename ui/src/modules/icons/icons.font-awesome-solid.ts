@@ -29,6 +29,17 @@ import {
     faTrash,
     faPlusCircle,
     faSpinner,
+    faMap,
+    faAnchor,
+    faCity,
+    faChessRook,
+    faMountain,
+    faCampground,
+    faHome,
+    faUniversity,
+    faCrosshairs,
+    faPlane,
+    faWrench,
 } from '@fortawesome/free-solid-svg-icons';
 
 export const fontAwesomeSolidIcons = {
@@ -60,4 +71,15 @@ export const fontAwesomeSolidIcons = {
     faTrash,
     faPlusCircle,
     faSpinner,
+    faMap,
+    faAnchor,
+    faCity,
+    faChessRook,
+    faMountain,
+    faCampground,
+    faHome,
+    faUniversity,
+    faCrosshairs,
+    faPlane,
+    faWrench,
 };

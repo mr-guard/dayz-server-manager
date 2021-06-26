@@ -10,7 +10,7 @@
     "plugins": [
         "@typescript-eslint"
     ],
-    "ignorePatterns": "scripts",
+    "ignorePatterns": ["scripts", "test"],
     "rules": {
         "indent": [
             "error",
@@ -102,7 +102,7 @@
                 "modifiers": ["readonly"],
                 "format": ["UPPER_CASE"]
             },
-            { "selector": "enumMember", "format": ["PascalCase"] },
+            { "selector": "enumMember", "format": ["UPPER_CASE"] },
             { "selector": "typeLike", "format": ["PascalCase"] }
         ],
         "@typescript-eslint/no-floating-promises": ["error"],

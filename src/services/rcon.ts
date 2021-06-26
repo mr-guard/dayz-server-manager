@@ -6,8 +6,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Logger, LogLevel } from '../util/logger';
 import { RconBan, RconPlayer } from '../types/rcon';
-import { StatefulService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
+import { matchRegex } from '../util/match-regex';
 
 export class BattleyeConf {
 
@@ -20,26 +21,32 @@ export class BattleyeConf {
 
 }
 
-export class RCON implements StatefulService {
+export class RCON implements IStatefulService {
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
 
-    private static log = new Logger('RCON');
+    private log = new Logger('RCON');
 
     private socket: Socket | undefined;
     private connection: Connection | undefined;
 
     private connected: boolean = false;
 
-    private fakePlayers: boolean = false;
+    private connectionErrorCounter: number = 0;
 
     public constructor(
         public manager: Manager,
     ) {}
 
-    public async start(): Promise<void> {
+    private createSocket(port: number): Socket {
+        return new Socket({
+            port,
+        });
+    }
 
-        this.createBattleyeConf();
+    public async start(skipServerWait?: boolean): Promise<void> {
+
+        this.connectionErrorCounter = 0;
 
         // get free listening port
         const openListeningPort = await new Promise<number | null>((r) => {
@@ -56,89 +63,102 @@ export class RCON implements StatefulService {
         }
 
         // create socket
-        this.socket = new Socket({
-            port: openListeningPort,
-        });
+        this.socket = this.createSocket(openListeningPort);
 
         this.socket.on('listening', (socket) => {
             const addr = socket.address();
-            RCON.log.log(LogLevel.IMPORTANT, `Listening on ${typeof addr === 'string' ? addr : `${addr.address}:${addr.port}`}`);
+            this.log.log(LogLevel.IMPORTANT, `Listening on ${typeof addr === 'string' ? addr : `${addr.address}:${addr.port}`}`);
         });
 
         this.socket.on('received', (resolved, packet /* , buffer, connection, info */) => {
-            RCON.log.log(LogLevel.DEBUG, `received`, packet);
+            this.log.log(LogLevel.DEBUG, `received`, packet);
         });
 
         this.socket.on('sent', (packet /* , buffer, bytes, connection */) => {
-            RCON.log.log(LogLevel.DEBUG, `sent`, packet);
+            this.log.log(LogLevel.DEBUG, `sent`, packet);
         });
 
         this.socket.on('error', (err) => {
-            RCON.log.log(LogLevel.ERROR, `socket error`, err.message);
+            this.log.log(LogLevel.ERROR, `socket error`, err?.message);
         });
 
-        this.manager.monitor.registerStateListener((state: ServerState) => {
-
-            if (this.connection || state !== ServerState.STARTED) return;
-
-            // create connection
-            this.connection = this.socket.connection(
-                {
-                    name: 'rcon',
-                    password: this.getRconPassword(),
-                    ip: '127.0.0.1',
-                    port: this.manager.config?.serverPort ?? 2302,
-                },
-                {
-                    reconnect: true,              // reconnect on timeout
-                    reconnectTimeout: 500,        // how long (in ms) to wait before trying to reconnect
-                    keepAlive: true,              // send keepAlive packet
-                    keepAliveInterval: 10000,     // keepAlive packet interval (in ms)
-                    timeout: true,                // timeout packets
-                    timeoutInterval: 1000,        // interval to check packets (in ms)
-                    serverTimeout: 30000,         // timeout server connection (in ms)
-                    packetTimeout: 1000,          // timeout packet check interval (in ms)
-                    packetTimeoutThresholded: 5,  // packets to resend
-                },
-            );
-
-            this.connection.on('message', (message /* , packet */) => {
-                RCON.log.log(LogLevel.DEBUG, `message`, message);
-                void this.manager.discord?.relayRconMessage(message);
+        if (skipServerWait) {
+            this.setupConnection();
+        } else {
+            this.manager.monitor.registerStateListener('rconInit', (state: ServerState) => {
+                if (this.connection || state !== ServerState.STARTED) return;
+                this.manager.monitor.removeStateListener('rconInit');
+                this.setupConnection();
             });
+        }
 
-            this.connection.on('command', (data, resolved, packet) => {
-                RCON.log.log(LogLevel.DEBUG, `command packet`, packet);
-            });
+    }
 
-            this.connection.on('disconnected', (reason) => {
-                if (reason instanceof Error && reason?.message?.includes('Server connection timed out')) {
-                    RCON.log.log(LogLevel.ERROR, `disconnected`, reason.message);
-                } else {
-                    RCON.log.log(LogLevel.ERROR, `disconnected`, reason);
-                }
-                this.connected = false;
-            });
+    private setupConnection(): void {
+        // create connection
+        this.connection = this.socket.connection(
+            {
+                name: 'rcon',
+                password: this.getRconPassword(),
+                ip: '127.0.0.1',
+                port: this.manager.config?.serverPort ?? 2302,
+            },
+            {
+                reconnect: true,              // reconnect on timeout
+                reconnectTimeout: 500,        // how long (in ms) to wait before trying to reconnect
+                keepAlive: true,              // send keepAlive packet
+                keepAliveInterval: 10000,     // keepAlive packet interval (in ms)
+                timeout: true,                // timeout packets
+                timeoutInterval: 1000,        // interval to check packets (in ms)
+                serverTimeout: 30000,         // timeout server connection (in ms)
+                packetTimeout: 1000,          // timeout packet check interval (in ms)
+                packetTimeoutThresholded: 5,  // packets to resend
+            },
+        );
 
-            this.connection.on('debug', (data) => {
-                RCON.log.log(LogLevel.DEBUG, 'debug', data);
-            });
-
-            this.connection.on('error', (err) => {
-                if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
-                    RCON.log.log(LogLevel.ERROR, `connection error`, err.message);
-                } else {
-                    RCON.log.log(LogLevel.ERROR, `connection error`, err);
-                }
-            });
-
-            this.connection?.on('connected', () => {
-                RCON.log.log(LogLevel.IMPORTANT, 'connected');
-                this.connected = true;
-                void this.sendCommand('say -1 Big Brother Connected.');
-            });
+        this.connection.on('message', (message /* , packet */) => {
+            this.log.log(LogLevel.DEBUG, `message`, message);
+            void this.manager.discord?.relayRconMessage(message);
         });
 
+        this.connection.on('command', (data, resolved, packet) => {
+            this.log.log(LogLevel.DEBUG, `command packet`, packet);
+        });
+
+        this.connection.on('disconnected', (reason) => {
+            if (reason instanceof Error && reason?.message?.includes('Server connection timed out')) {
+                this.log.log(LogLevel.ERROR, `disconnected`, reason.message);
+            } else {
+                this.log.log(LogLevel.ERROR, `disconnected`, reason);
+            }
+            this.connected = false;
+        });
+
+        this.connection.on('debug', (data) => {
+            this.log.log(LogLevel.DEBUG, 'debug', data);
+        });
+
+        this.connection.on('error', async (err) => {
+            if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
+                this.log.log(LogLevel.ERROR, `connection error`, err.message);
+
+                // restart on connection errors (disabled for now)
+                // this.connectionErrorCounter++;
+                // if (this.connectionErrorCounter >= 5) {
+                //     await this.stop();
+                //     void this.start(true);
+                // }
+
+            } else {
+                this.log.log(LogLevel.ERROR, `connection error`, err);
+            }
+        });
+
+        this.connection.on('connected', () => {
+            this.log.log(LogLevel.IMPORTANT, 'connected');
+            this.connected = true;
+            void this.sendCommand('say -1 Big Brother Connected.');
+        });
     }
 
     private getRconPassword(): string {
@@ -149,7 +169,7 @@ export class RCON implements StatefulService {
         );
     }
 
-    private createBattleyeConf(): void {
+    public createBattleyeConf(): void {
         let battleyePath = this.manager.config?.battleyePath;
         if (!battleyePath) {
             battleyePath = 'battleye';
@@ -170,7 +190,7 @@ export class RCON implements StatefulService {
 
         fse.ensureDirSync(battleyePath);
         try {
-            fse.readdirSync(battleyePath).forEach((x) => {
+            fs.readdirSync(battleyePath).forEach((x) => {
                 const lower = x.toLowerCase();
                 if (lower.includes('beserver') && lower.endsWith('.cfg')) {
                     fs.unlinkSync(path.join(battleyePath, x));
@@ -192,9 +212,13 @@ export class RCON implements StatefulService {
         let response: IPacketResponse = null;
         try {
             response = await this.connection.command(command);
-            RCON.log.log(LogLevel.DEBUG, `response to ${response.command}:\n${response.data}`);
+            this.log.log(LogLevel.DEBUG, `response to ${response.command}:\n${response.data}`);
         } catch (e) {
-            RCON.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
+            if (typeof e === 'object' && (e?.message as string)?.includes('Server connection timed out')) {
+                this.log.log(LogLevel.ERROR, 'Error while executing RCON command: Server connection timed out');
+            } else {
+                this.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
+            }
         }
 
         return response?.data ?? null;
@@ -202,30 +226,30 @@ export class RCON implements StatefulService {
     }
 
     public async stop(): Promise<void> {
-        if (this.connection && this.connection.connected) {
-            this.connection.kill(new Error('Reload'));
-            this.connection = undefined;
-            this.connected = false;
+        if (this.connection) {
+            this.connection.removeAllListeners();
+            if (this.connection.connected) {
+                this.connection.kill(new Error('Reload'));
+                this.connection = undefined;
+                this.connected = false;
+            }
         }
 
         if (this.socket) {
-            return new Promise<void>((r) => {
-                (this.socket!['socket'] as dgram.Socket).close(() => {
-                    this.socket = undefined;
-                    r();
-                });
+            return new Promise<void>((res, rej) => {
+                try {
+                    this.socket.removeAllListeners();
+                    ((this.socket!['socket'] as dgram.Socket) ?? {
+                        close: (c) => c(),
+                    }).close(() => {
+                        this.socket = undefined;
+                        res();
+                    });
+                } catch (e) {
+                    rej(e);
+                }
             });
         }
-    }
-
-    private matchRegex(regex: RegExp, data: string): any[] {
-        const matches = [];
-        let match = null;
-        // eslint-disable-next-line no-cond-assign
-        while (match = regex.exec(data)) {
-            matches.push(match);
-        }
-        return matches;
     }
 
     public async getBansRaw(): Promise<string | null> {
@@ -237,12 +261,12 @@ export class RCON implements StatefulService {
         if (!data) {
             return [];
         }
-        const guidBans = this.matchRegex(
+        const guidBans = matchRegex(
             /(\d+)\s+([0-9a-fA-F]+)\s([perm|\d]+)\s+([\S ]+)$/gim,
             data,
         )
             ?.map((e) => e.slice(1, e.length - 1)) ?? [];
-        const ipBans = this.matchRegex(
+        const ipBans = matchRegex(
             /(\d+)\s+([0-9\.]+)\s+([perm|\d]+)\s+([\S ]+)$/gim,
             data,
         )
@@ -274,25 +298,13 @@ export class RCON implements StatefulService {
 
     public async getPlayers(): Promise<RconPlayer[]> {
 
-        if (this.fakePlayers) {
-            return [1, 2, 3, 15, 24, 42].map((x) => ({
-                id: String(x),
-                name: `TestPlayer${x}`,
-                beguid: `111${x}-12341-124-5215125-1251251-125`,
-                ip: '127.0.0.1',
-                port: '1337',
-                ping: String(Math.round(Math.random() * 100)),
-                lobby: false,
-            }));
-        }
-
         const data = await this.getPlayersRaw();
 
         if (!data) {
             return [];
         }
 
-        return this.matchRegex(
+        return matchRegex(
             /(\d+)\s+(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+\b)\s+(\d+)\s+([0-9a-fA-F]+)\(\w+\)\s([\S ]+)$/gim,
             data,
         )

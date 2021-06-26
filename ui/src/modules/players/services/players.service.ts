@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DecimalPipe } from '@angular/common';
 import { Injectable, PipeTransform } from '@angular/core';
-import { RconPlayer } from '@common/models';
+import { MetricTypeEnum, MetricWrapper, RconPlayer } from '@common/models';
 import { AppCommonService } from '@common/services';
 import { SortDirection } from '@modules/players/directives';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
@@ -86,7 +86,10 @@ export class PlayersService {
     }
 
     protected listenToPlayerChanges(): void {
-        this.sub = this.appCommon.currentPlayers.subscribe(
+        this.sub = this.appCommon.getApiFetcher<
+        MetricTypeEnum.PLAYERS,
+        MetricWrapper<RconPlayer[]>
+        >(MetricTypeEnum.PLAYERS)!.latestData.subscribe(
             (players) => {
                 if (players?.value) {
                     this.currentPlayers = players.value;
@@ -175,7 +178,10 @@ export class AllPlayersService extends PlayersService {
     }
 
     protected listenToPlayerChanges(): void {
-        this.sub = this.appCommon.playerMetrics.subscribe(
+        this.sub = this.appCommon.getApiFetcher<
+        MetricTypeEnum.PLAYERS,
+        MetricWrapper<RconPlayer[]>
+        >(MetricTypeEnum.PLAYERS).data.subscribe(
             (metrics) => {
                 if (metrics?.length) {
                     const guids = new Set<string>();

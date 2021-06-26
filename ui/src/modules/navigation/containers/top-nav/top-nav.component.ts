@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { AppCommonService } from '@common/services';
 import { AuthService } from '@modules/auth/services';
+import { Breadcrumb } from '@modules/navigation/models';
 import { NavigationService } from '@modules/navigation/services';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'sb-top-nav',
@@ -9,9 +11,13 @@ import { NavigationService } from '@modules/navigation/services';
     templateUrl: './top-nav.component.html',
     styleUrls: ['top-nav.component.scss'],
 })
-export class TopNavComponent implements OnInit {
+export class TopNavComponent implements OnInit, OnDestroy {
 
     public refreshRate: string = '30';
+
+    public subscription: Subscription = new Subscription();
+    public breadcrumbs!: Breadcrumb[];
+    public title: string = '';
 
     public constructor(
         private navigationService: NavigationService,
@@ -20,7 +26,17 @@ export class TopNavComponent implements OnInit {
     ) {}
 
     public ngOnInit(): void {
-        this.refreshRate = String(this.appCommon.getRefreshRate());
+        this.refreshRate = String(this.appCommon.refreshRate);
+        this.subscription.add(
+            this.navigationService.routeData$().subscribe((routeData) => {
+                this.breadcrumbs = routeData.breadcrumbs;
+                if (this.breadcrumbs?.length) {
+                    this.title = this.breadcrumbs[this.breadcrumbs.length - 1].text;
+                } else {
+                    this.title = '';
+                }
+            }),
+        );
     }
 
     public toggleSideNav(): void {
@@ -39,6 +55,10 @@ export class TopNavComponent implements OnInit {
 
     public refreshNow(): void {
         this.appCommon.triggerUpdate();
+    }
+
+    public ngOnDestroy(): void {
+        this.subscription.unsubscribe();
     }
 
 }

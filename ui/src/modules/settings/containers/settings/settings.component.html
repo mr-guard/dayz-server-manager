@@ -26,7 +26,7 @@
                                 Instance ID is required
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="logLevel">Log Level</label>
                             <pre class="small text-muted">
@@ -204,13 +204,31 @@
                             <pre class="small text-muted">
                                 {{ schema.properties.steamWsMods.description }}
                             </pre>
-                            <div class="row" *ngFor="let mod of config.steamWsMods; let idx = index">
-                                <div class="col-md-11">
+                            <div class="row" style="margin-bottom: 15px;" *ngFor="let mod of config.steamWsMods; let idx = index">
+                                <div class="col-md-11" *ngIf="config.steamWsMods[idx]['includes']">
                                     <input  type="text"
                                             class="form-control"
                                             [(ngModel)]="config.steamWsMods[idx]"
                                             [ngModelOptions]="{standalone: true}"
                                     >
+                                </div>
+                                <div class="col-md-11" *ngIf="!config.steamWsMods[idx]['includes']">
+                                    <div class="prefixed-input">
+                                        <label>Name</label>
+                                        <input  type="text"
+                                                class="form-control"
+                                                [(ngModel)]="config.steamWsMods[idx]['name']"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                    </div>
+                                    <div class="prefixed-input">
+                                        <label>WorkshopId</label>
+                                        <input  type="text"
+                                                class="form-control"
+                                                [(ngModel)]="config.steamWsMods[idx]['workshopId']"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                    </div>
                                 </div>
                                 <div class="col-md-1">
                                     <button class="btn btn-danger form-control" type="button" (click)="config.steamWsMods.splice(idx, 1)">
@@ -219,7 +237,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn form-control" (click)="config.steamWsMods.push('')">
+                        <button type="button" class="btn form-control" (click)="config.steamWsMods.push({name: '', workshopId: ''})">
                             <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Entry
                         </button>
                     </div>
@@ -469,6 +487,56 @@
                 <div class="row spaced">
                     <div class="col-md-12">
                         --- currently only in file ---
+                    </div>
+                </div>
+
+                <strong>Server.cfg</strong>
+                <hr>
+                <div class="row spaced">
+                    <div class="col-md-12" *ngFor="let prop of serverCfgProps">
+                        <div class="form-group">
+                            <label for="cfg.{{prop.name}}">{{prop.name}}</label>
+                            <pre class="small text-muted">
+                                {{ prop.description }}
+                            </pre>
+                            <input  *ngIf="!prop.enum && prop.type === 'string'"
+                                    type="text" class="form-control"
+                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                    [(ngModel)]="config.serverCfg[prop.name]"
+                                    [ngModelOptions]="{standalone: true}"
+                            >
+                            <input  *ngIf="!prop.enum && prop.type === 'number'"
+                                    type="number" class="form-control"
+                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                    [(ngModel)]="config.serverCfg[prop.name]"
+                                    [ngModelOptions]="{standalone: true}"
+                            >
+                            <select *ngIf="prop.enum"
+                                    class="form-control"
+                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                    [(ngModel)]="config.serverCfg[prop.name]"
+                                    [ngModelOptions]="{standalone: true}"
+                            >
+                                <option *ngFor="let opt of prop.enum"
+                                        [value]="opt"
+                                        [ngValue]="opt"
+                                >
+                                    {{ opt }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="cfg.mission">Mission</label>
+                            <pre class="small text-muted">
+                                {{ schema.definitions.ServerCfg.properties.Missions.description }}
+                            </pre>
+                            <input  type="text" class="form-control"
+                                    id="cfg.mission" name="cfg.mission"
+                                    [(ngModel)]="config.serverCfg.Missions.DayZ.template"
+                            >
+                        </div>
                     </div>
                 </div>
 

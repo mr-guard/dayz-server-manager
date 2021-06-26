@@ -1,0 +1,125 @@
+<sb-layout-dashboard class="types-component">
+    <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <sb-card background="h-100 type-tabs">
+        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0;">
+            <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>
+            <div style="padding: 0 0.5rem;">Type Files:</div>
+
+            <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+                <li *ngFor="let file of files; let i = index;" [ngbNavItem]="i">
+                    <a ngbNavLink>{{ file.file }}</a>
+                    <ng-template ngbNavContent>
+                        <div style="height: 100%; margin-bottom: 20px;">
+                            <ag-grid-angular
+                                [frameworkComponents]="frameworkComponents"
+                                [columnDefs]="typesColumnDefs"
+                                [defaultColDef]="defaultColDef"
+                                [rowData]="file.content.types.type"
+                                [headerHeight]="150"
+                                [floatingFiltersHeight]="50"
+                                [groupHeaderHeight]="75"
+                                style="width: 100%; height: 100%;"
+                                class="ag-theme-alpine"
+                            >
+                            </ag-grid-angular>
+
+                        </div>
+                    </ng-template>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body" *ngIf="!loading">
+            <ngb-alert  *ngIf="outcomeBadge"
+                        [type]="outcomeBadge?.success ? 'success' : 'danger'"
+            >
+                {{ outcomeBadge.message }}
+            </ngb-alert>
+            <ngb-alert  *ngIf="validationErrors?.length"
+                        type="danger"
+            >
+                <div>
+                    Errors:
+                    <ul style="max-height: 10vh; overflow-y: scroll;">
+                        <li *ngFor="let error of validationErrors">
+                            {{ error }}
+                        </li>
+                    </ul>
+                </div>
+            </ngb-alert>
+            <form (ngSubmit)="onSubmit()" #configForm="ngForm">
+
+                <div [ngbNavOutlet]="nav"></div>
+
+                <div class="d-flex flex-row" style="justify-content: space-between;">
+                    <button type="button" class="btn btn-primary"
+                            (click)="reset()"
+                            [disabled]="submitting"
+                    >
+                        Reset
+                    </button>
+                    <div class="d-flex flex-row">
+                        <div class="d-flex flex-row btn-group">
+                            <input type="number" #percentChangeInput [value]="100" style="margin-right: -2px;">
+                            <select #attrChangeInput>
+                                <option value="nominal" selected>Nominal</option>
+                                <option value="lifetime">Lifetime</option>
+                                <option value="restock">Restock</option>
+                                <option value="min">Min</option>
+                                <option value="quantmin">Quant Min</option>
+                                <option value="quantmax">Quant Max</option>
+                                <option value="cost">Cost</option>
+                            </select>
+                            <button type="button" class="btn btn-success"
+                                    (click)="changeAttrInPercent(attrChangeInput.value, percentChangeInput.value)"
+                            >
+                                Multiply
+                            </button>
+                        </div>
+                        <div class="d-flex flex-row" style="margin-left: 15px;">
+                            <button type="button" class="btn btn-success"
+                                    (click)="validate(true)"
+                            >
+                                Validate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-row">
+                        <button type="button" class="btn btn-success" style="margin-right: 1.5rem;"
+                                [disabled]="!configForm.form.valid"
+                                (click)="saveCurrentFile()"
+                        >
+                            Download
+                        </button>
+
+
+                        <div class="d-flex flex-row" style="align-items: center;">
+                            <label class="form-label">Create Backup</label>
+                            <input type="checkbox" class="form-control form-control-sm mx-1"
+                                   [(ngModel)]="withBackup"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="submitting"
+                            >
+                        </div>
+                        <div class="d-flex flex-row" style="align-items: center;">
+                            <label class="form-label">Restart Server</label>
+                            <input type="checkbox" class="form-control form-control-sm mx-1"
+                                   [(ngModel)]="withRestart"
+                                   [ngModelOptions]="{standalone: true}"
+                                   [disabled]="submitting"
+                            >
+                        </div>
+                        <button type="submit" class="btn btn-success"
+                                [disabled]="!configForm.form.valid || submitting"
+                        >
+                            <fa-icon *ngIf="submitting" [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
+                            Submit
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="card-body" *ngIf="loading">
+            <fa-icon [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
+        </div>
+    </sb-card>
+</sb-layout-dashboard>

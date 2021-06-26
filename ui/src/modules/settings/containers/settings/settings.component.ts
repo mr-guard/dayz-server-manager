@@ -4,6 +4,16 @@ import { AppCommonService } from '@common/services';
 
 import configschema from '../../../../../../src/config/config.schema.json';
 
+type ServerCfgKey = keyof typeof configschema.definitions.ServerCfg.properties;
+
+interface Property {
+    name: string;
+    description: string;
+    enum?: (string | number)[];
+    type: 'number' | 'string' | 'boolean';
+    default: any;
+}
+
 @Component({
     selector: 'sb-settings',
     changeDetection: ChangeDetectionStrategy.Default,
@@ -21,6 +31,8 @@ export class SettingsComponent implements OnInit {
         message: string;
         success: boolean;
     };
+
+    public serverCfgProps = this.getServerCfgProps();
 
     public constructor(
         public appCommon: AppCommonService,
@@ -69,6 +81,24 @@ export class SettingsComponent implements OnInit {
             channel: '',
             mode: 'admin',
         });
+    }
+
+    public getServerCfgProps(): Property[] {
+        return (this.schema.definitions.ServerCfg.propertyOrder as ServerCfgKey[])
+            .filter((x) => {
+                const { type } = this.schema.definitions.ServerCfg.properties[x];
+
+                const included = ['string', 'number'].includes(type)
+                    && !(['motd', 'motdInterval', 'Missions'] as ServerCfgKey[]).includes(x);
+
+                console.log(`${x}: ${included}`);
+
+                return included;
+            })
+            .map((x) => ({
+                ...(this.schema.definitions.ServerCfg.properties[x] as Property),
+                name: x,
+            }));
     }
 
 }

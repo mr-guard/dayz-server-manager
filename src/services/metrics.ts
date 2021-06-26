@@ -1,26 +1,16 @@
 import { Manager } from '../control/manager';
-import * as fs from 'fs';
-import * as zlip from 'zlib';
-import { MetricsContainer, MetricType, MetricWrapper } from '../types/metrics';
+import { MetricType, MetricTypeEnum, MetricWrapper } from '../types/metrics';
 import { Logger, LogLevel } from '../util/logger';
-import { StatefulService } from '../types/service';
-import { merge } from '../util/merge';
+import { IStatefulService } from '../types/service';
+import { DatabaseTypes } from './database';
 
-export class Metrics implements StatefulService {
+export class Metrics implements IStatefulService {
 
-    private static log = new Logger('Metrics');
-    private static readonly METRICS_FILE = 'server-manager-metrics';
+    private log = new Logger('Metrics');
 
+    private initialTimeout = 1000;
+    private timeout: any;
     private interval: any;
-    private tickCount: number = 0;
-
-    /* eslint-disable @typescript-eslint/naming-convention */
-    private metricsContainer: MetricsContainer = {
-        AUDIT: [],
-        PLAYERS: [],
-        SYSTEM: [],
-    };
-    /* eslint-disable @typescript-eslint/naming-convention */
 
     public constructor(
         public manager: Manager,
@@ -31,38 +21,49 @@ export class Metrics implements StatefulService {
             await this.stop();
         }
 
-        await this.readMetrics();
+        for (const metricKey of Object.keys(MetricTypeEnum)) {
+            this.manager.database.getDatabase(DatabaseTypes.METRICS).run(`
+                CREATE TABLE IF NOT EXISTS ${metricKey} (
+                    timestamp UNSIGNED BIG INT PRIMARY KEY,
+                    value TEXT
+                );
+            `);
+        }
 
-        this.tickCount = 0;
-        setTimeout(() => {
+        this.timeout = setTimeout(() => {
+            this.timeout = undefined;
             this.interval = setInterval(() => {
                 void this.tick();
             }, this.manager.config.metricPollIntervall);
-        }, 1000);
+        }, this.initialTimeout);
     }
 
     public async stop(): Promise<void> {
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = undefined;
+        }
         if (this.interval) {
             clearInterval(this.interval);
             this.interval = undefined;
         }
     }
 
-    public pushMetricValue<T extends MetricWrapper<any>>(type: keyof typeof MetricType, value: T): void {
-        if (this.metricsContainer[type].length) {
-            const firstTS = this.metricsContainer[type][0].timestamp;
-            if ((new Date().valueOf() - firstTS) > this.manager.config.metricMaxAge) {
-                this.metricsContainer[type].shift();
-            }
-        }
-        this.metricsContainer[type].push(value);
+    public async pushMetricValue<T extends MetricWrapper<any>>(type: MetricType, value: T): Promise<void> {
+        this.manager.database.getDatabase(DatabaseTypes.METRICS).run(
+            `
+                INSERT INTO ${type} (timestamp, value) VALUES (?, ?)
+            `,
+            value.timestamp,
+            JSON.stringify(value.value),
+        );
     }
 
-    private async pushMetric(type: keyof typeof MetricType, valueFnc: () => Promise<any>): Promise<void> {
+    private async pushMetric(type: MetricType, valueFnc: () => Promise<any>): Promise<void> {
         try {
             const value = await valueFnc();
             if (!!value) {
-                this.pushMetricValue(type, {
+                await this.pushMetricValue(type, {
                     timestamp: new Date().valueOf(),
                     value,
                 });
@@ -74,79 +75,41 @@ export class Metrics implements StatefulService {
 
     private async tick(): Promise<void> {
 
-        Metrics.log.log(LogLevel.DEBUG, 'Tick');
+        this.log.log(LogLevel.DEBUG, 'Tick');
 
-        await this.pushMetric(MetricType.PLAYERS, () => this.manager.rcon.getPlayers());
+        await this.pushMetric(MetricTypeEnum.PLAYERS, () => this.manager.rcon.getPlayers());
 
-        await this.pushMetric(MetricType.SYSTEM, () => this.manager.monitor.getSystemReport());
+        await this.pushMetric(MetricTypeEnum.SYSTEM, () => this.manager.monitor.getSystemReport());
 
-        if ((this.tickCount++ % 10) === 0) {
-            this.writeMetrics();
+        if (this.manager.config.metricMaxAge && this.manager.config.metricMaxAge > 0) {
+            this.deleteMetrics(this.manager.config.metricMaxAge);
         }
 
     }
 
-    public deleteMetrics(maxDays: number): void {
-        const delTs = new Date().valueOf() - (maxDays * 24 * 60 * 60 * 1000);
-        for (const key of Object.keys(MetricType)) {
-            this.metricsContainer[key] = this.metricsContainer[key as MetricType]
-                .filter((x) => x.timestamp >= delTs);
+    public deleteMetrics(maxAge: number): void {
+
+        const delTs = new Date().valueOf() - maxAge;
+        for (const key of Object.keys(MetricTypeEnum)) {
+            this.manager.database.getDatabase(DatabaseTypes.METRICS).run(`
+                DELETE FROM ${key} WHERE timestamp < ?
+            `, delTs);
         }
-        this.writeMetrics();
+
     }
 
-    private writeMetrics(): void {
-        zlip.brotliCompress(
-            JSON.stringify(this.metricsContainer!),
-            (err, compressed) => {
-                if (err) {
-                    Metrics.log.log(LogLevel.ERROR, 'Failed to compress metrics', err);
-                    return;
-                }
-                fs.writeFile(
-                    Metrics.METRICS_FILE,
-                    compressed,
-                    (writeErr) => {
-                        if (writeErr) {
-                            Metrics.log.log(LogLevel.ERROR, 'Failed to write metrics', writeErr);
-                        }
-                    },
-                );
-            },
-        );
-    }
-
-    private async readMetrics(): Promise<void> {
-        try {
-            if (!fs.existsSync(Metrics.METRICS_FILE)) {
-                return;
-            }
-            const content = await new Promise<Buffer>(
-                (r, e) => fs.readFile(
-                    Metrics.METRICS_FILE,
-                    (err, data) => {
-                        if (err) {
-                            e(err);
-                        }
-                        r(data);
-                    },
-                ),
-            );
-            this.metricsContainer = merge(
-                this.metricsContainer,
-                JSON.parse(zlip.brotliDecompressSync(content).toString()),
-            );
-        } catch {
-            // ignore
-        }
-    }
-
-    public get metrics(): MetricsContainer {
-        return this.metricsContainer;
-    }
-
-    public async fetchMetrics(type: keyof typeof MetricType, since?: number): Promise<MetricWrapper<any>[]> {
-        return since ? this.metrics[type].filter((x) => x.timestamp > since) : this.metrics[type];
+    public async fetchMetrics(type: MetricType, since?: number): Promise<MetricWrapper<any>[]> {
+        return this.manager.database.getDatabase(DatabaseTypes.METRICS).all(
+            `
+                SELECT * FROM ${type} WHERE timestamp > ? ORDER BY timestamp ASC
+            `,
+            since ?? 0,
+        ).map((x) => {
+            return {
+                timestamp: x.timestamp,
+                value: JSON.parse(x.value),
+            };
+        });
     }
 
 }

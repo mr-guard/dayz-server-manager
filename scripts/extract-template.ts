@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as TJS from 'typescript-json-schema';
+import { ServerCfg } from '../src/config/config';
 import { generateConfigTemplate } from '../src/config/config-template';
 
 export const createConfigSchema = (): any => {
@@ -24,6 +25,9 @@ try {
 } catch {}
 
 const schema = createConfigSchema();
+
+schema.properties.serverCfg.default = new ServerCfg();
+
 fs.writeFileSync(
     path.resolve(path.join(__dirname, '../build/server-manager-template.json')),
     generateConfigTemplate(schema),
