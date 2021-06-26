@@ -5,8 +5,6 @@ on:
     branches:
       - master
       - experimental
-    tags-ignore:
-      - '*'
 
 jobs:
   build:
@@ -31,13 +29,32 @@ jobs:
         cp -r /tmp/mikero/bin /usr/local
         cp -r /tmp/mikero/lib /usr/local
         ldconfig
-    - name: build pbos
-      run: npm run buildPbos
-    - run: npm i
-    - run: npm run postinstall
-    - run: npm run buildAndPack --if-present
-    # - name: Archive artifacts
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: server-manager
-    #     path: build
+    - name: Install deps
+      run: npm i
+    - name: Build
+      run: npm run buildAndPack
+    - name: Zip Artifacts
+      if: startsWith(github.ref, 'refs/tags/')
+      run: zip -r server-manager.zip build/*
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset
+      if: startsWith(github.ref, 'refs/tags/v')
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server-manager.zip
+        asset_name: server-manager.zip
+        asset_content_type: application/zip
