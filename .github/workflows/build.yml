@@ -21,8 +21,8 @@ jobs:
         node-version: '12.x'
     - name: download mikeros tools
       run: |
-        apt-get update
-        apt-get install liblzo2-2 libvorbis0a libvorbisfile3 libvorbisenc2 libogg0 libuchardet0
+        sudo apt-get update
+        sudo apt-get install liblzo2-2 libvorbis0a libvorbisfile3 libvorbisenc2 libogg0 libuchardet0
         mkdir -p /tmp/mikero
         curl -o /tmp/mikero/mikero.tgz https://mikero.bytex.digital/api/download?filename=depbo-tools-0.8.06-linux-64bit.tgz
         pushd /tmp/mikero
