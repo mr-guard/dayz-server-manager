@@ -45,7 +45,7 @@ interface TypesXml {
     selector: 'category-renderer',
     template: `
         <ng-select [items]="dropdownList"
-               bindLabel="name"
+               bindLabel="label"
                bindValue="name"
                placeholder="Select item"
                appendTo="body"
@@ -60,18 +60,21 @@ interface TypesXml {
 export class CategoryRenderer implements ICellRendererAngularComp {
 
     public static CATEGORY_LIST = [
-        { name: 'weapons' },
-        { name: 'explosives' },
-        { name: 'clothes' },
-        { name: 'containers' },
-        { name: 'tools' },
-        { name: 'vehicleparts' },
-        { name: 'food' },
+        'weapons',
+        'explosives',
+        'clothes',
+        'containers',
+        'tools',
+        'vehicleparts',
+        'food',
     ];
 
     public params: any;
 
-    public dropdownList = CategoryRenderer.CATEGORY_LIST;
+    public dropdownList = CategoryRenderer.CATEGORY_LIST.map((x) => ({
+        name: x,
+        label: x,
+    }));
 
     public selectedItems = [];
 
@@ -100,7 +103,7 @@ export class CategoryRenderer implements ICellRendererAngularComp {
     selector: 'value-renderer',
     template: `
         <ng-select [items]="dropdownList"
-               bindLabel="name"
+               bindLabel="label"
                bindValue="name"
                placeholder="Select item"
                appendTo="body"
@@ -114,14 +117,17 @@ export class CategoryRenderer implements ICellRendererAngularComp {
 })
 export class ValueRenderer extends CategoryRenderer implements ICellRendererAngularComp {
 
-    public static VALUE_LIST = [
-        { name: 'Tier1' },
-        { name: 'Tier2' },
-        { name: 'Tier3' },
-        { name: 'Tier4' },
-    ];
+    public dropdownList: { name: string; label: string }[] = [];
 
-    public dropdownList = ValueRenderer.VALUE_LIST;
+    public constructor() {
+        super();
+        for (let i = 1; i <= 15; i++) {
+            this.dropdownList.push({
+                name: `Tier${i}`,
+                label: (i <= 4 ? `Tier${i}` : `Tier${i} (custom maps only)`),
+            });
+        }
+    }
 
 }
 
@@ -144,22 +150,25 @@ export class ValueRenderer extends CategoryRenderer implements ICellRendererAngu
 export class UsageRenderer extends CategoryRenderer implements ICellRendererAngularComp {
 
     public static USAGE_LIST = [
-        { name: 'Coast ' },
-        { name: 'Farm ' },
-        { name: 'Firefighter ' },
-        { name: 'Hunting ' },
-        { name: 'Industrial ' },
-        { name: 'Medic ' },
-        { name: 'Military ' },
-        { name: 'Office ' },
-        { name: 'Police ' },
-        { name: 'Prison ' },
-        { name: 'School ' },
-        { name: 'Town ' },
-        { name: 'Village' },
+        'Coast',
+        'Farm',
+        'Firefighter',
+        'Hunting',
+        'Industrial',
+        'Medic',
+        'Military',
+        'Office',
+        'Police',
+        'Prison',
+        'School',
+        'Town',
+        'Village',
     ];
 
-    public dropdownList = UsageRenderer.USAGE_LIST;
+    public dropdownList = UsageRenderer.USAGE_LIST.map((x) => ({
+        name: x,
+        label: x,
+    }));
 
 }
 
@@ -221,6 +230,7 @@ export class TypesComponent implements OnInit {
     public files: { file: string; content: TypesXml }[] = [];
 
     public activeTab = 0;
+    public validationErrors: string[] = [];
 
     public frameworkComponents = {
         checkboxRenderer: CheckboxRenderer,
@@ -237,7 +247,17 @@ export class TypesComponent implements OnInit {
         resizable: true,
     };
 
-    public typesColumnDefs = [
+    public typesColumnDefs: {
+        headerName: string;
+        valueGetter: (params: { data: TypesXmlEntry }) => any;
+        valueSetter: (params: { data: TypesXmlEntry; newValue: any }) => boolean;
+        minWidth?: number;
+        headerTooltip: string;
+        cellRenderer?: string;
+        editable?: boolean;
+        filter?: boolean;
+        sortable?: boolean;
+    }[] = [
         {
             headerName: 'Name',
             valueGetter: (params) => {
@@ -321,6 +341,13 @@ export class TypesComponent implements OnInit {
             valueGetter: (params) => Number(params.data.nominal[0]),
             valueSetter: (params) => {
                 params.data.nominal[0] = String(params.newValue);
+
+                // auto validate min <= nominal
+                if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
+                    // eslint-disable-next-line prefer-destructuring
+                    params.data.min[0] = params.data.nominal[0];
+                }
+
                 return true;
             },
             minWidth: 75,
@@ -351,6 +378,13 @@ export class TypesComponent implements OnInit {
             valueGetter: (params) => Number(params.data.min[0]),
             valueSetter: (params) => {
                 params.data.min[0] = String(params.newValue);
+
+                // auto validate min <= nominal
+                if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
+                    // eslint-disable-next-line prefer-destructuring
+                    params.data.nominal[0] = params.data.min[0];
+                }
+
                 return true;
             },
             minWidth: 50,
@@ -361,6 +395,16 @@ export class TypesComponent implements OnInit {
             valueGetter: (params) => Number(params.data.quantmin[0]),
             valueSetter: (params) => {
                 params.data.quantmin[0] = String(params.newValue);
+
+                // auto validate both min and max either -1 or some value
+                if (params.data.quantmin[0] === '-1' && params.data.quantmax[0] !== '-1') {
+                    params.data.quantmax[0] = '-1';
+                // auto validate min <= max
+                } else if (params.data.quantmin[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
+                    // eslint-disable-next-line prefer-destructuring
+                    params.data.quantmax[0] = params.data.quantmin[0];
+                }
+
                 return true;
             },
             headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
@@ -370,6 +414,16 @@ export class TypesComponent implements OnInit {
             valueGetter: (params) => Number(params.data.quantmax[0]),
             valueSetter: (params) => {
                 params.data.quantmax[0] = String(params.newValue);
+
+                // auto validate both min and max either -1 or some value
+                if (params.data.quantmax[0] === '-1' && params.data.quantmin[0] !== '-1') {
+                    params.data.quantmin[0] = '-1';
+                // auto validate min <= max
+                } else if (params.data.quantmax[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
+                    // eslint-disable-next-line prefer-destructuring
+                    params.data.quantmin[0] = params.data.quantmax[0];
+                }
+
                 return true;
             },
             headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
@@ -468,28 +522,34 @@ export class TypesComponent implements OnInit {
         this.submitting = true;
         this.outcomeBadge = undefined;
 
-        try {
-
-            for (const file of this.files) {
-                const xmlContent = new xml.Builder().buildObject(file.content);
-                await this.appCommon.updateMissionFile(
-                    file.file,
-                    xmlContent,
-                    this.withBackup,
-                ).toPromise();
+        if (this.validate(false)) {
+            try {
+                for (const file of this.files) {
+                    const xmlContent = new xml.Builder().buildObject(file.content);
+                    await this.appCommon.updateMissionFile(
+                        file.file,
+                        xmlContent,
+                        this.withBackup,
+                    ).toPromise();
+                }
+                if (this.withRestart) {
+                    await this.maintenance.restartServer();
+                }
+                this.outcomeBadge = {
+                    success: true,
+                    message: 'Submitted successfully',
+                };
+            } catch (e) {
+                console.error(e);
+                this.outcomeBadge = {
+                    success: false,
+                    message: `Failed to submit: ${e.message}`,
+                };
             }
-            if (this.withRestart) {
-                await this.maintenance.restartServer();
-            }
-            this.outcomeBadge = {
-                success: true,
-                message: 'Saved successfully',
-            };
-        } catch (e) {
-            console.error(e);
+        } else {
             this.outcomeBadge = {
                 success: false,
-                message: `Failed to save: ${e.message}`,
+                message: `Failed to submit: Validation Errors`,
             };
         }
 
@@ -523,7 +583,7 @@ export class TypesComponent implements OnInit {
                     }
                 }
             }
-            console.log(typesFiles);
+            // console.log(typesFiles);
 
             this.files = ((await Promise.all(typesFiles.map(async (x) => {
                 return {
@@ -548,7 +608,7 @@ export class TypesComponent implements OnInit {
                 return file;
             });
 
-            console.log(this.files);
+            // console.log(this.files);
 
             // console.log(this.coreXml);
         } catch (e) {
@@ -575,6 +635,34 @@ export class TypesComponent implements OnInit {
 
         // trigger change detection
         this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
+    }
+
+    public validate(showSuccess: boolean): boolean {
+        let result = true;
+        this.validationErrors = [];
+        for (const type of this.files[this.activeTab].content.types.type) {
+            if (Number(type.min[0]) > Number(type.nominal[0])) {
+                result = false;
+                this.validationErrors.push(`${type.$.name}: Min > Nominal`);
+            }
+            if ((type.quantmin[0] === '-1' || type.quantmax[0] === '-1') && (type.quantmin[0] !== '-1' || type.quantmax[0] !== '-1')) {
+                result = false;
+                this.validationErrors.push(`${type.$.name}: QuantMin & QuantMax must be both -1 or both != -1`);
+            }
+            if (Number(type.quantmin[0]) > Number(type.quantmax[0])) {
+                result = false;
+                this.validationErrors.push(`${type.$.name}: QuantMin > QuantMax`);
+            }
+        }
+
+        if (result && showSuccess) {
+            this.outcomeBadge = {
+                success: true,
+                message: 'No errors found',
+            };
+        }
+
+        return result;
     }
 
     public saveCurrentFile(): void {

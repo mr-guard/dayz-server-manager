@@ -34,6 +34,18 @@
             >
                 {{ outcomeBadge.message }}
             </ngb-alert>
+            <ngb-alert  *ngIf="validationErrors?.length"
+                        type="danger"
+            >
+                <div>
+                    Errors:
+                    <ul style="max-height: 10vh; overflow-y: scroll;">
+                        <li *ngFor="let error of validationErrors">
+                            {{ error }}
+                        </li>
+                    </ul>
+                </div>
+            </ngb-alert>
             <form (ngSubmit)="onSubmit()" #configForm="ngForm">
 
                 <div [ngbNavOutlet]="nav"></div>
@@ -46,21 +58,30 @@
                         Reset
                     </button>
                     <div class="d-flex flex-row">
-                        <input type="number" #percentChangeInput [value]="100">
-                        <select #attrChangeInput>
-                            <option value="nominal" selected>Nominal</option>
-                            <option value="lifetime">Lifetime</option>
-                            <option value="restock">Restock</option>
-                            <option value="min">Min</option>
-                            <option value="quantmin">Quant Min</option>
-                            <option value="quantmax">Quant Max</option>
-                            <option value="cost">Cost</option>
-                        </select>
-                        <button type="button" class="btn btn-success"
-                                (click)="changeAttrInPercent(attrChangeInput.value, percentChangeInput.value)"
-                        >
-                            Multiply
-                        </button>
+                        <div class="d-flex flex-row btn-group">
+                            <input type="number" #percentChangeInput [value]="100" style="margin-right: -2px;">
+                            <select #attrChangeInput>
+                                <option value="nominal" selected>Nominal</option>
+                                <option value="lifetime">Lifetime</option>
+                                <option value="restock">Restock</option>
+                                <option value="min">Min</option>
+                                <option value="quantmin">Quant Min</option>
+                                <option value="quantmax">Quant Max</option>
+                                <option value="cost">Cost</option>
+                            </select>
+                            <button type="button" class="btn btn-success"
+                                    (click)="changeAttrInPercent(attrChangeInput.value, percentChangeInput.value)"
+                            >
+                                Multiply
+                            </button>
+                        </div>
+                        <div class="d-flex flex-row" style="margin-left: 15px;">
+                            <button type="button" class="btn btn-success"
+                                    (click)="validate(true)"
+                            >
+                                Validate
+                            </button>
+                        </div>
                     </div>
                     <div class="d-flex flex-row">
                         <button type="button" class="btn btn-success" style="margin-right: 1.5rem;"
