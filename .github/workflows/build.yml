@@ -26,9 +26,9 @@ jobs:
         pushd /tmp/mikero
         tar --strip-components=1 -xvzf mikero.tgz
         popd
-        cp -r /tmp/mikero/bin /usr/local
-        cp -r /tmp/mikero/lib /usr/local
-        ldconfig
+        sudo cp -r /tmp/mikero/bin /usr/local
+        sudo cp -r /tmp/mikero/lib /usr/local
+        sudo ldconfig
     - name: Install deps
       run: npm i
     - name: Build
