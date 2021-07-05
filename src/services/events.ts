@@ -32,7 +32,10 @@ export class Events implements IStatefulService {
                     () => {
                         switch (event.type) {
                             case 'restart': {
-                                void checkAndRun(() => void this.manager.monitor.killServer());
+                                void checkAndRun(() => {
+                                    void this.manager.discord.relayRconMessage('Scheduled Restart!');
+                                    void this.manager.monitor.killServer();
+                                });
                                 break;
                             }
                             case 'message': {

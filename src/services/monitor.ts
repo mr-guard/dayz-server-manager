@@ -23,6 +23,8 @@ export class MonitorLoop {
 
     private loopInterval = 500;
 
+    private lastTick = 0;
+
     private log = new Logger('Monitor');
 
     private processes = new Processes();
@@ -66,12 +68,12 @@ export class MonitorLoop {
 
     private async loop(): Promise<void> {
 
-        let lastTick = 0;
+        this.lastTick = 0;
         while (this.watching) {
 
-            if ((new Date().valueOf() - lastTick) > this.checkIntervall) {
+            if ((new Date().valueOf() - this.lastTick) > this.checkIntervall) {
                 await this.tick();
-                lastTick = new Date().valueOf();
+                this.lastTick = new Date().valueOf();
             }
 
             await new Promise((r) => setTimeout(r, this.loopInterval));
@@ -112,6 +114,9 @@ export class MonitorLoop {
                 await this.monitor.startServer(this.initialStart);
                 this.lastServerUsages = [];
                 this.initialStart = false;
+
+                // give the server a minute to start up
+                this.skipLoop(60000);
             } else {
                 await this.checkPossibleStuckState();
             }
@@ -152,6 +157,10 @@ export class MonitorLoop {
         }
     }
 
+    public skipLoop(forTime?: number): void {
+        this.lastTick = new Date().valueOf() + (forTime ?? 30000);
+    }
+
 }
 
 export class Monitor implements IStatefulService, IMonitor {
@@ -182,6 +191,16 @@ export class Monitor implements IStatefulService, IMonitor {
         ) {
             // TODO force resume after this occurs multiple times?
             return;
+        }
+
+        // msg about server startup
+        if (
+            state === ServerState.STARTED
+            && (
+                this.$internalServerState === ServerState.STARTING
+            )
+        ) {
+            void this.manager.discord.relayRconMessage('Server start sucessful');
         }
 
         // handle stop after running
