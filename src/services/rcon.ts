@@ -48,6 +48,10 @@ export class RCON implements IStatefulService {
 
         this.connectionErrorCounter = 0;
 
+        if (this.manager.config?.serverCfg?.BattlEye === 0) {
+            return;
+        }
+
         // get free listening port
         const openListeningPort = await new Promise<number | null>((r) => {
             const tempSocket = dgram.createSocket('udp4');
