@@ -414,6 +414,7 @@ export class Event {
 // eslint-disable-next-line no-shadow
 export enum HookTypeEnum {
     beforeStart = 'beforeStart',
+    missionChanged = 'missionChanged'
 }
 
 export type HookType = keyof typeof HookTypeEnum;
@@ -425,7 +426,8 @@ export class Hook {
     /**
      * Type of the Hook
      * Can be one of:
-     * 'beforeStart' - restarts the server
+     * 'beforeStart' - triggered right before server start
+     * 'missionChanged' - triggered after the mission files were changed (i.e. types editor save)
      *
      * @required
      */

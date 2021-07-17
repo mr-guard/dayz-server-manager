@@ -9,6 +9,7 @@ import { ServerState, SystemReport } from '../types/monitor';
 import { MetricWrapper } from '../types/metrics';
 import { IStatefulService } from '../types/service';
 import { ConfigParser } from '../util/config-parser';
+import { HookTypeEnum } from '../config/config';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -411,24 +412,7 @@ export class Monitor implements IStatefulService, IMonitor {
 
                 await this.prepareServerStart(skipPrep);
 
-                const hooks = this.manager.getHooks('beforeStart');
-                if (hooks.length) {
-                    for (const hook of hooks) {
-                        this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
-                        const hookOut = await this.processes.spawnForOutput(
-                            hook.program,
-                            hook.params ?? [],
-                            {
-                                dontThrow: true,
-                            },
-                        );
-                        if (hookOut?.status === 0) {
-                            this.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
-                        } else {
-                            this.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
-                        }
-                    }
-                }
+                await this.manager.hooks.executeHooks(HookTypeEnum.beforeStart);
 
                 const args = this.buildStartServerArgs();
                 const sub = spawn(
