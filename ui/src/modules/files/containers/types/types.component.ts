@@ -567,10 +567,8 @@ export class TypesComponent implements OnInit {
 
         try {
             const core = await this.appCommon.fetchMissionFile('cfgEconomyCore.xml').toPromise();
-            // console.log(core);
             this.coreXml = await xml.parseStringPromise(core);
             const ceEntries = this.coreXml.economycore.ce;
-            console.log(ceEntries);
             const typesFiles: string[] = ['db/types.xml'];
             for (const ceEntry of ceEntries) {
                 const folder = ceEntry.$.folder as string;
@@ -583,7 +581,6 @@ export class TypesComponent implements OnInit {
                     }
                 }
             }
-            // console.log(typesFiles);
 
             this.files = ((await Promise.all(typesFiles.map(async (x) => {
                 return {
@@ -607,10 +604,6 @@ export class TypesComponent implements OnInit {
                 });
                 return file;
             });
-
-            // console.log(this.files);
-
-            // console.log(this.coreXml);
         } catch (e) {
             console.error(e);
         }
