@@ -449,7 +449,12 @@ export class Monitor implements IStatefulService, IMonitor {
         } else {
             processList = await this.processes.getProcessList();
 
-            this.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
+            this.log.log(
+                LogLevel.DEBUG,
+                'Fetched new Process list',
+                processList
+                    .filter((x) => this.paths.samePath(x?.ExecutablePath, this.manager.getServerExePath())),
+            );
 
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),
