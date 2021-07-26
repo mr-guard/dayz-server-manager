@@ -349,20 +349,20 @@ export class RCON implements IStatefulService {
         await this.sendCommand('reloadbans');
     }
 
-    // public async shutdown(): Promise<void> {
-    //     await this.sendCommand('#shutdown');
-    // }
+    public async shutdown(): Promise<void> {
+        await this.sendCommand('#shutdown');
+    }
 
     public async global(message: string): Promise<void> {
         await this.sendCommand(`say -1 ${message}`);
     }
 
     public async lock(): Promise<void> {
-        await this.sendCommand('lock');
+        await this.sendCommand('#lock');
     }
 
     public async unlock(): Promise<void> {
-        await this.sendCommand('unlock');
+        await this.sendCommand('#unlock');
     }
 
 }
