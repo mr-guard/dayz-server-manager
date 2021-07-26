@@ -1,4 +1,4 @@
-import { HookTypeEnum } from '../config/config';
+import { Hook, HookType, HookTypeEnum } from '../config/config';
 import { Manager } from '../control/manager';
 import { IService } from '../types/service';
 import { Logger, LogLevel } from '../util/logger';
@@ -15,8 +15,12 @@ export class Hooks implements IService {
         public manager: Manager,
     ) {}
 
+    public getHooks(type: HookType): Hook[] {
+        return (this.manager.config.hooks ?? []).filter((x) => x.type === type);
+    }
+
     public async executeHooks(hookType: HookTypeEnum): Promise<void> {
-        const hooks = this.manager.getHooks(hookType);
+        const hooks = this.getHooks(hookType);
         if (hooks.length) {
             for (const hook of hooks) {
                 this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);

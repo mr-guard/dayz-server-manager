@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { DiscordBot } from '../services/discord';
 import { REST } from '../interface/rest';
 import { RCON } from '../services/rcon';
-import { Config, Hook, HookType, UserLevel } from '../config/config';
+import { Config, UserLevel } from '../config/config';
 import * as fs from 'fs';
 import { SteamCMD } from '../services/steamcmd';
 import { Paths } from '../util/paths';
@@ -192,10 +192,6 @@ export class Manager {
         }
         const levels: UserLevel[] = ['admin', 'manage', 'moderate', 'view'];
         return levels.includes(userLevel) && levels.indexOf(userLevel) <= levels.indexOf(level);
-    }
-
-    public getHooks(type: HookType): Hook[] {
-        return (this.config.hooks ?? []).filter((x) => x.type === type);
     }
 
     public getWebPort(): number {
