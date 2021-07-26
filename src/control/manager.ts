@@ -13,11 +13,8 @@ import { Metrics } from '../services/metrics';
 import { Interface } from '../interface/interface';
 import { Logger, LogLevel } from '../util/logger';
 import { Events } from '../services/events';
-import { generateConfigTemplate } from '../config/config-template';
-import { parseConfigFileContent, validateConfig } from '../config/config-validate';
 import { LogReader } from '../services/log-reader';
 import { Backups } from '../services/backups';
-import { merge } from '../util/merge';
 import { Requirements } from '../services/requirements';
 import { IngameReport } from '../services/ingame-report';
 import { Service } from '../types/service';
@@ -25,9 +22,7 @@ import { Database } from '../services/database';
 import { ServerInfo } from '../types/server-info';
 import { MissionFiles } from '../services/mission-files';
 import { Hooks } from '../services/hooks';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const configschema = require('../config/config.schema.json');
+import { ConfigFileHelper } from '../config/config-file-helper';
 
 export class Manager {
 
@@ -36,6 +31,8 @@ export class Manager {
     private log = new Logger('Manager');
 
     private paths = new Paths();
+
+    private configHelper = new ConfigFileHelper();
 
     // services
     @Service({ type: Interface, stateful: false })
@@ -94,72 +91,13 @@ export class Manager {
         this.log.log(LogLevel.IMPORTANT, `Starting DZSM Version: ${this.APP_VERSION}`);
     }
 
-    private getConfigFileContent(cfgPath: string): string {
-        if (fs.existsSync(cfgPath)) {
-            return fs.readFileSync(cfgPath)?.toString();
-        }
-        throw new Error('Config file does not exist');
-    }
-
-    private logConfigErrors(errors: string[]): void {
-        this.log.log(LogLevel.ERROR, 'Config has errors:');
-
-        for (const configError of errors) {
-            this.log.log(LogLevel.ERROR, configError);
-        }
-    }
-
     public readConfig(): boolean {
-        try {
-            const cfgPath = path.join(this.paths.cwd(), 'server-manager.json');
-            this.log.log(LogLevel.IMPORTANT, `Trying to read config at: ${cfgPath}`);
-            const fileContent = this.getConfigFileContent(cfgPath);
-            const parsed = parseConfigFileContent(fileContent);
-            const configErrors = validateConfig(parsed);
-            if (configErrors?.length) {
-                this.logConfigErrors(configErrors);
-                return false;
-            }
-
-            this.log.log(LogLevel.IMPORTANT, 'Successfully read config');
-
-            // apply defaults
-            this.config = merge(
-                new Config(),
-                parsed,
-            );
-
-            return true;
-        } catch (e) {
-            this.log.log(LogLevel.ERROR, `Error reading config: ${e.message}`, e);
-            return false;
-        }
+        this.config = this.configHelper.readConfig();
+        return !!this.config;
     }
 
     public writeConfig(config: Config): void {
-        // apply defaults
-        config = merge(
-            new Config(),
-            config,
-        );
-
-        const configErrors = validateConfig(config);
-        if (configErrors?.length) {
-            throw ['New config containes errors. Cannot replace config.', ...configErrors];
-        }
-
-        try {
-            this.writeConfigFile(
-                generateConfigTemplate(configschema, config),
-            );
-        } catch (e) {
-            throw [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
-        }
-    }
-
-    private writeConfigFile(content: string): void {
-        const outPath = path.join(this.paths.cwd(), 'server-manager.json');
-        fs.writeFileSync(outPath, content);
+        this.configHelper.writeConfig(config);
     }
 
     public getServerPath(): string {
