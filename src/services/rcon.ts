@@ -38,6 +38,10 @@ export class RCON implements IStatefulService {
         public manager: Manager,
     ) {}
 
+    public isConnected(): boolean {
+        return this.connected;
+    }
+
     private createSocket(port: number): Socket {
         return new Socket({
             port,
@@ -105,7 +109,7 @@ export class RCON implements IStatefulService {
                 name: 'rcon',
                 password: this.getRconPassword(),
                 ip: '127.0.0.1',
-                port: this.manager.config?.serverPort ?? 2302,
+                port: this.getRconPort(),
             },
             {
                 reconnect: true,              // reconnect on timeout
@@ -173,6 +177,14 @@ export class RCON implements IStatefulService {
         );
     }
 
+    private getRconPort(): number {
+        return (
+            this.manager.config?.rconPort
+                ? this.manager.config?.rconPort
+                : 2306
+        );
+    }
+
     public createBattleyeConf(): void {
         let battleyePath = this.manager.config?.battleyePath;
         if (!battleyePath) {
@@ -191,6 +203,7 @@ export class RCON implements IStatefulService {
 
         const battleyeConfPath = path.join(battleyePath, 'BEServer_x64.cfg');
         const rConPassword = this.getRconPassword();
+        const rConPort = this.getRconPort();
 
         fse.ensureDirSync(battleyePath);
         try {
@@ -203,7 +216,7 @@ export class RCON implements IStatefulService {
         } catch {}
         fs.writeFileSync(
             battleyeConfPath,
-            `RConPassword ${rConPassword}\nRestrictRCon 0`,
+            `RConPassword ${rConPassword}\nRestrictRCon 0\nRConPort ${rConPort}`,
         );
     }
 

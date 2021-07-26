@@ -598,6 +598,12 @@ export class Config {
     public rconPassword: string = 'rcon';
 
     /**
+     * RCon Port as required by DayZ Update 1.13 (https://feedback.bistudio.com/T159179)
+     * The default is 2306 to avoid any colissions
+     */
+    public rconPort: number = 2306;
+
+    /**
      * Local mods
      * Actual modnames like '@MyAwesomeMod'
      */
