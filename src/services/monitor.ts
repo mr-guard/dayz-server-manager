@@ -288,12 +288,36 @@ export class Monitor implements IStatefulService, IMonitor {
         if (this.internalServerState === ServerState.STARTING || this.serverState === ServerState.STARTED) {
             this.internalServerState = ServerState.STOPPING;
         }
-        const processes = await this.getDayZProcesses();
-        const success = await Promise.all(processes?.map((x) => this.processes.killProcess(x.ProcessId, force)) ?? []);
 
-        // TODO check if the server needs to be force killed
+        if (force || !this.manager.rcon?.isConnected()) {
 
-        return success.every((x) => x);
+            const processes = await this.getDayZProcesses();
+            const success = await Promise.all(
+                processes?.map((x) => {
+                    return async () => {
+                        try {
+                            await this.processes.killProcess(x.ProcessId, force);
+                            return true;
+                        } catch (err) {
+                            this.log.log(
+                                LogLevel.ERROR,
+                                `Failed to kill process ${x.ProcessId}: ${err.status}`,
+                                err.stdout,
+                                err.stderr,
+                            );
+                        }
+                        return false;
+                    };
+                }) ?? [],
+            );
+            return success.every((x) => x);
+        }
+
+        return this.manager.rcon.shutdown().then(
+            () => true,
+            () => false,
+        );
+
     }
 
     public async writeServerCfg(): Promise<void> {
