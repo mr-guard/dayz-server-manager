@@ -16,6 +16,10 @@ export class ConfigFileHelper {
 
     private paths = new Paths();
 
+    public getConfigFilePath(): string {
+        return path.join(this.paths.cwd(), 'server-manager.json');
+    }
+
     private getConfigFileContent(cfgPath: string): string {
         if (fs.existsSync(cfgPath)) {
             return fs.readFileSync(cfgPath)?.toString();
@@ -33,10 +37,15 @@ export class ConfigFileHelper {
 
     public readConfig(): Config | null {
         try {
-            const cfgPath = path.join(this.paths.cwd(), 'server-manager.json');
+            const cfgPath = this.getConfigFilePath();
             this.log.log(LogLevel.IMPORTANT, `Trying to read config at: ${cfgPath}`);
             const fileContent = this.getConfigFileContent(cfgPath);
-            const parsed = parseConfigFileContent(fileContent);
+
+            // apply defaults
+            const parsed = merge(
+                new Config(),
+                parseConfigFileContent(fileContent),
+            );
             const configErrors = validateConfig(parsed);
             if (configErrors?.length) {
                 this.logConfigErrors(configErrors);
@@ -46,11 +55,7 @@ export class ConfigFileHelper {
 
             this.log.log(LogLevel.IMPORTANT, 'Successfully read config');
 
-            // apply defaults and return
-            return merge(
-                new Config(),
-                parsed,
-            );
+            return parsed;
         } catch (e) {
             this.log.log(LogLevel.ERROR, `Error reading config: ${e.message}`, e);
             return null;
@@ -79,8 +84,10 @@ export class ConfigFileHelper {
     }
 
     private writeConfigFile(content: string): void {
-        const outPath = path.join(this.paths.cwd(), 'server-manager.json');
-        fs.writeFileSync(outPath, content);
+        fs.writeFileSync(
+            this.getConfigFilePath(),
+            content,
+        );
     }
 
 }

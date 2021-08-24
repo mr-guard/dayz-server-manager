@@ -32,7 +32,7 @@ export class Manager {
 
     private paths = new Paths();
 
-    private configHelper = new ConfigFileHelper();
+    public configHelper = new ConfigFileHelper();
 
     // services
     @Service({ type: Interface, stateful: false })
@@ -81,23 +81,28 @@ export class Manager {
     public hooks!: Hooks;
 
     // config
-    public config!: Config;
+    private config$!: Config;
 
     public initDone: boolean = false;
 
     public constructor() {
         this.initDone = false;
-        this.APP_VERSION = fs.readFileSync(path.join(__dirname, '../VERSION')).toString();
+
+        const versionFilePath = path.join(__dirname, '../VERSION');
+        if (fs.existsSync(versionFilePath)) {
+            this.APP_VERSION = fs.readFileSync(versionFilePath).toString();
+        } else {
+            this.APP_VERSION = 'UNKNOWN';
+        }
         this.log.log(LogLevel.IMPORTANT, `Starting DZSM Version: ${this.APP_VERSION}`);
     }
 
-    public readConfig(): boolean {
-        this.config = this.configHelper.readConfig();
-        return !!this.config;
+    public get config(): Config {
+        return this.config$;
     }
 
-    public writeConfig(config: Config): void {
-        this.configHelper.writeConfig(config);
+    public applyConfig(config: Config): void {
+        this.config$ = config;
     }
 
     public getServerPath(): string {
