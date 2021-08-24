@@ -34,6 +34,9 @@ export class RCON implements IStatefulService {
 
     private connectionErrorCounter: number = 0;
 
+    private duplicateMessageCache: string[] = [];
+    private duplicateMessageCacheSize: number = 3;
+
     public constructor(
         public manager: Manager,
     ) {}
@@ -125,6 +128,16 @@ export class RCON implements IStatefulService {
         );
 
         this.connection.on('message', (message /* , packet */) => {
+
+            if (this.duplicateMessageCache.includes(message)) {
+                this.log.log(LogLevel.DEBUG, `duplicate message`, message);
+                return;
+            }
+            this.duplicateMessageCache.push(message);
+            if (this.duplicateMessageCache.length > this.duplicateMessageCacheSize) {
+                this.duplicateMessageCache.shift();
+            }
+
             this.log.log(LogLevel.DEBUG, `message`, message);
             void this.manager.discord?.relayRconMessage(message);
         });
@@ -140,6 +153,7 @@ export class RCON implements IStatefulService {
                 this.log.log(LogLevel.ERROR, `disconnected`, reason);
             }
             this.connected = false;
+            this.duplicateMessageCache = [];
         });
 
         this.connection.on('debug', (data) => {
@@ -163,9 +177,11 @@ export class RCON implements IStatefulService {
         });
 
         this.connection.on('connected', () => {
-            this.log.log(LogLevel.IMPORTANT, 'connected');
-            this.connected = true;
-            void this.sendCommand('say -1 Big Brother Connected.');
+            if (!this.connected) {
+                this.connected = true;
+                this.log.log(LogLevel.IMPORTANT, 'connected');
+                void this.sendCommand('say -1 Big Brother Connected.');
+            }
         });
     }
 
@@ -244,8 +260,10 @@ export class RCON implements IStatefulService {
 
     public async stop(): Promise<void> {
         if (this.connection) {
+
             this.connection.removeAllListeners();
             if (this.connection.connected) {
+                this.connection.once('error', () => { /* ignore */ });
                 this.connection.kill(new Error('Reload'));
                 this.connection = undefined;
                 this.connected = false;
