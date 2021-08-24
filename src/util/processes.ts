@@ -181,7 +181,7 @@ export class Processes {
                 }
 
                 spawnedProcess.on('error', (error) => {
-                    this.log.log(LogLevel.ERROR, error.message, error);
+                    this.log.log(LogLevel.ERROR, error?.message ?? 'Spawned processes threw an error', error);
                 });
 
                 spawnedProcess.on('close', (code) => {
