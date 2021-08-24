@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "postinstall": "npm run installSqlite && npm run installUi",
-    "installSqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v12.0.0 --arch x64 --platform win32",
+    "installSqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v14.0.0 --arch x64 --platform win32",
     "installUi": "cd ui && npm i",
     "pack": "del-cli build/*.exe && cp VERSION dist/VERSION && pkg --out-path build .",
     "buildUi": "del-cli dist/ui && cd ui && npm run build",
@@ -38,9 +38,9 @@
       "dist/VERSION",
       "dist/config/config.shema.json"
     ],
-    "__comment": "node12-linux-x64",
+    "__comment": "node14-linux-x64",
     "targets": [
-      "node12-win-x64"
+      "node14-win-x64"
     ]
   },
   "nyc": {
@@ -115,6 +115,7 @@
   "dependencies": {
     "@senfo/battleye": "2.0.3",
     "better-sqlite3": "^7.4.0",
+    "chokidar": "^3.5.2",
     "compression": "^1.7.4",
     "cron-parser": "3.3.0",
     "discord.js": "^11.6.4",
