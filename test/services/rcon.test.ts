@@ -61,6 +61,7 @@ describe('Test class RCON', () => {
                 else if (t === 'error') errCb = cb
                 else if (t === 'connected') conCb = cb
             },
+            once: (t, c) => {},
             command: (command) => {
                 commandCalled = command;
                 return null;
@@ -136,10 +137,10 @@ describe('Test class RCON', () => {
         } as any;
 
         await rcon.unlock();
-        expect(sentCommand).to.equal('unlock');
+        expect(sentCommand).to.equal('#unlock');
 
         await rcon.lock();
-        expect(sentCommand).to.equal('lock');
+        expect(sentCommand).to.equal('#lock');
 
         await rcon.global('test');
         expect(sentCommand).to.include('say -1');

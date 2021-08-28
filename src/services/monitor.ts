@@ -294,7 +294,7 @@ export class Monitor implements IStatefulService, IMonitor {
             const processes = await this.getDayZProcesses();
             const success = await Promise.all(
                 processes?.map((x) => {
-                    return async () => {
+                    return (async () => {
                         try {
                             await this.processes.killProcess(x.ProcessId, force);
                             return true;
@@ -307,7 +307,7 @@ export class Monitor implements IStatefulService, IMonitor {
                             );
                         }
                         return false;
-                    };
+                    })();
                 }) ?? [],
             );
             return success.every((x) => x);

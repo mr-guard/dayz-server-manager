@@ -176,9 +176,9 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath'
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 
@@ -202,9 +202,9 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath'
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 
@@ -246,9 +246,9 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath'
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 
@@ -298,10 +298,10 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath',
                 linkModDirs: false,
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 
@@ -337,10 +337,10 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath',
                 linkModDirs: true,
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 
@@ -374,9 +374,9 @@ describe('Test class SteamCMD', () => {
 
         const manager = {
             config: {
-                steamWsMods: ['1234567'],
                 steamWorkshopPath: 'testwspath'
             },
+            getModIdList: () => ['1234567'],
             getServerPath: () => 'testserver',
         } as any;
 

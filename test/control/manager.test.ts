@@ -13,7 +13,7 @@ const getConfiguredManager = (): Manager => {
     ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
     
     const manager = new Manager();
-    manager.readConfig();
+    manager.applyConfig(manager.configHelper.readConfig());
 
     return manager;
 };
@@ -40,9 +40,9 @@ describe('Test class Manager', () => {
         ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
         
         const manager = new Manager();
-        const resultValid = manager.readConfig();
+        const resultValid = manager.configHelper.readConfig();
         
-        expect(resultValid).to.be.true;
+        expect(resultValid).to.be.not.null;
     });
 
     it('Manager-readConfig-Data Error', () => {
@@ -51,8 +51,8 @@ describe('Test class Manager', () => {
         ImportMock.mockFunction(fs, 'readFileSync', DATA_ERROR_CONFIG);
         const manager = new Manager();
         
-        const resultErrorData = manager.readConfig();
-        expect(resultErrorData).to.be.false;
+        const resultErrorData = manager.configHelper.readConfig();
+        expect(resultErrorData).to.be.null;
     });
 
     it('Manager-readConfig-Parser Error', () => {
@@ -60,8 +60,8 @@ describe('Test class Manager', () => {
         ImportMock.mockFunction(fs, 'existsSync', true);
         ImportMock.mockFunction(fs, 'readFileSync', PARSER_ERROR_CONFIG);
         const manager = new Manager();
-        const resultErrorParse = manager.readConfig();
-        expect(resultErrorParse).to.be.false;
+        const resultErrorParse = manager.configHelper.readConfig();
+        expect(resultErrorParse).to.be.null;
     });
 
     it('Manager-readConfig-Empty file', () => {
@@ -69,8 +69,8 @@ describe('Test class Manager', () => {
         ImportMock.mockFunction(fs, 'existsSync', true);
         ImportMock.mockFunction(fs, 'readFileSync', '');
         const manager = new Manager();
-        const resultEmpty = manager.readConfig();
-        expect(resultEmpty).to.be.false;
+        const resultEmpty = manager.configHelper.readConfig();
+        expect(resultEmpty).to.be.null;
     });
 
     it('Manager-readConfig-Not existing', () => {
@@ -78,16 +78,16 @@ describe('Test class Manager', () => {
         ImportMock.mockFunction(fs, 'existsSync', false);
         ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
         const manager = new Manager();
-        const resultNotExists = manager.readConfig();
-        expect(resultNotExists).to.be.false;
+        const resultNotExists = manager.configHelper.readConfig();
+        expect(resultNotExists).to.be.null;
     });
 
     it('Manager-logConfigErrors', () => {
         const logs = ['test1', 'test2'];
         const manager = new Manager();
         let i = 0;
-        manager['log'].log = () => i++;
-        manager['logConfigErrors'](logs)
+        manager.configHelper['log'].log = () => i++;
+        manager.configHelper['logConfigErrors'](logs)
         expect(i).to.be.greaterThanOrEqual(logs.length);
     });
 
@@ -96,7 +96,7 @@ describe('Test class Manager', () => {
         const stub = ImportMock.mockFunction(fs, 'writeFileSync');
         
         const manager = new Manager();
-        manager.writeConfig(
+        manager.configHelper.writeConfig(
             Object.assign(
                 new Config(),
                 <Partial<Config>>{
@@ -127,7 +127,7 @@ describe('Test class Manager', () => {
         
         const manager = new Manager();
         
-        expect(() => manager.writeConfig(
+        expect(() => manager.configHelper.writeConfig(
             Object.assign(
                 new Config(),
                 {
@@ -155,7 +155,7 @@ describe('Test class Manager', () => {
         
         const manager = new Manager();
         
-        expect(() => manager.writeConfig(
+        expect(() => manager.configHelper.writeConfig(
             Object.assign(
                 new Config(),
                 {
@@ -180,7 +180,7 @@ describe('Test class Manager', () => {
         const manager = getConfiguredManager();
         const result = manager.getServerPath();
 
-        manager.config.serverPath = null;
+        manager['config$'].serverPath = null;
         const resultDef = manager.getServerPath();
 
         // Expect result
@@ -191,10 +191,10 @@ describe('Test class Manager', () => {
     it('Manager-getServerExePath-abs', () => {
         const manager = getConfiguredManager();
 
-        manager.config.serverPath = 'TestDayZServer';
+        manager['config$'].serverPath = 'TestDayZServer';
         const resultRel = manager.getServerPath();
 
-        manager.config.serverPath = 'C:/TestDayZServer';
+        manager['config$'].serverPath = 'C:/TestDayZServer';
         const resultAbs = manager.getServerPath();
 
         // Expect result
@@ -205,8 +205,8 @@ describe('Test class Manager', () => {
     it('Manager-getServerExePath', () => {
         const manager = getConfiguredManager();
 
-        manager.config.serverPath = 'TestDayZServer';
-        manager.config.serverExe = 'Test.exe';
+        manager['config$'].serverPath = 'TestDayZServer';
+        manager['config$'].serverExe = 'Test.exe';
         const result = manager.getServerExePath();
 
         // Expect result
@@ -274,35 +274,35 @@ describe('Test class Manager', () => {
         expect(result).to.be.true;
     });
 
-    it('Manager-getHooks', () => {
-        const manager = getConfiguredManager();
-        manager.config.hooks = null;
-        const resultUndef = manager.getHooks('beforeStart');
-        manager.config.hooks = [{
-            type: 'beforeStart',
-            program: '',
-        }];
-        const result = manager.getHooks('beforeStart');
+    // it('Manager-getHooks', () => {
+    //     const manager = getConfiguredManager();
+    //     manager.config.hooks = null;
+    //     const resultUndef = manager.getHooks('beforeStart');
+    //     manager.config.hooks = [{
+    //         type: 'beforeStart',
+    //         program: '',
+    //     }];
+    //     const result = manager.getHooks('beforeStart');
         
-        // Expect result
-        expect(resultUndef).to.be.not.undefined;
-        expect(resultUndef).to.be.empty;
-        expect(result).to.be.not.undefined;
-        expect(result).to.be.not.empty;
-    });
+    //     // Expect result
+    //     expect(resultUndef).to.be.not.undefined;
+    //     expect(resultUndef).to.be.empty;
+    //     expect(result).to.be.not.undefined;
+    //     expect(result).to.be.not.empty;
+    // });
 
-    it('Manager-getHooks-unknown-type', () => {
-        const manager = getConfiguredManager();
-        manager.config.hooks.push({
-            type: 'beforeStart',
-            program: '',
-        });
-        const resultNotThere = manager.getHooks('what?' as HookType);
+    // it('Manager-getHooks-unknown-type', () => {
+    //     const manager = getConfiguredManager();
+    //     manager.config.hooks.push({
+    //         type: 'beforeStart',
+    //         program: '',
+    //     });
+    //     const resultNotThere = manager.getHooks('what?' as HookType);
 
-        // Expect result
-        expect(resultNotThere).to.be.not.undefined;
-        expect(resultNotThere).to.be.empty;
-    });
+    //     // Expect result
+    //     expect(resultNotThere).to.be.not.undefined;
+    //     expect(resultNotThere).to.be.empty;
+    // });
 
     it('Manager-getWebPort-default', () => {
         const manager = getConfiguredManager();
@@ -319,42 +319,6 @@ describe('Test class Manager', () => {
 
         // Expect result
         expect(result).to.be.equal(9999);
-    });
-
-    it('Manager-getIngameToken', async () => {
-        // Method call
-        const manager = getConfiguredManager();
-
-        manager.monitor = {
-            getDayZProcesses: async () => {
-                return [];
-            },
-        } as any;
-        await manager.calcIngameToken();
-
-        const result = manager.getIngameToken();
-
-        // Expect result
-        expect(result).to.match(/DZSM-\d+-\d+-\d+/g);
-    });
-
-    it('Manager-getIngameToken-runningProcess', async () => {
-        // Method call
-        const manager = getConfiguredManager();
-
-        manager.monitor = {
-            getDayZProcesses: async () => {
-                return [{
-                    CommandLine: 'dsfjalkdshafdsha -serverManagerToken=DZSM-1-1-1 fdhlsahfjdskla fdjksalhfd'
-                }];
-            },
-        } as any;
-        await manager.calcIngameToken();
-
-        const result = manager.getIngameToken();
-
-        // Expect result
-        expect(result).to.equal('DZSM-1-1-1');
     });
 
     it('Manager-initDone', () => {

@@ -64,9 +64,7 @@ describe('Test class IngameReport', () => {
     it('IngameReport-getMods', async () => {
 
         const manager = {
-            config: {
-                steamWsMods: [],
-            },
+            getModIdList: () => []
         };
 
         const ingameReport = new IngameReport(manager as any);
@@ -75,7 +73,7 @@ describe('Test class IngameReport', () => {
         expect(mods.length).to.equal(1);
         expect(mods).to.include(ingameReport.MOD_NAME);
 
-        manager.config.steamWsMods.push(ingameReport.EXPANSION_VEHICLES_MOD_ID);
+        manager.getModIdList = () => [ingameReport.EXPANSION_VEHICLES_MOD_ID];
 
         const expansionMods = ingameReport.getServerMods();
         expect(expansionMods.length).to.equal(2);

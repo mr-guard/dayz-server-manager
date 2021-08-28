@@ -116,11 +116,9 @@ describe('Test class Monitor', () => {
     });
 
     it('Monitor-kill', async () => {
-        const monitor = new Monitor({
-            getServerExePath: () => 'test/DayZServer_x64.exe'
-        } as any);
+        const monitor = new Monitor({} as any);
 
-        monitor['processes'].getProcessList = async () => [{
+        monitor['getDayZProcesses'] = async () => [{
             Name: 'DayZ',
             ProcessId: '1234',
             ExecutablePath: 'test/DayZServer_x64.exe',
@@ -129,23 +127,15 @@ describe('Test class Monitor', () => {
             CreationDate: '20210604142624',
             UserModeTime: '123456',
             KernelModeTime: '123456',
-        },{
-            Name: 'DayZ',
-            ProcessId: '4321',
-            ExecutablePath: 'DayZServer_x64.exe',
-            CommandLine: 'DayZServer_x64 some arg',
-            PrivatePageCount: '1234',
-            CreationDate: '20210604142624',
-            UserModeTime: '123456',
-            KernelModeTime: '123456',
-        }] as any;
+        }];
 
         let killed = [];
         monitor['processes'].killProcess = async (pid, f) => {
             killed.push(pid);
+            return null;
         };
 
-        const res = await monitor.killServer();
+        const res = await monitor.killServer(true);
         
         expect(killed.length).to.equal(1);
         expect(killed).to.include('1234');
@@ -236,9 +226,9 @@ describe('Test class Monitor', () => {
         let updateServerCalled = false;
         let updateModsCalled = false;
         const manager = {
-            getHooks: (t) => [{
-                program: 'test',
-            }],
+            hooks: {
+                executeHooks: (t) => {},
+            },
             getServerPath: () => 'testPath',
             getWebPort: () => 4321,
             getIngameToken: () => '4321',

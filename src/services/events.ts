@@ -19,11 +19,11 @@ export class Events implements IStatefulService {
 
             const runTask = async (task: () => Promise<any>): Promise<any> => {
                 void task()
-                    .then(() => {
-                        this.log.log(LogLevel.DEBUG, `Successfully excuted task '${event.name}'`);
+                    ?.then(() => {
+                        this.log.log(LogLevel.DEBUG, `Successfully executed task '${event.name}'`);
                     })
-                    .catch(() => {
-                        this.log.log(LogLevel.WARN, `Failed to excute task '${event.name}'`);
+                    ?.catch(() => {
+                        this.log.log(LogLevel.WARN, `Failed to execute task '${event.name}'`);
                     });
             };
 
@@ -40,6 +40,7 @@ export class Events implements IStatefulService {
                 event.name,
                 event.cron,
                 () => {
+                    this.log.log(LogLevel.DEBUG, `Executing task '${event.name}' (${event.type})`);
                     switch (event.type) {
                         case 'restart': {
                             void checkAndRun(async () => {
