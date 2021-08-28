@@ -9,6 +9,7 @@ import { ServerState, SystemReport } from '../types/monitor';
 import { MetricWrapper } from '../types/metrics';
 import { IStatefulService } from '../types/service';
 import { ConfigParser } from '../util/config-parser';
+import { HookTypeEnum } from '../config/config';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -287,12 +288,36 @@ export class Monitor implements IStatefulService, IMonitor {
         if (this.internalServerState === ServerState.STARTING || this.serverState === ServerState.STARTED) {
             this.internalServerState = ServerState.STOPPING;
         }
-        const processes = await this.getDayZProcesses();
-        const success = await Promise.all(processes?.map((x) => this.processes.killProcess(x.ProcessId, force)) ?? []);
 
-        // TODO check if the server needs to be force killed
+        if (force || !this.manager.rcon?.isConnected()) {
 
-        return success.every((x) => x);
+            const processes = await this.getDayZProcesses();
+            const success = await Promise.all(
+                processes?.map((x) => {
+                    return (async () => {
+                        try {
+                            await this.processes.killProcess(x.ProcessId, force);
+                            return true;
+                        } catch (err) {
+                            this.log.log(
+                                LogLevel.ERROR,
+                                `Failed to kill process ${x.ProcessId}: ${err.status}`,
+                                err.stdout,
+                                err.stderr,
+                            );
+                        }
+                        return false;
+                    })();
+                }) ?? [],
+            );
+            return success.every((x) => x);
+        }
+
+        return this.manager.rcon.shutdown().then(
+            () => true,
+            () => false,
+        );
+
     }
 
     public async writeServerCfg(): Promise<void> {
@@ -411,24 +436,7 @@ export class Monitor implements IStatefulService, IMonitor {
 
                 await this.prepareServerStart(skipPrep);
 
-                const hooks = this.manager.getHooks('beforeStart');
-                if (hooks.length) {
-                    for (const hook of hooks) {
-                        this.log.log(LogLevel.DEBUG, `Executing beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')})`);
-                        const hookOut = await this.processes.spawnForOutput(
-                            hook.program,
-                            hook.params ?? [],
-                            {
-                                dontThrow: true,
-                            },
-                        );
-                        if (hookOut?.status === 0) {
-                            this.log.log(LogLevel.INFO, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) succeed`);
-                        } else {
-                            this.log.log(LogLevel.ERROR, `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`, hookOut);
-                        }
-                    }
-                }
+                await this.manager.hooks.executeHooks(HookTypeEnum.beforeStart);
 
                 const args = this.buildStartServerArgs();
                 const sub = spawn(
@@ -465,7 +473,12 @@ export class Monitor implements IStatefulService, IMonitor {
         } else {
             processList = await this.processes.getProcessList();
 
-            this.log.log(LogLevel.DEBUG, 'Fetched new Process list', processList);
+            this.log.log(
+                LogLevel.DEBUG,
+                'Fetched new Process list',
+                processList
+                    .filter((x) => this.paths.samePath(x?.ExecutablePath, this.manager.getServerExePath())),
+            );
 
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),

@@ -84,7 +84,9 @@ export const validateConfig = (config: Config): string[] => {
 
             if (event.cron) {
                 try {
-                    cron.parseExpression(event.cron);
+                    if (!cron.parseExpression(event.cron).hasNext()) {
+                        errors.push(`Event (${event.name}) has no upcoming invocation`);
+                    }
                 } catch (e) {
                     errors.push(`Event (${event.name}) has invalid cron format: ${e.message}`);
                 }

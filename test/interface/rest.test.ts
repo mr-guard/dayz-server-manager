@@ -55,7 +55,7 @@ describe('Test REST', () => {
                 registeredPaths.get('all').push(path);
                 return appMock;
             },
-            listen: (port, handler) => {
+            listen: (port, host, handler) => {
                 listenCalled = true;
                 handler();
                 return appMock;
@@ -105,7 +105,6 @@ describe('Test REST', () => {
         expect(registeredPaths.get('all')).to.include(`*`);
         expect(registeredPaths.get('get')).to.include(`/login`);
         expect(registeredPaths.get('get')).to.include(`/dashboard`);
-        expect(registeredPaths.get('post')).to.include(`/ingame/stats`);
 
         testManager.interface.commandMap.forEach(
             (template, key) => {
@@ -231,43 +230,6 @@ describe('Test REST', () => {
 
         await rest['handleUiFileRequest']({} as any, res);
         expect(sentFile).to.include('index.html');
-
-    });
-
-    it('REST-handleIngameRequest', () => {
-
-        let executed = false;
-        const rest = new REST({
-            getIngameToken: () => 'asdf',
-            ingameReport: {
-                processIngameReport: (body) => {
-                    executed = true;
-                }
-            }
-        } as any);
-        
-        let sent = false;
-        const res = {
-            send: () => sent = true,
-        } as any;
-
-        rest['handleIngameRequest']({
-            query: {
-                token: '1234'
-            }
-        } as any, res);
-        expect(sent).to.be.true;
-        expect(executed).to.be.false;
-
-        sent = false;
-        executed = false;
-        rest['handleIngameRequest']({
-            query: {
-                token: 'asdf'
-            }
-        } as any, res);
-        expect(sent).to.be.true;
-        expect(executed).to.be.true;
 
     });
 

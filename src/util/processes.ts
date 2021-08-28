@@ -28,6 +28,12 @@ export class SystemInfo {
 
 }
 
+export interface SpawnOutput {
+    status: number;
+    stdout: string;
+    stderr: string;
+}
+
 export class Processes {
 
     private static readonly WMIC_VALUES = Object.keys(new ProcessEntry());
@@ -105,24 +111,15 @@ export class Processes {
         );
     }
 
-    public killProcess(pid: string, force?: boolean): Promise<void> {
-        return new Promise<void>((r, e) => {
-            const kill = spawn(
-                'taskkill',
-                [
-                    ...(force ? ['/F'] : []),
-                    '/PID',
-                    pid,
-                ],
-            );
-            kill.on('close', (error) => {
-                if (error) {
-                    e(error);
-                } else {
-                    r();
-                }
-            });
-        });
+    public killProcess(pid: string, force?: boolean): Promise<SpawnOutput> {
+        return this.spawnForOutput(
+            'taskkill',
+            [
+                ...(force ? ['/F'] : []),
+                '/PID',
+                pid,
+            ],
+        );
     }
 
     public getSystemUsage(): SystemInfo {
@@ -146,11 +143,7 @@ export class Processes {
             stdOutHandler?: (data: string) => any;
             stdErrHandler?: (data: string) => any;
         },
-    ): Promise<{
-            status: number;
-            stdout: string;
-            stderr: string;
-        }> {
+    ): Promise<SpawnOutput> {
         return new Promise((r, e) => {
             const startTS = new Date().valueOf();
             try {
@@ -188,7 +181,7 @@ export class Processes {
                 }
 
                 spawnedProcess.on('error', (error) => {
-                    this.log.log(LogLevel.ERROR, error.message, error);
+                    this.log.log(LogLevel.ERROR, error?.message ?? 'Spawned processes threw an error', error);
                 });
 
                 spawnedProcess.on('close', (code) => {

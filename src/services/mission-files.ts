@@ -3,6 +3,7 @@ import { IService } from '../types/service';
 import { Logger } from '../util/logger';
 import * as path from 'path';
 import * as fse from 'fs-extra';
+import { HookTypeEnum } from '../config/config';
 
 export class MissionFiles implements IService {
 
@@ -71,6 +72,8 @@ export class MissionFiles implements IService {
         }
         await fse.ensureDir(path.dirname(filePath));
         await fse.writeFile(filePath, content);
+
+        await this.manager.hooks.executeHooks(HookTypeEnum.missionChanged);
     }
 
 }

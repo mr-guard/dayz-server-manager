@@ -3,6 +3,9 @@ import 'reflect-metadata';
 import { Manager } from './manager';
 import { Logger, LogLevel } from '../util/logger';
 import { IStatefulService, ServiceConfig } from '../types/service';
+import * as chokidar from 'chokidar';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
 
 export class ManagerController {
 
@@ -11,6 +14,9 @@ export class ManagerController {
     private log = new Logger('Manager');
 
     private manager: Manager | undefined;
+
+    private configFileWatcher: chokidar.FSWatcher | undefined;
+    private configFileHash: string | undefined;
 
     private skipInitialCheck: boolean = false;
 
@@ -42,6 +48,10 @@ export class ManagerController {
     }
 
     public async stop(): Promise<void> {
+        if (this.configFileWatcher) {
+            await this.configFileWatcher.close();
+            this.configFileWatcher = undefined;
+        }
         if (this.manager) {
             this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
             await this.forEachManagerServices(async (manager, service, config) => {
@@ -68,15 +78,21 @@ export class ManagerController {
 
     public async start(): Promise<void> {
 
-        await this.stop();
-
-        this.manager = new Manager();
-
-        if (!await this.manager.readConfig()) {
-            return;
+        const manager = new Manager();
+        const config = manager.configHelper.readConfig();
+        if (!config) {
+            throw new Error(`Config missing or invalid`);
         }
 
-        const loglevel = this.manager.config?.loglevel;
+        this.configFileHash = crypto.createHash('md5')
+            .update(JSON.stringify(config))
+            .digest('hex');
+
+        await this.stop();
+        this.manager = manager;
+        manager.applyConfig(config);
+
+        const { loglevel } = config;
         if (typeof loglevel === 'number' && loglevel >= LogLevel.DEBUG && loglevel <= LogLevel.ERROR) {
             Logger.defaultLogLevel = this.manager.config.loglevel;
         }
@@ -84,10 +100,10 @@ export class ManagerController {
 
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
-        await this.forEachManagerServices(async (manager, service, config) => {
-            if (config.type) {
+        await this.forEachManagerServices(async (m, service, serviceConfig) => {
+            if (serviceConfig.type) {
                 this.log.log(LogLevel.DEBUG, `Setting up service: ${service}`);
-                manager[service] = new config.type(manager);
+                m[service] = new serviceConfig.type(m);
             }
         });
 
@@ -153,10 +169,52 @@ export class ManagerController {
             this.log.log(LogLevel.IMPORTANT, 'Server Manager initialized successfully');
             this.log.log(LogLevel.IMPORTANT, 'Waiting for first server monitor tick..');
 
+            this.watchConfig();
+
         } catch (e) {
             this.log.log(LogLevel.ERROR, e?.message, e);
             process.exit(1);
         }
+    }
+
+    private watchConfig(): void {
+        const cfgPath = this.manager.configHelper.getConfigFilePath();
+        this.configFileWatcher = chokidar.watch(
+            cfgPath,
+        ).on(
+            'change',
+            async () => {
+
+                // usually file "headers" are saved before content is done
+                // waiting a small amount of time prevents reading RBW errors
+                await new Promise((r) => setTimeout(r, 1000));
+
+                this.log.log(LogLevel.INFO, 'Detected config file change...');
+
+                if (!fs.existsSync(cfgPath)) {
+                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config file does not exist');
+                    return;
+                }
+
+                const config = this.manager.configHelper.readConfig();
+                if (!config) {
+                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config contains errors');
+                    return;
+                }
+
+                const newHash = crypto.createHash('md5')
+                    .update(JSON.stringify(config))
+                    .digest('hex');
+
+                if (newHash === this.configFileHash) {
+                    this.log.log(LogLevel.WARN, 'Skipping config reload because no changes were found');
+                    return;
+                }
+
+                this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
+                void this.start();
+            },
+        );
     }
 
 }

@@ -34,9 +34,16 @@ export class RCON implements IStatefulService {
 
     private connectionErrorCounter: number = 0;
 
+    private duplicateMessageCache: string[] = [];
+    private duplicateMessageCacheSize: number = 3;
+
     public constructor(
         public manager: Manager,
     ) {}
+
+    public isConnected(): boolean {
+        return this.connected;
+    }
 
     private createSocket(port: number): Socket {
         return new Socket({
@@ -105,7 +112,7 @@ export class RCON implements IStatefulService {
                 name: 'rcon',
                 password: this.getRconPassword(),
                 ip: '127.0.0.1',
-                port: this.manager.config?.serverPort ?? 2302,
+                port: this.getRconPort(),
             },
             {
                 reconnect: true,              // reconnect on timeout
@@ -121,6 +128,16 @@ export class RCON implements IStatefulService {
         );
 
         this.connection.on('message', (message /* , packet */) => {
+
+            if (this.duplicateMessageCache.includes(message)) {
+                this.log.log(LogLevel.DEBUG, `duplicate message`, message);
+                return;
+            }
+            this.duplicateMessageCache.push(message);
+            if (this.duplicateMessageCache.length > this.duplicateMessageCacheSize) {
+                this.duplicateMessageCache.shift();
+            }
+
             this.log.log(LogLevel.DEBUG, `message`, message);
             void this.manager.discord?.relayRconMessage(message);
         });
@@ -136,6 +153,7 @@ export class RCON implements IStatefulService {
                 this.log.log(LogLevel.ERROR, `disconnected`, reason);
             }
             this.connected = false;
+            this.duplicateMessageCache = [];
         });
 
         this.connection.on('debug', (data) => {
@@ -159,9 +177,11 @@ export class RCON implements IStatefulService {
         });
 
         this.connection.on('connected', () => {
-            this.log.log(LogLevel.IMPORTANT, 'connected');
-            this.connected = true;
-            void this.sendCommand('say -1 Big Brother Connected.');
+            if (!this.connected) {
+                this.connected = true;
+                this.log.log(LogLevel.IMPORTANT, 'connected');
+                void this.sendCommand('say -1 Big Brother Connected.');
+            }
         });
     }
 
@@ -170,6 +190,14 @@ export class RCON implements IStatefulService {
             this.manager.config?.rconPassword
                 ? this.manager.config?.rconPassword
                 : this.RND_RCON_PW
+        );
+    }
+
+    private getRconPort(): number {
+        return (
+            this.manager.config?.rconPort
+                ? this.manager.config?.rconPort
+                : 2306
         );
     }
 
@@ -191,6 +219,7 @@ export class RCON implements IStatefulService {
 
         const battleyeConfPath = path.join(battleyePath, 'BEServer_x64.cfg');
         const rConPassword = this.getRconPassword();
+        const rConPort = this.getRconPort();
 
         fse.ensureDirSync(battleyePath);
         try {
@@ -203,7 +232,7 @@ export class RCON implements IStatefulService {
         } catch {}
         fs.writeFileSync(
             battleyeConfPath,
-            `RConPassword ${rConPassword}\nRestrictRCon 0`,
+            `RConPassword ${rConPassword}\nRestrictRCon 0\nRConPort ${rConPort}`,
         );
     }
 
@@ -231,8 +260,10 @@ export class RCON implements IStatefulService {
 
     public async stop(): Promise<void> {
         if (this.connection) {
+
             this.connection.removeAllListeners();
             if (this.connection.connected) {
+                this.connection.once('error', () => { /* ignore */ });
                 this.connection.kill(new Error('Reload'));
                 this.connection = undefined;
                 this.connected = false;
@@ -349,20 +380,20 @@ export class RCON implements IStatefulService {
         await this.sendCommand('reloadbans');
     }
 
-    // public async shutdown(): Promise<void> {
-    //     await this.sendCommand('#shutdown');
-    // }
+    public async shutdown(): Promise<void> {
+        await this.sendCommand('#shutdown');
+    }
 
     public async global(message: string): Promise<void> {
         await this.sendCommand(`say -1 ${message}`);
     }
 
     public async lock(): Promise<void> {
-        await this.sendCommand('lock');
+        await this.sendCommand('#lock');
     }
 
     public async unlock(): Promise<void> {
-        await this.sendCommand('unlock');
+        await this.sendCommand('#unlock');
     }
 
 }

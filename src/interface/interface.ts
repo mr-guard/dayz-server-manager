@@ -1,12 +1,10 @@
 import { UserLevel } from '../config/config';
 import { Manager } from '../control/manager';
-import { ManagerController } from '../control/manager-controller';
 import { Request, Response } from '../types/interface';
 import { Logger, LogLevel } from '../util/logger';
 import { merge } from '../util/merge';
 import { makeTable } from '../util/table';
 import { constants as HTTP } from 'http2';
-
 
 export type RequestHandler = (request: Request) => Promise<Response>;
 export type RequestMethods = 'get' | 'post' | 'put' | 'delete';
@@ -311,13 +309,14 @@ export class Interface {
                 action: this.singleParamWrapper(
                     'config',
                     async (config) => {
+
                         try {
-                            this.manager.writeConfig(config);
-                            void ManagerController.INSTANCE.start();
+                            this.manager.configHelper.writeConfig(config);
                             return true;
                         } catch (e) {
                             throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
                         }
+
                     },
                     true,
                     true,

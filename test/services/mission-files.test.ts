@@ -25,11 +25,13 @@ describe('Test class MissionFiles', () => {
 
         const readMock = ImportMock.mockFunction(fse, 'readFile');
         readMock.withArgs(
-            path.join(
-                'testserver',
-                'mpmissions',
-                'dayz.chernarusplus',
-                'test.txt',
+            path.resolve(
+                path.join(
+                    'testserver',
+                    'mpmissions',
+                    'dayz.chernarusplus',
+                    'test.txt',
+                )
             )
         ).returns('test');
 
@@ -58,11 +60,13 @@ describe('Test class MissionFiles', () => {
 
         const readMock = ImportMock.mockFunction(fse, 'readdir');
         readMock.withArgs(
-            path.join(
-                'testserver',
-                'mpmissions',
-                'dayz.chernarusplus',
-                '/'
+            path.resolve(
+                path.join(
+                    'testserver',
+                    'mpmissions',
+                    'dayz.chernarusplus',
+                    '/'
+                )
             )
         ).returns([{
             name: 'test',
@@ -109,6 +113,9 @@ describe('Test class MissionFiles', () => {
                         },
                     },
                 },
+            },
+            hooks: {
+                executeHooks: () => {},
             },
         } as any;
 

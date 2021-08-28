@@ -42,7 +42,13 @@ export class DiscordBot implements IStatefulService {
             this.client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
         }
         this.client.on('message', (m) => this.onMessage(m));
-        this.client.on('disconnect', (d) => this.log.log(LogLevel.ERROR, 'disconnect', d));
+        this.client.on('disconnect', (d) => {
+            if (d?.wasClean) {
+                this.log.log(LogLevel.INFO, 'disconnect');
+            } else {
+                this.log.log(LogLevel.ERROR, 'disconnect', d);
+            }
+        });
         this.client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
         await this.client.login(this.manager.config?.discordBotToken);
     }

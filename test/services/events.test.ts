@@ -37,6 +37,7 @@ describe('Test class Events', () => {
         cronMock.callsFake((name, cron, action) => {
             const task = {
                 cancel: sinon.stub(),
+                nextInvocation: () => new Date(),
                 name,
                 cron,
                 action,
@@ -66,6 +67,9 @@ describe('Test class Events', () => {
             },
             backup: {
                 createBackup: sinon.stub(),
+            },
+            discord: {
+                relayRconMessage: (m) => {},
             },
         };
 

@@ -515,10 +515,10 @@ describe('Test Interface', () => {
 
     it('execute-deleteMetrics', async () => {
         const manager = new TestManager();
-        let executedDays;
+        let executedDelay;
         manager.metrics = {
             pushMetricValue: (p) => {}, // audit
-            deleteMetrics: (days) => executedDays = days,
+            deleteMetrics: (delay) => executedDelay = delay,
         } as any;
         
         const handler = new Interface(manager as any);
@@ -532,7 +532,7 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executedDays).to.equal(10);
+        expect(executedDelay).to.equal(864000000);
     });
 
     it('execute-logs', async () => {
@@ -588,10 +588,8 @@ describe('Test Interface', () => {
     it('execute-updateconfig', async () => {
         const manager = new TestManager() as any;
         let executedConfig;
-        manager.writeConfig = (c) => executedConfig = c;
+        manager.configHelper = { writeConfig: (c) => executedConfig = c };
         
-        const startMock = ImportMock.mockFunction(ManagerController.INSTANCE, 'start');
-
         const handler = new Interface(manager as any);
         const request = {
             resource: 'updateconfig',
@@ -604,7 +602,6 @@ describe('Test Interface', () => {
 
         expect(response.status).to.equal(200);
         expect(executedConfig).to.equal('test');
-        expect(startMock.callCount).to.equal(1);
     });
 
     it('execute-updateMods', async () => {
@@ -712,12 +709,11 @@ describe('Test Interface', () => {
         const request = {
             resource: 'readmissionfile',
             user: 'admin',
-            body: {
+            query: {
                 file: 'test',
             }
         } as any as Request;
         const response = await handler.execute(request);
-
         expect(response.status).to.equal(200);
         expect(executed).to.be.true;
     });
