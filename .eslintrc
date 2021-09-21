@@ -10,7 +10,7 @@
     "plugins": [
         "@typescript-eslint"
     ],
-    "ignorePatterns": ["scripts", "test"],
+    "ignorePatterns": ["scripts", "test", "node_modules"],
     "rules": {
         "indent": [
             "error",
