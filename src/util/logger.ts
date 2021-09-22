@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 
 // eslint-disable-next-line no-shadow
 export enum LogLevel {
@@ -20,15 +21,35 @@ const LogLevelNames = [
 export class Logger {
 
     public static readonly LOG_LEVELS: { [context: string]: LogLevel } = {};
+
     public static defaultLogLevel: LogLevel = LogLevel.INFO;
+    public static defaultLogFile: string = 'server-manager.log';
+
+    public static wrapWithFileLogger(fnc: any): any {
+
+        return (msg: string, ...data: any[]) => {
+            fnc(msg, data);
+
+            void fs.promises.appendFile(
+                Logger.defaultLogFile,
+                `${msg} - ${JSON.stringify(data)}`,
+            ).then(
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                (e) => { /* ignore */ },
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                (e) => { /* ignore */ },
+            );
+        };
+
+    }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public static LogLevelFncs = [
-        console.log,
-        console.log,
-        console.log,
-        console.warn,
-        console.error,
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.warn),
+        Logger.wrapWithFileLogger(console.error),
     ];
 
     public readonly MAX_CONTEXT_LENGTH = 10;

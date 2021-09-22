@@ -173,15 +173,13 @@ export class ManagerController {
             await this.manager.requirements.checkFirewall();
 
             // check runtime libs
-            const vcRedistOk = await this.manager.requirements.checkVcRedist();
-            const directXOk = await this.manager.requirements.checkDirectX();
-            if (!vcRedistOk || !directXOk) {
+            if (!await this.manager.requirements.checkRuntimeLibs()) {
                 this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
                 process.exit(0);
             }
 
-            // check error reporting
-            await this.manager.requirements.checkWinErrorReporting();
+            // check optionals
+            await this.manager.requirements.checkOptionals();
 
             // eslint-disable-next-line no-negated-condition
             if (!this.skipInitialCheck && !await this.manager.monitor.isServerRunning()) {

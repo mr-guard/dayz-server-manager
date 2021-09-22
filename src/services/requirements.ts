@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { NetSH } from '../util/netsh';
 import { IService } from '../types/service';
+import { detectOS } from '../util/detect-os';
 
 export class Requirements implements IService {
 
@@ -32,21 +33,30 @@ export class Requirements implements IService {
 
     public async checkFirewall(): Promise<boolean> {
         this.log.log(LogLevel.DEBUG, 'Checking Firewall');
-        const exePath = path.resolve(this.manager.getServerExePath());
-        const firewallRules = await this.netSh.getRulesByPath(exePath);
-        if (firewallRules?.length) {
-            this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
+
+        if (detectOS() === 'windows') {
+            const exePath = path.resolve(this.manager.getServerExePath());
+            const firewallRules = await this.netSh.getRulesByPath(exePath);
+            if (firewallRules?.length) {
+                this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
+                return true;
+            }
+
+            this.log.log(
+                LogLevel.IMPORTANT,
+                '\n\nFirewall rules were not found.\n'
+                    + 'You can add the rules manually or by running the following command in a elevated command promt:\n\n'
+                    + `netsh firewall add allowedprogram ${exePath} DayZ ENABLE\n\n`,
+                // + `Add the firewall rule and restart the manager`,
+            );
+            return false;
+        }
+
+        if (detectOS() === 'linux') {
+            // TODO linux
             return true;
         }
 
-
-        this.log.log(
-            LogLevel.IMPORTANT,
-            '\n\nFirewall rules were not found.\n'
-                + 'You can add the rules manually or by running the following command in a elevated command promt:\n\n'
-                + `netsh firewall add allowedprogram ${exePath} DayZ ENABLE\n\n`,
-            // + `Add the firewall rule and restart the manager`,
-        );
         return false;
     }
 
@@ -101,6 +111,67 @@ export class Requirements implements IService {
         return false;
     }
 
+    public async isLinuxLibPresent(libname: string): Promise<boolean> {
+        const result = await this.processes.spawnForOutput(
+            'bash',
+            [
+                '-c',
+                `ldconfig -p | grep ${libname}`,
+            ],
+            {
+                dontThrow: true,
+            },
+        );
+        const present = !!(result.stdout?.trim()?.length);
+
+        if (present) {
+            this.log.log(LogLevel.DEBUG, `${libname} is OK!`);
+        }
+        this.log.log(
+            LogLevel.IMPORTANT,
+            `\n\n${libname} was not found.\n`
+                + 'You can install it by:\n\n'
+                + `apt-get install ${libname}\n\n`
+                + `Install it and restart the manager`,
+        );
+
+        return present;
+    }
+
+    public async checkRuntimeLibs(): Promise<boolean> {
+
+        const checks: boolean[] = [];
+
+        if (detectOS() === 'windows') {
+            checks.push(
+                await this.manager.requirements.checkVcRedist(),
+            );
+            checks.push(
+                await this.manager.requirements.checkDirectX(),
+            );
+        }
+
+        if (detectOS() === 'linux') {
+            // server
+            checks.push(
+                await this.isLinuxLibPresent('libcap-dev'),
+            );
+
+            // steamcmd
+            checks.push(
+                await this.isLinuxLibPresent('lib32gcc1'),
+            );
+            checks.push(
+                await this.isLinuxLibPresent('libcurl4'),
+            );
+            checks.push(
+                await this.isLinuxLibPresent('libcurl4-openssl-dev'),
+            );
+        }
+
+        return checks.every((x) => x);
+    }
+
     public async checkWinErrorReporting(): Promise<boolean> {
         const winErrorReportingOut = await this.processes.spawnForOutput(
             'REG',
@@ -133,6 +204,15 @@ export class Requirements implements IService {
 
         this.log.log(LogLevel.DEBUG, 'Windows Error Reporting Settings are OK!');
         return true;
+    }
+
+    public async checkOptionals(): Promise<void> {
+
+        if (detectOS() === 'windows') {
+            await this.checkWinErrorReporting();
+        }
+
+        // TODO linux: anything for linux?
     }
 
 }

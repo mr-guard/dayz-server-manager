@@ -10,6 +10,7 @@ import { MetricWrapper } from '../types/metrics';
 import { IStatefulService } from '../types/service';
 import { ConfigParser } from '../util/config-parser';
 import { HookTypeEnum } from '../config/config';
+import { detectOS } from '../util/detect-os';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -364,15 +365,31 @@ export class Monitor implements IStatefulService, IMonitor {
         }
 
         // env requirements
-        await this.manager.requirements.checkWinErrorReporting();
         await this.manager.requirements.checkFirewall();
+        await this.manager.requirements.checkOptionals();
+    }
+
+    private buildServerSpawnCmd(): { cmd: string; args: string[]; cwd?: string } {
+        if (detectOS() === 'windows') {
+            return {
+                cmd: 'cmd',
+                args: [
+                    '/c', 'start',
+                    '/D', this.manager.getServerPath(),
+                    this.manager.config!.serverExe,
+                ],
+            };
+        }
+
+        return {
+            cmd: this.manager.config!.serverExe,
+            args: [],
+            cwd: this.manager.getServerPath(),
+        };
     }
 
     private buildStartServerArgs(): string[] {
         const args = [
-            '/c', 'start',
-            '/D', this.manager.getServerPath(),
-            this.manager.config!.serverExe,
             `-config=${this.manager.config!.serverCfgPath}`,
             `-port=${this.manager.config!.serverPort}`,
             `-profiles=${this.manager.config!.profilesPath}`,
@@ -438,13 +455,18 @@ export class Monitor implements IStatefulService, IMonitor {
 
                 await this.manager.hooks.executeHooks(HookTypeEnum.beforeStart);
 
+                const spawnCmd = this.buildServerSpawnCmd();
                 const args = this.buildStartServerArgs();
                 const sub = spawn(
-                    'cmd',
-                    args,
+                    spawnCmd.cmd,
+                    [
+                        ...spawnCmd.args,
+                        ...args,
+                    ],
                     {
                         detached: true,
                         stdio: 'ignore',
+                        cwd: spawnCmd.cwd,
                     },
                 );
 
@@ -471,13 +493,14 @@ export class Monitor implements IStatefulService, IMonitor {
         if (this.lastServerCheckResult?.ts && (new Date().valueOf() - this.lastServerCheckResult?.ts) < 1000) {
             processList = this.lastServerCheckResult.result;
         } else {
-            processList = await this.processes.getProcessList();
+            processList = await this.processes.getProcessList(
+                this.manager.getServerExePath(),
+            );
 
             this.log.log(
                 LogLevel.DEBUG,
                 'Fetched new Process list',
-                processList
-                    .filter((x) => this.paths.samePath(x?.ExecutablePath, this.manager.getServerExePath())),
+                processList,
             );
 
             this.lastServerCheckResult = {
@@ -486,7 +509,6 @@ export class Monitor implements IStatefulService, IMonitor {
             };
         }
         return processList
-            .filter((x) => this.paths.samePath(x?.ExecutablePath, this.manager.getServerExePath()))
             .map((x) => {
                 if (x.CreationDate) {
                     const y = x.CreationDate.substr(0, 4);

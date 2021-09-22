@@ -4,10 +4,11 @@ import * as path from 'path';
 import { Manager } from '../control/manager';
 import { Paths } from '../util/paths';
 import { Processes } from '../util/processes';
-import { download, extractZip } from '../util/download';
+import { download, extractTar, extractZip } from '../util/download';
 import { Logger, LogLevel } from '../util/logger';
 import { sameDirHash } from '../util/compare-folders';
 import { IService } from '../types/service';
+import { detectOS } from '../util/detect-os';
 
 export class SteamCMD implements IService {
 
@@ -37,48 +38,92 @@ export class SteamCMD implements IService {
         }
         return path.join(
             cmdFolder,
-            'steamcmd.exe',
+            detectOS() === 'windows' ? 'steamcmd.exe' : 'steamcmd.sh',
         );
     }
 
     private async downloadSteamCmd(): Promise<boolean> {
 
         const cmdPath = path.dirname(this.getCmdPath());
-        const zipPath = path.join(cmdPath, 'steamcmd.zip');
 
-        try {
-            await download(
-                'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip',
-                zipPath,
-            );
-            this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
-        } catch (e) {
-            this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
+        if (detectOS() === 'windows') {
+            const zipPath = path.join(cmdPath, 'steamcmd.zip');
+
+            try {
+                await download(
+                    'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip',
+                    zipPath,
+                );
+                this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
+                if (fs.existsSync(zipPath)) {
+                    fs.unlinkSync(zipPath);
+                }
+                return false;
+            }
+
+            try {
+                await extractZip(zipPath, { dir: path.resolve(cmdPath) });
+                this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
+                if (fs.existsSync(zipPath)) {
+                    fs.unlinkSync(zipPath);
+                }
+                return false;
+            }
+
             if (fs.existsSync(zipPath)) {
                 fs.unlinkSync(zipPath);
             }
-            return false;
+
+            // wait for the exe not to be 'busy'
+            await new Promise((r) => setTimeout(r, this.extractDelay));
+
+            return true;
         }
 
-        try {
-            await extractZip(zipPath, { dir: path.resolve(cmdPath) });
-            this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
-        } catch (e) {
-            this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
-            if (fs.existsSync(zipPath)) {
-                fs.unlinkSync(zipPath);
+        if (detectOS() === 'linux') {
+            const tarPath = path.join(cmdPath, 'steamcmd.tar.gz');
+
+            try {
+                await download(
+                    'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz',
+                    tarPath,
+                );
+                this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
+                if (fs.existsSync(tarPath)) {
+                    fs.unlinkSync(tarPath);
+                }
+                return false;
             }
-            return false;
+
+            try {
+                await extractTar(tarPath, path.resolve(cmdPath));
+                this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
+                if (fs.existsSync(tarPath)) {
+                    fs.unlinkSync(tarPath);
+                }
+                return false;
+            }
+
+            if (fs.existsSync(tarPath)) {
+                fs.unlinkSync(tarPath);
+            }
+
+            // wait for the exe not to be 'busy'
+            await new Promise((r) => setTimeout(r, this.extractDelay));
+
+            return true;
+
         }
 
-        if (fs.existsSync(zipPath)) {
-            fs.unlinkSync(zipPath);
-        }
-
-        // wait for the exe not to be 'busy'
-        await new Promise((r) => setTimeout(r, this.extractDelay));
-
-        return true;
+        return false;
     }
 
     private async installSteamCmd(): Promise<boolean> {

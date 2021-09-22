@@ -4,6 +4,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { Logger, LogLevel } from './logger';
+import { detectOS } from './detect-os';
 
 export class Paths {
 
@@ -70,42 +71,89 @@ export class Paths {
     }
 
     public removeLink(target: string): boolean {
-        // cmd //c rmdir "$__TARGET_DIR"
-        return (spawnSync(
-            'cmd',
-            [
-                '/c',
-                'rmdir',
-                '/S',
-                '/Q',
-                target,
-            ],
-        ).status === 0);
-    }
-
-    public linkDirsFromTo(source: string, target: string): boolean {
-        // cmd //c mklink //j "$__TARGET_DIR" "$__SOURCE_DIR"
-        try {
-            if (fs.existsSync(target)) {
-                if (!this.removeLink(target)) {
-                    this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
-                    return false;
-                }
-            }
+        if (detectOS() === 'windows') {
+            // cmd //c rmdir "$__TARGET_DIR"
             return (spawnSync(
                 'cmd',
                 [
                     '/c',
-                    'mklink',
-                    '/j',
+                    'rmdir',
+                    '/S',
+                    '/Q',
                     target,
-                    source,
                 ],
             ).status === 0);
-        } catch (e) {
-            this.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
-            return false;
         }
+
+        if (detectOS() === 'linux') {
+
+            try {
+                const stats = fse.statSync(target);
+                if (stats.isSymbolicLink()) {
+                    fse.unlinkSync(target);
+                } else if (stats.isDirectory()) {
+                    fse.rmSync(
+                        target,
+                        {
+                            recursive: true,
+                        },
+                    );
+                } else {
+                    fse.rmSync(target);
+                }
+            } catch {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public linkDirsFromTo(source: string, target: string): boolean {
+        if (detectOS() === 'windows') {
+            // cmd //c mklink //j "$__TARGET_DIR" "$__SOURCE_DIR"
+            try {
+                if (fs.existsSync(target)) {
+                    if (!this.removeLink(target)) {
+                        this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
+                        return false;
+                    }
+                }
+                return (spawnSync(
+                    'cmd',
+                    [
+                        '/c',
+                        'mklink',
+                        '/j',
+                        target,
+                        source,
+                    ],
+                ).status === 0);
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
+                return false;
+            }
+        }
+
+        if (detectOS() === 'linux') {
+            try {
+                if (fs.existsSync(target)) {
+                    if (!this.removeLink(target)) {
+                        this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
+                        return false;
+                    }
+                }
+                fs.symlinkSync(source, target);
+                return true;
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public async copyDirFromTo(source: string, target: string): Promise<boolean> {
