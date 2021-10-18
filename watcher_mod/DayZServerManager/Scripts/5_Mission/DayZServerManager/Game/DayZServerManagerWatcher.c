@@ -79,7 +79,7 @@ class DayZServerManagerWatcher
 		PrintToRPT("DZSM ~ DayZServerManagerWatcher()");
 		#endif
 		
-        if (!IsMissionClient())
+        if (!GetGame().IsClient())
 		{
 			m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
 			m_InitTimer.Run(1.0 * 60.0, this, "init", null, false);
@@ -177,7 +177,7 @@ class DayZServerManagerWatcher
 				ref ServerManagerEntry playerEntry = new ServerManagerEntry();
 				
 				playerEntry.entryType = "PLAYER";
-				entry.category = "MAN";
+				playerEntry.category = "MAN";
 
 				playerEntry.name = player.GetIdentity().GetName();
 				// player.GetDisplayName();
