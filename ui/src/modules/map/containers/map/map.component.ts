@@ -107,7 +107,7 @@ export class MapComponent implements OnInit, OnDestroy {
     public mapScale?: number;
     public curCoordinates: Point = new Point(0, 0);
 
-    private mapHost = 'https://senfo.space/dayzmaps';
+    private mapHost = 'https://mr-guard.de/dayz-maps';
     private mapName?: string;
 
     private layerControl?: Control;
