@@ -351,6 +351,13 @@ export class ServerCfg {
         },
     };
 
+
+    /**
+     * 1 - enable cfgGameplayFile
+     */
+    @Reflect.metadata('config-range', [0, 1])
+    public enableCfgGameplayFile: 0 | 1 = 0;
+
 }
 
 // eslint-disable-next-line no-shadow
