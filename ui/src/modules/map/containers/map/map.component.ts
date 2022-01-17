@@ -195,32 +195,6 @@ export class MapComponent implements OnInit, OnDestroy {
         };
 
         console.log('Map Setup Done');
-
-        this.appCommon.getApiFetcher('INGAME_PLAYERS').latestData
-            .pipe(
-                takeUntil(this.onDestroy),
-            )
-            .subscribe(
-                (data) => {
-                    if (data) {
-                        const players = (data as any).value;
-                        this.updatePlayers(players);
-                    }
-                },
-            );
-
-        this.appCommon.getApiFetcher('INGAME_VEHICLES').latestData
-            .pipe(
-                takeUntil(this.onDestroy),
-            )
-            .subscribe(
-                (data) => {
-                    if (data) {
-                        const vehicles = (data as any).value;
-                        this.updateVehicles(vehicles);
-                    }
-                },
-            );
     }
 
     private updateLayersControl(): void {
@@ -345,6 +319,32 @@ export class MapComponent implements OnInit, OnDestroy {
         this.updateLayersControl();
 
         this.zoomChange();
+
+        this.appCommon.getApiFetcher('INGAME_PLAYERS').latestData
+            .pipe(
+                takeUntil(this.onDestroy),
+            )
+            .subscribe(
+                (data) => {
+                    if (data) {
+                        const players = (data as any).value;
+                        this.updatePlayers(players);
+                    }
+                },
+            );
+
+        this.appCommon.getApiFetcher('INGAME_VEHICLES').latestData
+            .pipe(
+                takeUntil(this.onDestroy),
+            )
+            .subscribe(
+                (data) => {
+                    if (data) {
+                        const vehicles = (data as any).value;
+                        this.updateVehicles(vehicles);
+                    }
+                },
+            );
     }
 
     private getLocationTooltip(x: Location): { name: string; icon: string } {

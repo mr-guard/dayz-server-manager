@@ -166,7 +166,7 @@ class DayZServerManagerWatcher
 			}
 		}
 		
-		array<Man> players;
+		array<Man> players = new array<Man>();
 		GetGame().GetPlayers(players);
 		if (players)
 		{
