@@ -8,7 +8,9 @@ export const parseConfigFileContent = (fileContent: string): any => {
 
         // remove comments
         const stripped = fileContent
-            .replace(/(\/\*\*(.|\n)*?\*\/)|(\/\/(.*))/g, '');
+            .replace(/\r/g, '')
+            .replace(/\/\/(.*)/g, '')
+            .replace(/(\/\*(.|\n)*?\*\/)/g, '');
 
         try {
             return JSON.parse(stripped);
