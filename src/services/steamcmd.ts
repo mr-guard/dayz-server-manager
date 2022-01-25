@@ -210,12 +210,11 @@ export class SteamCMD implements IService {
         const names = metaContent.match(/name[\s]*=.*/g) ?? [];
         const modName = names.pop()?.split('=')[1]?.trim() ?? '';
         if (modName) {
-            return `@${modName
-                .replace(/"/g, '')
-                .replace(/;/g, '')
-                .replace(/\//g, '-')
-                .replace(/\\/g, '-')
-                .replace(/ /g, '-')}`;
+            return '@' + modName
+            .replace(/\//g, '-')
+            .replace(/\\/g, '-')
+            .replace(/ /g, '-')
+            .replace(/[^a-zA-Z0-9\-_]/g, '');
         }
         return '';
     }
