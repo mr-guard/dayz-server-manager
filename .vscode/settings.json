@@ -1,9 +1,0 @@
-{
-    "eslint.workingDirectories": [
-        "./",
-        "./ui",
-    ],
-    "eslint.validate": [
-        "typescript"
-    ]
-}

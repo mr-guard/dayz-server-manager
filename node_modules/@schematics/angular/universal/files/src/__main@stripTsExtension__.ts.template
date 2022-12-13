@@ -1,0 +1,2 @@
+
+export { <%= rootModuleClassName %> } from './app/<%= stripTsExtension(rootModuleFileName) %>';

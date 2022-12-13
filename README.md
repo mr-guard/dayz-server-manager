@@ -1,13 +1,14 @@
 # DayZ Server Manager
 
-[![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/mr-guard/dayz-server-manager/)
-[![license](https://img.shields.io/github/license/mr-guard/dayz-server-manager.svg)](https://github.com/mr-guard/dayz-server-manager/blob/master/LICENSE)
-![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)  
+[![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/Dev-Time/dayz-server-manager/)
+[![license](https://img.shields.io/github/license/Dev-Time/dayz-server-manager.svg)](https://github.com/Dev-Time/dayz-server-manager/blob/master/LICENSE)
+![GitHub Workflow Status](https://github.com/Dev-Time/dayz-server-manager/actions/workflows/build.yml/badge.svg)  
 
-[![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)
-[![GitHub commits](https://img.shields.io/github/commits-since/mr-guard/dayz-server-manager/latest.svg)](https://GitHub.com/mr-guard/dayz-server-manager/commit/)
-[![Github all releases](https://img.shields.io/github/downloads/mr-guard/dayz-server-manager/total.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)  
+[![GitHub release](https://img.shields.io/github/release/Dev-Time/dayz-server-manager.svg)](https://GitHub.com/Dev-Time/dayz-server-manager/releases/)
+[![GitHub commits](https://img.shields.io/github/commits-since/Dev-Time/dayz-server-manager/latest.svg)](https://GitHub.com/Dev-Time/dayz-server-manager/commit/)
+[![Github all releases](https://img.shields.io/github/downloads/Dev-Time/dayz-server-manager/total.svg)](https://GitHub.com/Dev-Time/dayz-server-manager/releases/)  
 
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/Dev-Time/dayz-server-manager)
 
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
 The goal was to break down the initial effort to a minimum while providing configuration to nearly all aspects of the server administration process.
@@ -117,7 +118,7 @@ The goal was to break down the initial effort to a minimum while providing confi
 <br><a name="usage"></a>
 ## Usage <hr>  
 
-* Download the [latest version](https://github.com/mr-guard/dayz-server-manager/releases/latest) of the manager
+* Download the [latest version](https://github.com/Dev-Time/dayz-server-manager/releases/latest) of the manager
 * Extract the manager and the config template
 * Copy and rename the config template to `server-manager.json`
 * Edit the `server-manager.json` config to fit your needs
@@ -134,7 +135,7 @@ The goal was to break down the initial effort to a minimum while providing confi
 ## Updating <hr>  
 
 This app was written with backwards compatibility in mind.<br>
-Sometimes, however, some bracking changes to the server manager config will occur.<br>
+Sometimes, however, some breaking changes to the server manager config will occur.<br>
 The best strategy to update is to take the config template of the new version and and modify it to match your old version.<br>
 This way you can not miss out on new properties which might be required.<br>
 
@@ -259,6 +260,8 @@ Example:<br>
 
 <br><a name="guide-add-workshop-mods"></a>
 ### Adding workshop mods <hr>  
+
+Note: You must use a steam account that owns Dayz in order to download workshop mods.<br>
 
 Workshop mods will be downloaded and updated everytime the server restarts (if not configured otherwise).<br>
 The steamWsMods property specifies a list of workshop mods to download.<br>
