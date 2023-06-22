@@ -376,9 +376,11 @@ export class SteamCMD implements IService {
 
     public async installMods(): Promise<boolean> {
         const modIds = this.manager.getModIdList();
-        return (await Promise.all(modIds.map((modId) => {
-            return this.installMod(modId);
-        }))).every((x) => x);
+        let success = true;
+        for (const modId of modIds) {
+            success = success && (await this.installMod(modId));
+        }
+        return success;
     }
 
     private async copyModKeys(modId: string): Promise<boolean> {
