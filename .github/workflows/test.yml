@@ -1,0 +1,48 @@
+name: Test
+
+on: [workflow_call]
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    
+    - name: download mikeros tools
+      uses: arma-actions/mikero-tools@latest
+    
+    - name: Install deps
+      run: npm i --ignore-scripts
+    
+    - name: Install ui deps
+      run: npm run installUi
+    
+    - name: Run tests and get Coverage for badge
+      run: |
+        SUMMARY="$(npm test | tail -2 | head -1)"
+        TOKENS=($SUMMARY)
+        echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
+        REF=${{ github.ref }}
+        echo "github.ref: $REF"
+        IFS='/' read -ra PATHS <<< "$REF"
+        BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+        echo $BRANCH_NAME
+        echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+    
+    - name: Create the Badge
+      uses: schneegans/dynamic-badges-action@v1.0.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 442a5cdea03dd79a87b34339a7a16a2c
+        filename: dayz-server-manager__${{ env.BRANCH }}.json
+        label: Test Coverage
+        message: ${{ env.COVERAGE }}
+        color: green
+        namedLogo: jest

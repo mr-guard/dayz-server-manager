@@ -45,10 +45,8 @@ export class RCON implements IStatefulService {
         return this.connected;
     }
 
-    private createSocket(port: number): Socket {
-        return new Socket({
-            port,
-        });
+    private createSocket(): Socket {
+        return new Socket();
     }
 
     public async start(skipServerWait?: boolean): Promise<void> {
@@ -74,7 +72,7 @@ export class RCON implements IStatefulService {
         }
 
         // create socket
-        this.socket = this.createSocket(openListeningPort);
+        this.socket = this.createSocket();
 
         this.socket.on('listening', (socket) => {
             const addr = socket.address();

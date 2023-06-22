@@ -96,15 +96,6 @@ describe('Test class Monitor', () => {
             CreationDate: '20210604142624',
             UserModeTime: '123456',
             KernelModeTime: '123456',
-        },{
-            Name: 'DayZ',
-            ProcessId: '1234',
-            ExecutablePath: 'DayZServer_x64.exe',
-            CommandLine: 'DayZServer_x64 some arg',
-            PrivatePageCount: '1234',
-            CreationDate: '20210604142624',
-            UserModeTime: '123456',
-            KernelModeTime: '123456',
         }] as any;
 
         const res = await monitor.getDayZProcesses();
@@ -281,6 +272,7 @@ describe('Test class Monitor', () => {
             requirements: {
                 checkWinErrorReporting: () => {},
                 checkFirewall: () => {},
+                checkOptionals: () => {},
             },
             rcon: {
                 createBattleyeConf: () => {},

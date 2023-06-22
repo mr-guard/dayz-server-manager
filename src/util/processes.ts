@@ -215,18 +215,19 @@ export class Processes implements IProcessSpawner, IProcessFetcher {
         }
 
         const snapshot = await ps.snapshot();
-        return snapshot.map((x) => ({
-            /* eslint-disable @typescript-eslint/naming-convention */
-            Name: x.name,
-            ProcessId: String(x.pid),
-            ExecutablePath: x.path,
-            CommandLine: x.cmdline,
-            PrivatePageCount: x.vmem, // TODO
-            CreationDate: String(x.starttime.valueOf()), // TODO
-            UserModeTime: x.utime, // TODO
-            KernelModeTime: x.stime, // TODO
-            /* eslint-enable @typescript-eslint/naming-convention */
-        }));
+        return snapshot
+            .map((x) => ({
+                /* eslint-disable @typescript-eslint/naming-convention */
+                Name: x.name,
+                ProcessId: String(x.pid),
+                ExecutablePath: x.path,
+                CommandLine: x.cmdline,
+                PrivatePageCount: x.vmem, // TODO
+                CreationDate: String(x.starttime.valueOf()), // TODO
+                UserModeTime: x.utime, // TODO
+                KernelModeTime: x.stime, // TODO
+                /* eslint-enable @typescript-eslint/naming-convention */
+            }));
     }
 
     public getProcessCPUSpent(proc: ProcessEntry): number {

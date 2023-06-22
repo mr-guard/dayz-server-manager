@@ -95,7 +95,7 @@ describe('Test class RCON', () => {
                 close: (c) => c(),
             }
         } as any;
-        rcon['createSocket'] = (p) => sock;
+        rcon['createSocket'] = () => sock;
 
         await rcon.start();
 
@@ -128,7 +128,7 @@ describe('Test class RCON', () => {
     it('RCON-commands', async () => {
     
         let sentCommand;
-        const rcon = new RCON(null);
+        const rcon = new RCON(null!);
         rcon['connected'] = true;
         rcon['connection'] = {
             command: (cmd: string) => {
@@ -164,7 +164,7 @@ describe('Test class RCON', () => {
 
     it('RCON-players', async () => {
     
-        const rcon = new RCON(null);
+        const rcon = new RCON(null!);
         rcon['connected'] = true;
         rcon['connection'] = {
             command: (cmd: string) => {
@@ -186,7 +186,7 @@ describe('Test class RCON', () => {
 
     it('RCON-kickAll', async () => {
     
-        const rcon = new RCON(null);
+        const rcon = new RCON(null!);
         rcon['connected'] = true;
         
         let kicks: string[] = [];
@@ -244,7 +244,7 @@ describe('Test class RCON', () => {
 
     it('RCON-bans', async () => {
     
-        const rcon = new RCON(null);
+        const rcon = new RCON(null!);
         rcon['connected'] = true;
         rcon['connection'] = {
             command: (cmd: string) => {

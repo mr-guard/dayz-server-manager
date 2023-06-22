@@ -148,8 +148,8 @@ describe('Test class SystemInfo', () => {
 
         // Property call
         const systemInfo = new SystemInfo();
-        systemInfo.cpu = cpu1;
-        systemInfo.avgLoad = avgLoad1;
+        systemInfo.cpu = cpu1!;
+        systemInfo.avgLoad = avgLoad1!;
         systemInfo.memTotal = memTotal1;
         systemInfo.memFree = memFree1;
         systemInfo.uptime = uptime1;
@@ -182,13 +182,14 @@ describe('Test class Processes', () => {
     it('Processes-getProcessList', async () => {
         const processes = new Processes();
 
-        Sinon.stub(processes, 'spawnForOutput').returns(Promise.resolve({
-            status: 0,
-            stdout: WMIC_OUTPUT,
-            stderr: '',
-        }));
+        processes['windowsProcessFetcher']['spawner']
+            .spawnForOutput = async () => ({
+                status: 0,
+                stdout: WMIC_OUTPUT,
+                stderr: '',
+            });
 
-        const result = await processes.getProcessList();
+        const result = await processes.getProcessList('C:\\Discord\\app-1.0.X\\Discord.exe');
 
         // Expect result
         expect(result.length).to.equal(2);
