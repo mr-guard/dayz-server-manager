@@ -27,9 +27,14 @@ export class Logger {
 
     public static wrapWithFileLogger(fnc: any): any {
 
-        return (msg: string, ...data: any[]) => {
-            fnc(msg, data);
+        return (msg: string, data: any[]) => {
+            if (data?.length) {
+                fnc(msg, data);
+            } else {
+                fnc(msg);
+            }
 
+            // TODO sync up and keep file open
             void fs.promises.appendFile(
                 Logger.defaultLogFile,
                 `${msg} - ${JSON.stringify(data)}`,
@@ -52,7 +57,7 @@ export class Logger {
         Logger.wrapWithFileLogger(console.error),
     ];
 
-    public readonly MAX_CONTEXT_LENGTH = 10;
+    public readonly MAX_CONTEXT_LENGTH = 12;
 
     public constructor(
         private context: string,
@@ -78,11 +83,7 @@ export class Logger {
                 : new Date().toISOString();
             const fmt = `@${date} | ${LogLevelNames[level]} | ${this.formatContext(this.context)} | ${msg}`;
 
-            if (data?.length) {
-                Logger.LogLevelFncs[level](fmt, data);
-            } else {
-                Logger.LogLevelFncs[level](fmt);
-            }
+            Logger.LogLevelFncs[level](fmt, data);
         }
 
     }
