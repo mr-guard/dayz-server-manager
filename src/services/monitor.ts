@@ -364,9 +364,6 @@ export class Monitor implements IStatefulService, IMonitor {
             throw new Error('Mod installation failed');
         }
 
-        // env requirements
-        await this.manager.requirements.checkFirewall();
-        await this.manager.requirements.checkOptionals();
     }
 
     private buildServerSpawnCmd(): { cmd: string; args: string[]; cwd?: string } {

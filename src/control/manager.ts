@@ -15,7 +15,6 @@ import { Logger, LogLevel } from '../util/logger';
 import { Events } from '../services/events';
 import { LogReader } from '../services/log-reader';
 import { Backups } from '../services/backups';
-import { Requirements } from '../services/requirements';
 import { IngameReport } from '../services/ingame-report';
 import { Service } from '../types/service';
 import { Database } from '../services/database';
@@ -65,9 +64,6 @@ export class Manager {
     @Service({ type: Backups, stateful: false })
     public backup!: Backups;
 
-    @Service({ type: Requirements, stateful: false })
-    public requirements!: Requirements;
-
     @Service({ type: IngameReport, stateful: true })
     public ingameReport!: IngameReport;
 
@@ -80,12 +76,12 @@ export class Manager {
     @Service({ type: Hooks, stateful: false })
     public hooks!: Hooks;
 
-    // config
-    private config$!: Config;
 
     public initDone: boolean = false;
 
-    public constructor() {
+    public constructor(
+        private config$: Config,
+    ) {
         this.initDone = false;
 
         const versionFilePath = path.join(__dirname, '../VERSION');
@@ -99,10 +95,6 @@ export class Manager {
 
     public get config(): Config {
         return this.config$;
-    }
-
-    public applyConfig(config: Config): void {
-        this.config$ = config;
     }
 
     public getServerPath(): string {
@@ -138,10 +130,10 @@ export class Manager {
     }
 
     public getWebPort(): number {
-        if ((this.config?.webPort ?? 0) > 0) {
-            return this.config!.webPort;
+        if ((this.config.webPort ?? 0) > 0) {
+            return this.config.webPort;
         }
-        return this.config!.serverPort + 11;
+        return this.config.serverPort + 11;
     }
 
     public async getServerInfo(): Promise<ServerInfo> {

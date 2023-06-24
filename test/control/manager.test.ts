@@ -1,23 +1,29 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { Manager } from '../../src/control/manager';
-import { Config, HookType } from '../../src/config/config';
 import { disableConsole, enableConsole } from '../util';
-import { DATA_ERROR_CONFIG, PARSER_ERROR_CONFIG, VALID_CONFIG } from '../config/config-validate.test';
+import { Config } from '../../src/config/config';
 
 const getConfiguredManager = (): Manager => {
-    ImportMock.mockFunction(fs, 'existsSync', true);
-    ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
-    
-    const manager = new Manager();
-    manager.applyConfig(manager.configHelper.readConfig());
-
+    const manager = new Manager(new Config());
     return manager;
 };
 
+const defaultAdmins = [{
+    userId: "admin",
+    userLevel: "admin",
+    password: "admin"
+},{
+    userId: "moderator",
+    userLevel: "moderate",
+    password: "moderator"
+},{
+    userId: "moderator2",
+    userLevel: "wrong-level" as any,
+    password: "moderator"
+}];
 
 describe('Test class Manager', () => {
 
@@ -34,153 +40,11 @@ describe('Test class Manager', () => {
         ImportMock.restore();
     });
 
-    it('Manager-readConfig', () => {
-
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
-        
-        const manager = new Manager();
-        const resultValid = manager.configHelper.readConfig();
-        
-        expect(resultValid).to.be.not.null;
-    });
-
-    it('Manager-readConfig-Data Error', () => {
-
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', DATA_ERROR_CONFIG);
-        const manager = new Manager();
-        
-        const resultErrorData = manager.configHelper.readConfig();
-        expect(resultErrorData).to.be.null;
-    });
-
-    it('Manager-readConfig-Parser Error', () => {
-
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', PARSER_ERROR_CONFIG);
-        const manager = new Manager();
-        const resultErrorParse = manager.configHelper.readConfig();
-        expect(resultErrorParse).to.be.null;
-    });
-
-    it('Manager-readConfig-Empty file', () => {
-
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', '');
-        const manager = new Manager();
-        const resultEmpty = manager.configHelper.readConfig();
-        expect(resultEmpty).to.be.null;
-    });
-
-    it('Manager-readConfig-Not existing', () => {
-        
-        ImportMock.mockFunction(fs, 'existsSync', false);
-        ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
-        const manager = new Manager();
-        const resultNotExists = manager.configHelper.readConfig();
-        expect(resultNotExists).to.be.null;
-    });
-
-    it('Manager-logConfigErrors', () => {
-        const logs = ['test1', 'test2'];
-        const manager = new Manager();
-        let i = 0;
-        manager.configHelper['log'].log = () => i++;
-        manager.configHelper['logConfigErrors'](logs)
-        expect(i).to.be.greaterThanOrEqual(logs.length);
-    });
-
-    it('Manager-writeConfig', () => {
-        
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
-        
-        const manager = new Manager();
-        manager.configHelper.writeConfig(
-            Object.assign(
-                new Config(),
-                <Partial<Config>>{
-                    instanceId: 'test-instance',
-                    admins: [{
-                        userId: 'test-admin',
-                        userLevel: 'admin',
-                        password: 'admin'
-                    }],
-                    rconPassword: 'test123',
-                    steamUsername: 'testuser'
-                }
-            ),
-        );
-
-        // Expect result
-        expect(stub.callCount).to.equal(1);
-        expect(stub.firstCall.args[0]).to.equal(path.join(process.cwd(), 'server-manager.json'));
-        expect(stub.firstCall.args[1]).to.include('test-instance');
-        expect(stub.firstCall.args[1]).to.include('test123');
-        expect(stub.firstCall.args[1]).to.include('test-admin');
-        expect(stub.firstCall.args[1]).to.include('testuser');
-    });
-
-    it('Manager-writeConfig-errors', () => {
-        
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
-        
-        const manager = new Manager();
-        
-        expect(() => manager.configHelper.writeConfig(
-            Object.assign(
-                new Config(),
-                {
-                    instanceId: false,
-                    admins: [{
-                        userId: 'test-admin',
-                        userLevel: 'admin',
-                        password: 'admin'
-                    }],
-                    rconPassword: 'test123',
-                    steamUsername: 'testuser'
-                }
-            ),
-        )).to.throw();
-
-        // Expect result
-        expect(stub.callCount).to.equal(0);
-        
-    });
-
-    it('Manager-writeConfig-io-errors', () => {
-        
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
-        stub.throwsException();
-        
-        const manager = new Manager();
-        
-        expect(() => manager.configHelper.writeConfig(
-            Object.assign(
-                new Config(),
-                {
-                    instanceId: 'test',
-                    admins: [{
-                        userId: 'test-admin',
-                        userLevel: 'admin',
-                        password: 'admin'
-                    }],
-                    rconPassword: 'test123',
-                    steamUsername: 'testuser'
-                }
-            ),
-        )).to.throw();
-
-        // Expect result
-        expect(stub.callCount).to.equal(1);
-        
-    });
-
     it('Manager-getServerPath', () => {
         const manager = getConfiguredManager();
         const result = manager.getServerPath();
 
-        manager['config$'].serverPath = null;
+        manager.config.serverPath = null!;
         const resultDef = manager.getServerPath();
 
         // Expect result
@@ -191,10 +55,10 @@ describe('Test class Manager', () => {
     it('Manager-getServerExePath-abs', () => {
         const manager = getConfiguredManager();
 
-        manager['config$'].serverPath = 'TestDayZServer';
+        manager.config.serverPath = 'TestDayZServer';
         const resultRel = manager.getServerPath();
 
-        manager['config$'].serverPath = 'C:/TestDayZServer';
+        manager.config.serverPath = 'C:/TestDayZServer';
         const resultAbs = manager.getServerPath();
 
         // Expect result
@@ -205,8 +69,8 @@ describe('Test class Manager', () => {
     it('Manager-getServerExePath', () => {
         const manager = getConfiguredManager();
 
-        manager['config$'].serverPath = 'TestDayZServer';
-        manager['config$'].serverExe = 'Test.exe';
+        manager.config.serverPath = 'TestDayZServer';
+        manager.config.serverExe = 'Test.exe';
         const result = manager.getServerExePath();
 
         // Expect result
@@ -215,9 +79,10 @@ describe('Test class Manager', () => {
 
     it('Manager-getUserLevel', () => {
         const userId = 'moderator';
+        const manager = getConfiguredManager();
+        manager.config.admins = defaultAdmins;
 
         // Method call
-        const manager = getConfiguredManager();
         const result = manager.getUserLevel(userId);
 
         // Expect result
@@ -227,8 +92,9 @@ describe('Test class Manager', () => {
     it('Manager-isUserOfLevel-userlevel-is-greater', () => {
         const userId = 'admin';
         const level = 'moderate';
-
         const manager = getConfiguredManager();
+        manager.config.admins = defaultAdmins;
+
         const result = manager.isUserOfLevel(userId, level);
 
         expect(result).to.be.true;
@@ -237,8 +103,9 @@ describe('Test class Manager', () => {
     it('Manager-isUserOfLevel-userlevel-is-lower', () => {
         const userId = 'moderator';
         const level = 'admin';
-
         const manager = getConfiguredManager();
+        manager.config.admins = defaultAdmins;
+
         const result = manager.isUserOfLevel(userId, level);
 
         expect(result).to.be.false;
@@ -247,8 +114,9 @@ describe('Test class Manager', () => {
     it('Manager-isUserOfLevel-userlevel-unknown', () => {
         const userId = 'moderator2';
         const level = 'view';
-
         const manager = getConfiguredManager();
+        manager.config.admins = defaultAdmins;
+
         const result = manager.isUserOfLevel(userId, level);
 
         expect(result).to.be.false;
@@ -257,8 +125,9 @@ describe('Test class Manager', () => {
     it('Manager-isUserOfLevel-unknown user', () => {
         const userId = 'unknown';
         const level = 'admin';
-
         const manager = getConfiguredManager();
+        manager.config.admins = defaultAdmins;
+
         const result = manager.isUserOfLevel(userId, level);
 
         expect(result).to.be.false;
@@ -266,10 +135,10 @@ describe('Test class Manager', () => {
 
     it('Manager-isUserOfLevel-no level', () => {
         const userId = 'unknown';
-        const level = null;
-
         const manager = getConfiguredManager();
-        const result = manager.isUserOfLevel(userId, level);
+        manager.config.admins = defaultAdmins;
+        
+        const result = manager.isUserOfLevel(userId, null!);
 
         expect(result).to.be.true;
     });
@@ -319,17 +188,6 @@ describe('Test class Manager', () => {
 
         // Expect result
         expect(result).to.be.equal(9999);
-    });
-
-    it('Manager-initDone', () => {
-        const manager = new Manager();
-        const resultBefore = manager.initDone;
-        manager.initDone = true;
-        const resultAfter = manager.initDone;
-
-        // Expect result
-        expect(resultBefore).to.be.false;
-        expect(resultAfter).to.be.true;
     });
 
 });

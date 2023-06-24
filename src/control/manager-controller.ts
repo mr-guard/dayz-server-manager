@@ -7,6 +7,8 @@ import * as chokidar from 'chokidar';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as childProcess from 'child_process';
+import { Requirements } from '../services/requirements';
+import { ConfigFileHelper } from '../config/config-file-helper';
 
 export const isRunFromWindowsGUI = (): boolean => {
     if (process.platform !== 'win32') {
@@ -56,12 +58,13 @@ export class ManagerController {
 
     public static readonly INSTANCE = new ManagerController();
 
-    private log = new Logger('Manager');
+    private log = new Logger('Bootstrap');
 
     private manager: Manager | undefined;
 
     private configFileWatcher: chokidar.FSWatcher | undefined;
     private configFileHash: string | undefined;
+    private configFileHelper = new ConfigFileHelper();
 
     private skipInitialCheck: boolean = false;
 
@@ -136,8 +139,7 @@ export class ManagerController {
 
     public async start(): Promise<void> {
 
-        const manager = new Manager();
-        const config = manager.configHelper.readConfig();
+        const config = this.configFileHelper.readConfig();
         if (!config) {
             throw new Error(`Config missing or invalid`);
         }
@@ -147,14 +149,22 @@ export class ManagerController {
             .digest('hex');
 
         await this.stop();
-        this.manager = manager;
-        manager.applyConfig(config);
 
+        this.manager = new Manager(config);
+
+        // apply initial log level
         const { loglevel } = config;
         if (typeof loglevel === 'number' && loglevel >= LogLevel.DEBUG && loglevel <= LogLevel.ERROR) {
-            Logger.defaultLogLevel = this.manager.config.loglevel;
+            Logger.defaultLogLevel = loglevel;
         }
+
+        // set the process title
         process.title = `Server-Manager ${this.manager.getServerExePath()}`;
+
+        // check any requirements before even starting
+        await new Requirements(this.manager.getServerExePath())
+            .check();
+
 
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
@@ -168,18 +178,6 @@ export class ManagerController {
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {
-
-            // check firewall, but let the server boot if its not there (could be manually set to ports)
-            await this.manager.requirements.checkFirewall();
-
-            // check runtime libs
-            if (!await this.manager.requirements.checkRuntimeLibs()) {
-                this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
-                process.exit(0);
-            }
-
-            // check optionals
-            await this.manager.requirements.checkOptionals();
 
             // eslint-disable-next-line no-negated-condition
             if (!this.skipInitialCheck && !await this.manager.monitor.isServerRunning()) {
@@ -234,43 +232,48 @@ export class ManagerController {
     }
 
     private watchConfig(): void {
-        const cfgPath = this.manager.configHelper.getConfigFilePath();
+        const cfgPath = this.configFileHelper.getConfigFilePath();
         this.configFileWatcher = chokidar.watch(
             cfgPath,
         ).on(
             'change',
-            async () => {
+            async () => { // NOSONAR
 
                 // usually file "headers" are saved before content is done
                 // waiting a small amount of time prevents reading RBW errors
                 await new Promise((r) => setTimeout(r, 1000));
 
                 this.log.log(LogLevel.INFO, 'Detected config file change...');
-
-                if (!fs.existsSync(cfgPath)) {
-                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config file does not exist');
-                    return;
-                }
-
-                const config = this.manager.configHelper.readConfig();
-                if (!config) {
-                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config contains errors');
-                    return;
-                }
-
-                const newHash = crypto.createHash('md5')
-                    .update(JSON.stringify(config))
-                    .digest('hex');
-
-                if (newHash === this.configFileHash) {
-                    this.log.log(LogLevel.WARN, 'Skipping config reload because no changes were found');
-                    return;
-                }
-
-                this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
-                void this.start();
+                this.reloadConfig();
             },
         );
+    }
+
+    private reloadConfig(): void {
+        const cfgPath = this.configFileHelper.getConfigFilePath();
+
+        if (!fs.existsSync(cfgPath)) {
+            this.log.log(LogLevel.ERROR, 'Cannot reload config because config file does not exist');
+            return;
+        }
+
+        const config = this.configFileHelper.readConfig();
+        if (!config) {
+            this.log.log(LogLevel.ERROR, 'Cannot reload config because config contains errors');
+            return;
+        }
+
+        const newHash = crypto.createHash('md5')
+            .update(JSON.stringify(config))
+            .digest('hex');
+
+        if (newHash === this.configFileHash) {
+            this.log.log(LogLevel.WARN, 'Skipping config reload because no changes were found');
+            return;
+        }
+
+        this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
+        void this.start();
     }
 
 }

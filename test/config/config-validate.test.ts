@@ -76,10 +76,10 @@ describe('Test config validate', () => {
         base.events = [
             // no name, wrong type and missing cron
             {
-                name: null,
+                name: null!,
                 type: 'message123' as EventType,
                 params: [],
-                cron: null,
+                cron: null!,
             },
             // wrong cron
             {

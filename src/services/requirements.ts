@@ -1,13 +1,11 @@
-import { Manager } from '../control/manager';
 import { Logger, LogLevel } from '../util/logger';
 import { Processes } from '../util/processes';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NetSH } from '../util/netsh';
-import { IService } from '../types/service';
 import { detectOS } from '../util/detect-os';
 
-export class Requirements implements IService {
+export class Requirements {
 
     private readonly VCREDIST_LINK = 'https://www.microsoft.com/en-us/download/details.aspx?id=52685';
     private readonly VCREDIST_MARKER_DLL = 'VCRuntime140.dll';
@@ -21,21 +19,18 @@ export class Requirements implements IService {
     + '[HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\Windows Error Reporting]\n'
     + '"DontShowUI"=dword:00000001';
 
-    private log = new Logger('Requirements');
-
-    private netSh = new NetSH();
-
-    private processes = new Processes();
-
     public constructor(
-        public manager: Manager,
+        private serverExePath: string,
+        private log = new Logger('Requirements'),
+        private netSh = new NetSH(),
+        private processes = new Processes(),
     ) {}
 
     public async checkFirewall(): Promise<boolean> {
         this.log.log(LogLevel.DEBUG, 'Checking Firewall');
 
         if (detectOS() === 'windows') {
-            const exePath = path.resolve(this.manager.getServerExePath());
+            const exePath = path.resolve(this.serverExePath);
             const firewallRules = await this.netSh.getRulesByPath(exePath);
             if (firewallRules?.length) {
                 this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
@@ -144,10 +139,10 @@ export class Requirements implements IService {
 
         if (detectOS() === 'windows') {
             checks.push(
-                await this.manager.requirements.checkVcRedist(),
+                await this.checkVcRedist(),
             );
             checks.push(
-                await this.manager.requirements.checkDirectX(),
+                await this.checkDirectX(),
             );
         }
 
@@ -206,13 +201,28 @@ export class Requirements implements IService {
         return true;
     }
 
-    public async checkOptionals(): Promise<void> {
+    public async checkOptionals(): Promise<boolean> {
 
         if (detectOS() === 'windows') {
-            await this.checkWinErrorReporting();
+            return this.checkWinErrorReporting();
         }
 
         // TODO linux: anything for linux?
+        return true;
+    }
+
+    public async check(): Promise<void> {
+        // check firewall, but let the server boot if its not there (could be manually set to ports)
+        await this.checkFirewall();
+
+        // check optionals
+        await this.checkOptionals();
+
+        // check runtime libs
+        if (!await this.checkRuntimeLibs()) {
+            this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
+            process.exit(0);
+        }
     }
 
 }
