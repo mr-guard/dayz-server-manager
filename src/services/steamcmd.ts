@@ -215,9 +215,9 @@ export class SteamCMD implements IService {
         fse.ensureDirSync(serverPath);
 
         const success = await this.execute([
-            ...this.getLoginArgs(),
             '+force_install_dir',
             serverPath,
+            ...this.getLoginArgs(),
             '+app_update',
             (this.manager.config?.experimentalServer ? SteamCMD.DAYZ_EXPERIMENTAL_SERVER_APP_ID : SteamCMD.DAYZ_SERVER_APP_ID),
             'validate',
@@ -275,9 +275,9 @@ export class SteamCMD implements IService {
         fse.ensureDirSync(wsBasePath);
 
         const success = await this.execute([
-            ...this.getLoginArgs(),
             '+force_install_dir',
             wsBasePath,
+            ...this.getLoginArgs(),
             '+workshop_download_item',
             SteamCMD.DAYZ_APP_ID,
             modId,
