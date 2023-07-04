@@ -1,5 +1,3 @@
-import { ImportMock } from 'ts-mock-imports'
-import * as cron from 'cron-parser';
 import { parseConfigFileContent, validateConfig } from '../../src/config/config-validate';
 import { expect } from '../expect';
 import { Config, EventType } from '../../src/config/config';
@@ -44,11 +42,6 @@ export const DATA_ERROR_CONFIG = VALID_CONFIG.replace('"instanceId": "test",', '
 
 
 describe('Test config validate', () => {
-
-    beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
-    });
 
     it('parseConfigFileContent', () => {
         expect(() => parseConfigFileContent(VALID_CONFIG)).not.to.throw();

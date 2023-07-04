@@ -1,44 +1,71 @@
 import { GuildChannel, Message } from 'discord.js';
-import { DiscordBot } from '../services/discord';
 import { Manager } from '../control/manager';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { Request } from '../types/interface';
+import { InterfaceDispatcher } from './interface';
+import { IService } from '../types/service';
+import { LoggerFactory } from '../services/loggerfactory';
+import { injectable, singleton } from 'tsyringe';
 
-export class DiscordMessageHandler {
+@singleton()
+@injectable()
+export class DiscordMessageHandler extends IService {
 
-    private log = new Logger('Discord');
     public readonly PREFIX = '!';
 
     public constructor(
-        public manager: Manager,
-        public discord: DiscordBot,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private dispatcher: InterfaceDispatcher,
+    ) {
+        super(loggerFactory.createLogger('DiscordMsgHandler'));
+    }
 
     public async handleCommandMessage(message: Message): Promise<void> {
-        if (!this.manager.initDone) return;
+        if (!this.manager.initDone) {
+            this.log.log(LogLevel.DEBUG, `Received command before init was completed`);
+            return;
+        }
 
         const args = message.content.slice(this.PREFIX.length).trim().split(/ +/);
         const command = args?.shift()?.toLowerCase();
 
-        if (!command) return;
+        if (!command) {
+            return;
+        }
 
         const channelName = (message.channel as GuildChannel).name;
         const authorId = message.author.tag;
 
         if (!authorId?.includes('#')) {
             // safety
+            this.log.log(LogLevel.DEBUG, `Received command without valid author id`);
             return;
         }
 
         this.log.log(LogLevel.INFO, `Command "${command}" from "${authorId}" in "${channelName}" with args: "${args?.join(' ')}"`);
 
-        const handler = this.manager.interface.commandMap.get(command);
+        const configChannel = this.manager.config.discordChannels.find((x) => x.channel.toLowerCase() === channelName?.toLowerCase());
+        // if (command === 'help') {
+        //     let response = 'The following commands are available: \n\n';
+        //     response += [...this.interfaceService.commandMap.entries()]
+        //         .filter((x) => !x[1].disableDiscord)
+        //         .map((x) => this.PREFIX + x[0]
+        //             + x[1].params
+        //                 .map((param) => x[1].paramsOptional ? `[${param}]` : `<${param}>`)
+        //                 .join(' '))
+        //         .join('\n\n');
+        //     response += '\n\n ([x] means x is optional, <x> means x is required)';
+        //     await message.reply(response);
+        //     return;
+        // }
+
+        const handler = this.dispatcher.getCommands()?.get(command);
         if (!handler || handler.disableDiscord) {
             await message.reply('Command not found.');
             return;
         }
 
-        const configChannel = this.manager.config.discordChannels.find((x) => x.channel.toLowerCase() === channelName?.toLowerCase());
         if (configChannel?.mode !== 'admin' && !handler.discordPublic) {
             await message.reply('This command is not allowed in this channel.');
             return;
@@ -63,7 +90,7 @@ export class DiscordMessageHandler {
             });
         }
 
-        const res = await this.manager.interface.execute(req);
+        const res = await this.dispatcher.execute(req);
 
         if (res.status >= 200 && res.status < 300) {
             // eslint-disable-next-line @typescript-eslint/no-base-to-string

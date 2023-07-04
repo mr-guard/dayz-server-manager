@@ -1,14 +1,23 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
 import * as sinon from 'sinon';
-import * as fs from 'fs';
 import * as path from 'path';
 import * as tail from 'tail';
 import { ServerState } from '../../src/types/monitor';
 import { LogReader } from '../../src/services/log-reader';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { Monitor } from '../../src/services/monitor';
+import { FSAPI } from '../../src/util/apis';
 
 describe('Test class LogReader', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let monitor: StubInstance<Monitor>;
+    let fs: FSAPI;
 
     before(() => {
         disableConsole();
@@ -21,63 +30,67 @@ describe('Test class LogReader', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
+        fs = memfs({}, '/', injector);
+
+        manager = injector.resolve(Manager) as any;
+        monitor = injector.resolve(Monitor) as any;
     });
 
-    it('LogReader', async () => {
+    it('LogReader-scan', async () => {
 
-        ImportMock.mockFunction(
-            fs.promises,
-            'readdir',
-            Promise.resolve([
-                'server.rpt',
-                'server.adm',
-                'script.log',
-                'test.txt',
-            ]),
-        );
-
-        const statMock = ImportMock.mockFunction(
-            fs.promises,
-            'stat',
-            Promise.resolve({
-                mtime: new Date(),
-            }),
+        fs = memfs(
+            {
+                '/testserver/profs': {
+                    'server.rpt': 'test',
+                    'server.adm': 'test',
+                    'script.log': 'test',
+                    'test.txt': 'test',
+                },
+            },
+            '/',
+            injector,
         );
 
         const tailMock = ImportMock.mockClass<tail.Tail>(
             tail,
             'Tail',
         );
+        let lineRegister = 0;
         tailMock.set('on', (t, c) => {
-            if (t === 'line') c('test');
+            if (t === 'line') {
+                lineRegister++;
+                c('test');
+            }
         });
 
-        const manager = {
-            monitor: {
-                registerStateListener: (t, c) => c(ServerState.STARTED),
-            },
-            config: {
-                profilesPath: 'profs',
-            },
-            getServerPath: () => 'testserver',
+        monitor.registerStateListener.callsFake((t, c) => c(ServerState.STARTED));
+        manager.config = {
+            profilesPath: 'profs',
         } as any;
+        manager.getServerPath.returns('/testserver');
 
-        const logReader = new LogReader(manager);
-        logReader['initDelay'] = 10;
+        const logReader = injector.resolve(LogReader);
+        logReader.initDelay = 10;
 
 
         await logReader.start();
-        await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 100));
         await logReader.stop();
 
-        expect(statMock.callCount).to.equal(3);
+        expect(lineRegister).to.equal(3);
     });
 
-    it('LogReader', async () => {
+    it('LogReader-fetchLogs', async () => {
 
-        const logReader = new LogReader(null);
+        const logReader = injector.resolve(LogReader);
 
-        logReader['logMap']['RPT'].logLines = [
+        logReader['logMap']['RPT']!.logLines = [
             { timestamp: 1, message: 'test 1' },
             { timestamp: 2, message: 'test 2' },
             { timestamp: 3, message: 'test 3' },

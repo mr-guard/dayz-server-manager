@@ -1,13 +1,20 @@
+import 'reflect-metadata';
+
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import * as fs from 'fs';
-import * as path from 'path';
+import * as sinon from 'sinon';
 import { Config } from '../../src/config/config';
-import { disableConsole, enableConsole } from '../util';
+import { disableConsole, enableConsole, memfs, stubClass } from '../util';
 import { DATA_ERROR_CONFIG, PARSER_ERROR_CONFIG, VALID_CONFIG } from './config-validate.test';
 import { ConfigFileHelper } from '../../src/config/config-file-helper';
+import { container, DependencyContainer, Lifecycle } from 'tsyringe';
+import { FSAPI } from '../../src/util/apis';
+import { LoggerFactory } from '../../src/services/loggerfactory';
+import { Paths } from '../../src/services/paths';
 
-describe('Test class Manager', () => {
+describe('Test class ConfigFileHelper', () => {
+
+    let files: FSAPI;
+    let injector: DependencyContainer;
 
     before(() => {
         disableConsole();
@@ -18,74 +25,62 @@ describe('Test class Manager', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer()
+        files = memfs({}, '/', injector);
+        injector.register(LoggerFactory, LoggerFactory);
+        injector.register(Paths, stubClass(Paths), { lifecycle: Lifecycle.Singleton });
+        
+        (injector.resolve(Paths).cwd as sinon.SinonStub).returns('/');
     });
 
-    it('Manager-readConfig', () => {
-
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
+    it('ConfigFileHelper-readConfig', () => {
         
-        const resultValid = new ConfigFileHelper().readConfig();
+        memfs({ ['/' + ConfigFileHelper.CFG_NAME]: VALID_CONFIG }, '/', injector);
+        
+        const resultValid = injector.resolve(ConfigFileHelper).readConfig();
         
         expect(resultValid).to.be.not.null;
     });
 
-    it('Manager-readConfig-Data Error', () => {
+    it('ConfigFileHelper-readConfig-Data Error', () => {
 
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', DATA_ERROR_CONFIG);
-        
-        const resultErrorData = new ConfigFileHelper().readConfig();
+        memfs({ ['/' + ConfigFileHelper.CFG_NAME]: DATA_ERROR_CONFIG }, '/', injector);
+
+        const resultErrorData = injector.resolve(ConfigFileHelper).readConfig();
         
         expect(resultErrorData).to.be.null;
     });
 
-    it('Manager-readConfig-Parser Error', () => {
+    it('ConfigFileHelper-readConfig-Parser Error', () => {
 
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', PARSER_ERROR_CONFIG);
+        memfs({ ['/' + ConfigFileHelper.CFG_NAME]: PARSER_ERROR_CONFIG }, '/', injector);
         
-        const resultErrorParse = new ConfigFileHelper().readConfig();
+        const result = injector.resolve(ConfigFileHelper).readConfig();
         
-        expect(resultErrorParse).to.be.null;
+        expect(result).to.be.null;
     });
 
-    it('Manager-readConfig-Empty file', () => {
+    it('ConfigFileHelper-readConfig-Empty file', () => {
 
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', '');
+        memfs({ ['/' + ConfigFileHelper.CFG_NAME]: '' }, '/', injector);
         
-        const resultEmpty = new ConfigFileHelper().readConfig();
+        const result = injector.resolve(ConfigFileHelper).readConfig();
         
-        expect(resultEmpty).to.be.null;
+        expect(result).to.be.null;
     });
 
-    it('Manager-readConfig-Not existing', () => {
+    it('ConfigFileHelper-readConfig-Not existing', () => {
         
-        ImportMock.mockFunction(fs, 'existsSync', false);
-        ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
-        
-        const resultNotExists = new ConfigFileHelper().readConfig();
+        const resultNotExists = injector.resolve(ConfigFileHelper).readConfig();
         
         expect(resultNotExists).to.be.null;
     });
 
-    it('Manager-logConfigErrors', () => {
-        const logs = ['test1', 'test2'];
-        const configHelper = new ConfigFileHelper();
-        let i = 0;
-        configHelper['log'].log = () => i++;
-        configHelper['logConfigErrors'](logs)
-        expect(i).to.be.greaterThanOrEqual(logs.length);
-    });
-
-    it('Manager-writeConfig', () => {
+    it('ConfigFileHelper-writeConfig', () => {
+        const helper = injector.resolve(ConfigFileHelper);
         
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
-        
-        new ConfigFileHelper().writeConfig(
+        helper.writeConfig(
             Object.assign(
                 new Config(),
                 <Partial<Config>>{
@@ -102,19 +97,21 @@ describe('Test class Manager', () => {
         );
 
         // Expect result
-        expect(stub.callCount).to.equal(1);
-        expect(stub.firstCall.args[0]).to.equal(path.join(process.cwd(), 'server-manager.json'));
-        expect(stub.firstCall.args[1]).to.include('test-instance');
-        expect(stub.firstCall.args[1]).to.include('test123');
-        expect(stub.firstCall.args[1]).to.include('test-admin');
-        expect(stub.firstCall.args[1]).to.include('testuser');
+        const cfgPath = helper.getConfigFilePath();
+        expect(files.existsSync(cfgPath)).to.be.true;
+
+        const cfgContent = files.readFileSync(cfgPath) + '';
+        expect(cfgContent).to.include('test-instance');
+        expect(cfgContent).to.include('test123');
+        expect(cfgContent).to.include('test-admin');
+        expect(cfgContent).to.include('testuser');
     });
 
-    it('Manager-writeConfig-errors', () => {
+    it('ConfigFileHelper-writeConfig-errors', () => {
         
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
+        const helper = injector.resolve(ConfigFileHelper);
         
-        expect(() => new ConfigFileHelper().writeConfig(
+        expect(() => helper.writeConfig(
             Object.assign(
                 new Config(),
                 {
@@ -131,16 +128,16 @@ describe('Test class Manager', () => {
         )).to.throw();
 
         // Expect result
-        expect(stub.callCount).to.equal(0);
+        const cfgPath = helper.getConfigFilePath();
+        expect(files.existsSync(cfgPath)).to.be.false;
         
     });
 
-    it('Manager-writeConfig-io-errors', () => {
+    it('ConfigFileHelper-writeConfig-io-errors', () => {
         
-        const stub = ImportMock.mockFunction(fs, 'writeFileSync');
-        stub.throwsException();
+        const stub = sinon.stub(files, 'writeFileSync').throwsException();
         
-        expect(() => new ConfigFileHelper().writeConfig(
+        expect(() => injector.resolve(ConfigFileHelper).writeConfig(
             Object.assign(
                 new Config(),
                 {

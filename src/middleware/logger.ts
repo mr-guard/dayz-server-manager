@@ -3,6 +3,7 @@ import { Logger, LogLevel } from '../util/logger';
 
 const logger = new Logger('HTTP API');
 
+/* istanbul ignore next */
 export const loggerMiddleware = (req: Request, resp: Response, next: any): void => {
     logger.log(
         LogLevel.DEBUG,

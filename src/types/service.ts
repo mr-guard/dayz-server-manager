@@ -1,9 +1,10 @@
-import 'reflect-metadata';
-import { Manager } from '../control/manager';
+import { Logger } from '../util/logger';
 
 export class IService {
 
-    public constructor(public manager: Manager) {}
+    public constructor(
+        protected log: Logger,
+    ) {}
 
 }
 
@@ -18,14 +19,3 @@ export interface ServiceConfig {
     type: typeof IService;
     stateful: boolean;
 }
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const Service = (config: ServiceConfig): PropertyDecorator => (cls, prop) => {
-    const serviceProps: (string | symbol)[] = Reflect.getMetadata('services', cls) ?? [];
-    if (!serviceProps.includes(prop)) {
-        serviceProps.push(prop);
-        Reflect.defineMetadata('services', serviceProps, cls);
-    }
-    Reflect.defineMetadata('service', config, cls, prop);
-};
-

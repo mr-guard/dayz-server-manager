@@ -3,48 +3,34 @@ import { ImportMock } from 'ts-mock-imports'
 import { Interface } from '../../src/interface/interface';
 import { Request } from '../../src/types/interface';
 import { ManagerController } from '../../src/control/manager-controller';
-import { disableConsole, enableConsole } from '../util';
-
-class TestManager {
-    config = {
-        admins: [{
-            userId: 'admin',
-            level: 'admin',
-        }, {
-            userId: 'whatever',
-            level: 'view',
-        }]
-    };
-    metrics = {
-        pushMetricValue: (a1, a2) => {},
-    };
-    monitor = {
-        getDayZProcesses: () => [{
-            Name: 'DayZ',
-            ProcessId: '1234',
-            ExecutablePath: 'DayZServer_x64.exe',
-            CommandLine: 'DayZServer_x64 some arg',
-            PrivatePageCount: '1234',
-            CreationDate: '20210604142624',
-            UserModeTime: '123456',
-            KernelModeTime: '123456',
-        }],
-        getSystemReport: () => ({
-            format: () => 'test',
-        }),
-    };
-    rcon = {
-        getPlayers: () => [],
-        getBans: () => [],
-        getPlayersRaw: () => 'test',
-        getBansRaw: () => 'test',
-    };
-    isUserOfLevel = (a1, a2) => true;
-    initDone = true;
-}
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { RCON } from '../../src/services/rcon';
+import { Monitor, ServerDetector, SystemReporter } from '../../src/services/monitor';
+import { Metrics } from '../../src/services/metrics';
+import { SteamCMD } from '../../src/services/steamcmd';
+import { LogReader } from '../../src/services/log-reader';
+import { Backups } from '../../src/services/backups';
+import { MissionFiles } from '../../src/services/mission-files';
+import { ConfigFileHelper } from '../../src/config/config-file-helper';
 
 
 describe('Test Interface', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let rcon: StubInstance<RCON>;
+    let monitor: StubInstance<Monitor>;
+    let systemReporter: StubInstance<SystemReporter>;
+    let serverDetector: StubInstance<ServerDetector>;
+    let metrics: StubInstance<Metrics>;
+    let steamCmd: StubInstance<SteamCMD>;
+    let logReader: StubInstance<LogReader>;
+    let backups: StubInstance<Backups>;
+    let missionFiles: StubInstance<MissionFiles>;
+    let configFileHelper: StubInstance<ConfigFileHelper>;
 
     before(() => {
         disableConsole();
@@ -57,10 +43,71 @@ describe('Test Interface', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(RCON, stubClass(RCON), { lifecycle: Lifecycle.Singleton });
+        injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
+        injector.register(SystemReporter, stubClass(SystemReporter), { lifecycle: Lifecycle.Singleton });
+        injector.register(ServerDetector, stubClass(ServerDetector), { lifecycle: Lifecycle.Singleton });
+        injector.register(Metrics, stubClass(Metrics), { lifecycle: Lifecycle.Singleton });
+        injector.register(SteamCMD, stubClass(SteamCMD), { lifecycle: Lifecycle.Singleton });
+        injector.register(LogReader, stubClass(LogReader), { lifecycle: Lifecycle.Singleton });
+        injector.register(Backups, stubClass(Backups), { lifecycle: Lifecycle.Singleton });
+        injector.register(MissionFiles, stubClass(MissionFiles), { lifecycle: Lifecycle.Singleton });
+        injector.register(ConfigFileHelper, stubClass(ConfigFileHelper), { lifecycle: Lifecycle.Singleton });
+        
+        manager = injector.resolve(Manager) as any;
+        manager.config = {
+            admins: [{
+                userId: 'admin',
+                level: 'admin',
+            }, {
+                userId: 'whatever',
+                level: 'view',
+            }]
+        } as any;
+        manager.isUserOfLevel.returns(true);
+        manager.initDone = true;
+        
+        rcon = injector.resolve(RCON) as any;
+        rcon.getPlayers.resolves([]);
+        rcon.getBans.resolves([]);
+        rcon.getPlayersRaw.resolves('test');
+        rcon.getBansRaw.resolves('test');
+
+        monitor = injector.resolve(Monitor) as any;
+        monitor.restartLock = false;
+
+        systemReporter = injector.resolve(SystemReporter) as any;
+        systemReporter.getSystemReport.resolves({
+            format: () => 'test',
+        } as any);
+        
+        serverDetector = injector.resolve(ServerDetector) as any;
+        serverDetector.getDayZProcesses.resolves([{
+            Name: 'DayZ',
+            ProcessId: '1234',
+            ExecutablePath: 'DayZServer_x64.exe',
+            CommandLine: 'DayZServer_x64 some arg',
+            PrivatePageCount: '1234',
+            CreationDate: '20210604142624',
+            UserModeTime: '123456',
+            KernelModeTime: '123456',
+        }]);
+        
+        metrics = injector.resolve(Metrics) as any;
+        steamCmd = injector.resolve(SteamCMD) as any;
+        logReader = injector.resolve(LogReader) as any;
+        backups = injector.resolve(Backups) as any;
+        missionFiles = injector.resolve(MissionFiles) as any;
+        configFileHelper = injector.resolve(ConfigFileHelper) as any;
     });
 
     it('execute-non existing', async () => {
-        const handler = new Interface(null);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'whatever',
         } as any as Request;
@@ -70,7 +117,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-malformed', async () => {
-        const handler = new Interface(null);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: '',
         } as any as Request;
@@ -80,9 +127,8 @@ describe('Test Interface', () => {
     });
 
     it('execute-init lock', async () => {
-        const manager = new TestManager();
         manager.initDone = false;
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'ping',
             user: 'admin',
@@ -93,8 +139,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-unknown user', async () => {
-        const manager = new TestManager();
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'ping',
             user: 'unknown'
@@ -105,9 +150,8 @@ describe('Test Interface', () => {
     });
 
     it('execute-auth level', async () => {
-        const manager = new TestManager();
-        manager.isUserOfLevel = (a1, a2) => false;
-        const handler = new Interface(manager as any);
+        manager.isUserOfLevel.returns(false);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'ping',
             user: 'whatever'
@@ -119,8 +163,7 @@ describe('Test Interface', () => {
 
 
     it('execute-ping', async () => {
-        const manager = new TestManager();
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'ping',
             user: 'admin'
@@ -132,8 +175,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-process', async () => {
-        const manager = new TestManager();
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'process',
             user: 'admin',
@@ -146,10 +188,9 @@ describe('Test Interface', () => {
     });
 
     it('execute-process-not found', async () => {
-        const manager = new TestManager();
-        manager.monitor.getDayZProcesses = () => [];
+        serverDetector.getDayZProcesses.resolves([]);
 
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'process',
             user: 'admin'
@@ -160,9 +201,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-system', async () => {
-        const manager = new TestManager();
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'system',
             user: 'admin',
@@ -175,9 +214,8 @@ describe('Test Interface', () => {
     });
 
     it('execute-system-not found', async () => {
-        const manager = new TestManager();
-        manager.monitor.getSystemReport = () => null;
-        const handler = new Interface(manager as any);
+        systemReporter.getSystemReport.resolves(null);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'system',
             user: 'admin'
@@ -188,9 +226,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-players', async () => {
-        const manager = new TestManager();
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'players',
             user: 'admin',
@@ -203,9 +239,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-bans', async () => {
-        const manager = new TestManager();
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'bans',
             user: 'admin',
@@ -218,13 +252,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-lock', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            lock: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'lock',
             user: 'admin',
@@ -232,17 +260,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.lock.called).to.be.true;
     });
 
     it('execute-unlock', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            unlock: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'unlock',
             user: 'admin',
@@ -250,17 +272,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.unlock.called).to.be.true;
     });
 
     it('execute-global', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            global: (m) => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'global',
             user: 'admin',
@@ -271,17 +287,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.global.called).to.be.true;
     });
 
     it('execute-kickall', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            kickAll: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'kickall',
             user: 'admin',
@@ -289,17 +299,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.kickAll.called).to.be.true;
     });
 
     it('execute-kick', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            kick: (p) => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'kick',
             user: 'admin',
@@ -310,17 +314,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.kick.called).to.be.true;
     });
 
     it('execute-kick-missing param', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            kick: (p) => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'kick',
             user: 'admin',
@@ -331,17 +329,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(400);
-        expect(executed).to.be.false;
+        expect(rcon.kick.called).to.be.false;
     });
 
     it('execute-ban', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            ban: (p) => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'ban',
             user: 'admin',
@@ -352,17 +344,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.ban.called).to.be.true;
     });
 
     it('execute-removeban', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            removeBan: (p) => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'removeban',
             user: 'admin',
@@ -373,17 +359,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.removeBan.called).to.be.true;
     });
 
     it('execute-reloadbans', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.rcon = {
-            reloadBans: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'reloadbans',
             user: 'admin'
@@ -391,17 +371,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(rcon.reloadBans.called).to.be.true;
     });
 
     it('execute-restart', async () => {
-        let executed = false;
-        const manager = new TestManager();
-        manager.monitor = {
-            killServer: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'restart',
             user: 'admin'
@@ -409,16 +383,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(monitor.killServer.called).to.be.true;
     });
 
     it('execute-lockrestart', async () => {
-        const manager = new TestManager();
-        manager.monitor = {
-            restartLock: false,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'lockrestart',
             user: 'admin'
@@ -426,16 +395,13 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(manager.monitor['restartLock']).to.be.true;
+        expect(monitor.restartLock).to.be.true;
     });
 
     it('execute-unlockrestart', async () => {
-        const manager = new TestManager();
-        manager.monitor = {
-            restartLock: true,
-        } as any;
+        monitor.restartLock = true;
         
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'unlockrestart',
             user: 'admin'
@@ -443,16 +409,13 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(manager.monitor['restartLock']).to.be.false;
+        expect(monitor.restartLock).to.be.false;
     });
 
     it('execute-isrestartlocked', async () => {
-        const manager = new TestManager();
-        manager.monitor = {
-            restartLock: true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        monitor.restartLock = true;
+
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'isrestartlocked',
             user: 'admin'
@@ -464,17 +427,8 @@ describe('Test Interface', () => {
     });
 
     it('execute-metrics', async () => {
-        const manager = new TestManager();
-        let executedType;
-        manager.metrics = {
-            pushMetricValue: (p) => {}, // audit
-            fetchMetrics: (type) => {
-                executedType = type;
-                return [];
-            },
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        metrics.fetchMetrics.resolves([]);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'metrics',
             user: 'admin',
@@ -485,21 +439,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executedType).to.equal('test');
+        expect(metrics.fetchMetrics.firstCall.firstArg).to.equal('test');
     });
 
     it('execute-metrics-missing type', async () => {
-        const manager = new TestManager();
-        let executedType;
-        manager.metrics = {
-            pushMetricValue: (p) => {}, // audit
-            fetchMetrics: (type) => {
-                executedType = type;
-                return [];
-            },
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'metrics',
             user: 'admin',
@@ -510,18 +454,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(400);
-        expect(executedType).to.be.undefined;
+        expect(metrics.fetchMetrics.called).to.be.false;
     });
 
     it('execute-deleteMetrics', async () => {
-        const manager = new TestManager();
-        let executedDelay;
-        manager.metrics = {
-            pushMetricValue: (p) => {}, // audit
-            deleteMetrics: (delay) => executedDelay = delay,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'deleteMetrics',
             user: 'admin',
@@ -532,17 +469,12 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executedDelay).to.equal(864000000);
+        expect(metrics.deleteMetrics.firstCall.firstArg).to.equal(864000000);
     });
 
     it('execute-logs', async () => {
-        const manager = new TestManager() as any;
-        let executedType;
-        manager.logReader = {
-            fetchLogs: (t, s) => executedType = t,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        logReader.fetchLogs.resolves([]);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'logs',
             user: 'admin',
@@ -553,14 +485,15 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executedType).to.equal('test');
+        expect(logReader.fetchLogs.firstCall.firstArg).to.equal('test');
     });
 
     it('execute-login', async () => {
-        const manager = new TestManager() as any;
-        manager.getUserLevel = (user) => user === 'admin' ? 'test' : undefined;
+        manager.getUserLevel.callsFake((user): any => {
+            return user === 'admin' ? 'test' : undefined;
+        });
         
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'login',
             user: 'admin',
@@ -572,9 +505,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-config', async () => {
-        const manager = new TestManager() as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'config',
             user: 'admin',
@@ -586,11 +517,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-updateconfig', async () => {
-        const manager = new TestManager() as any;
-        let executedConfig;
-        manager.configHelper = { writeConfig: (c) => executedConfig = c };
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'updateconfig',
             user: 'admin',
@@ -601,17 +528,12 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executedConfig).to.equal('test');
+        expect(configFileHelper.writeConfig.firstCall.firstArg).to.equal('test');
     });
 
     it('execute-updateMods', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.steamCmd = {
-            updateMods: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        steamCmd.updateMods.resolves(true);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'updatemods',
             user: 'admin'
@@ -619,17 +541,12 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(steamCmd.updateMods.called).to.be.true;
     });
 
     it('execute-updateServer', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.steamCmd = {
-            updateServer: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        steamCmd.updateServer.resolves(true);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'updateserver',
             user: 'admin'
@@ -637,17 +554,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(steamCmd.updateServer.called).to.be.true;
     });
 
     it('execute-backup', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.backup = {
-            createBackup: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'backup',
             user: 'admin'
@@ -655,17 +566,12 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(backups.createBackup.called).to.be.true;
     });
 
     it('execute-getbackups', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.backup = {
-            getBackups: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        backups.getBackups.resolves([]);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'getbackups',
             user: 'admin'
@@ -673,17 +579,11 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(backups.getBackups.called).to.be.true;
     });
 
     it('execute-writemissionfile', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.missionFiles = {
-            writeMissionFile: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'writemissionfile',
             user: 'admin',
@@ -695,17 +595,12 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(missionFiles.writeMissionFile.called).to.be.true;
     });
 
     it('execute-readmissionfile', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.missionFiles = {
-            readMissionFile: () => executed = true,
-        } as any;
-        
-        const handler = new Interface(manager as any);
+        missionFiles.readMissionFile.resolves('test-content');
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'readmissionfile',
             user: 'admin',
@@ -715,15 +610,27 @@ describe('Test Interface', () => {
         } as any as Request;
         const response = await handler.execute(request);
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(missionFiles.readMissionFile.called).to.be.true;
+    });
+
+    it('execute-readmissiondir', async () => {
+        missionFiles.readMissionDir.resolves([]);
+        const handler = injector.resolve(Interface);
+        const request = {
+            resource: 'readmissiondir',
+            user: 'admin',
+            query: {
+                dir: '/'
+            }
+        } as any as Request;
+        const response = await handler.execute(request);
+        expect(response.status).to.equal(200);
+        expect(missionFiles.readMissionDir.called).to.be.true;
     });
 
     it('execute-serverinfo', async () => {
-        let executed = false;
-        const manager = new TestManager() as any;
-        manager.getServerInfo = () => executed = true;
-        
-        const handler = new Interface(manager as any);
+        manager.getServerInfo.resolves({ name: 'hello' } as any);
+        const handler = injector.resolve(Interface);
         const request = {
             resource: 'serverinfo',
             user: 'admin',
@@ -731,7 +638,7 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(executed).to.be.true;
+        expect(manager.getServerInfo.called).to.be.true;
     });
 
 });

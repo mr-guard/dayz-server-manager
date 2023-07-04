@@ -1,12 +1,23 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import * as sinon from 'sinon';
-import * as fs from 'fs';
 import * as path from 'path';
-import { Metrics } from '../../src/services/metrics';
+import { Metrics, MetricsCollector } from '../../src/services/metrics';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { Database } from '../../src/services/database';
+import { RCON } from '../../src/services/rcon';
+import { SystemReporter } from '../../src/services/monitor';
 
 describe('Test class Metrics', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let database: StubInstance<Database>;
+    let rcon: StubInstance<RCON>;
+    let systemReporter: StubInstance<SystemReporter>;
 
     before(() => {
         disableConsole();
@@ -19,6 +30,19 @@ describe('Test class Metrics', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Database, stubClass(Database), { lifecycle: Lifecycle.Singleton });
+        injector.register(RCON, stubClass(RCON), { lifecycle: Lifecycle.Singleton });
+        injector.register(SystemReporter, stubClass(SystemReporter), { lifecycle: Lifecycle.Singleton });
+
+        manager = injector.resolve(Manager) as any;
+        database = injector.resolve(Database) as any;
+        rcon = injector.resolve(RCON) as any;
+        systemReporter = injector.resolve(SystemReporter) as any;
     });
 
     it('Metrics', async () => {
@@ -26,19 +50,11 @@ describe('Test class Metrics', () => {
         const db = {
             run: (sql) => {},
         };
-        const manager = {
-            database: {
-                getDatabase: (t) => db,
-            },
-            rcon: {
-                getPlayers: async () => [],
-            },
-            monitor: {
-                getSystemReport: async () => ({})
-            },
-        };
+        database.getDatabase.returns(db as any);
+        rcon.getPlayers.resolves([]);
+        systemReporter.getSystemReport.resolves({} as any);
 
-        const metrics = new Metrics(manager as any);
+        const metrics = injector.resolve(Metrics);
 
         await metrics.start();
         await metrics.stop();
@@ -53,30 +69,27 @@ describe('Test class Metrics', () => {
         const db = {
             run: sinon.stub(),
         }
-        const manager = {
-            database: {
-                getDatabase: (t) => db,
-            },
-            rcon: {
-                getPlayers: async () => [],
-            },
-            monitor: {
-                getSystemReport: async () => ({})
-            },
-            config: {
-                metricPollIntervall: 10,
-            },
-        };
+        database.getDatabase.returns(db as any);
+        rcon = injector.resolve(RCON) as any;
+        rcon.getPlayers.resolves([]);
+        systemReporter.getSystemReport.resolves({} as any);
 
-        const metrics = new Metrics(manager as any);
-        metrics['initialTimeout'] = 5;
+        manager.config = {
+            metricPollIntervall: 10,
+        } as any;
+
+        const metrics = injector.resolve(Metrics);
+        const metricsCollector = injector.resolve(MetricsCollector);
+        metricsCollector.initialTimeout = 5;
+        await metricsCollector.start();
         await metrics.start();
         
         await new Promise((r) => setTimeout(r, 40));
         
         await metrics.stop();
-        expect(metrics['timeout']).to.be.undefined;
-        expect(metrics['interval']).to.be.undefined;
+        await metricsCollector.stop();
+        expect(metricsCollector['timeout']).to.be.undefined;
+        expect(metricsCollector['interval']).to.be.undefined;
 
         expect(db.run.callCount).to.be.greaterThanOrEqual(3);
 
@@ -87,13 +100,9 @@ describe('Test class Metrics', () => {
         const db = {
             run: sinon.stub(),
         }
-        const manager = {
-            database: {
-                getDatabase: (t) => db,
-            },
-        };
+        database.getDatabase.returns(db as any);
 
-        const metrics = new Metrics(manager as any);
+        const metrics = injector.resolve(Metrics);
         
         await metrics.deleteMetrics(5);
         expect(db.run.callCount).to.be.greaterThanOrEqual(1);
@@ -108,13 +117,9 @@ describe('Test class Metrics', () => {
                 value: '{ "test": "test" }'
             }]),
         };
-        const manager = {
-            database: {
-                getDatabase: (t) => db,
-            },
-        };
+        database.getDatabase.returns(db as any);
 
-        const metrics = new Metrics(manager as any);
+        const metrics = injector.resolve(Metrics);
         
         const res = await metrics.fetchMetrics('SYSTEM');
         expect(res.length).to.equal(1);

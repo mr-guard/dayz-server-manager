@@ -1,14 +1,20 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
-import * as sinon from 'sinon';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as cron from 'node-schedule';
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import { Hooks } from '../../src/services/hooks';
-import { Hook, HookType, HookTypeEnum } from '../../src/config/config';
+import { Hook, HookTypeEnum } from '../../src/config/config';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { Processes } from '../../src/services/processes';
+import { DiscordBot } from '../../src/services/discord';
 
 describe('Test class Hooks', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let discord: StubInstance<DiscordBot>;
+    let processes: StubInstance<Processes>;
 
     before(() => {
         disableConsole();
@@ -21,36 +27,41 @@ describe('Test class Hooks', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Processes, stubClass(Processes), { lifecycle: Lifecycle.Singleton });
+        injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
+
+        manager = injector.resolve(Manager) as any;
+        discord = injector.resolve(DiscordBot) as any;
+        processes = injector.resolve(Processes) as any;
     });
 
     it('Hooks', async () => {
 
-        const manager = {
-            config: {
-                hooks: [
-                    {
-                        type: 'beforeStart',
-                        program: 'p1',
-                    },
-                    {
-                        type: 'beforeStart',
-                        program: 'p2',
-                    }
-                ] as Hook[],
-            },
-            discord: {
-                relayRconMessage: sinon.stub(),
-            },
-        };
+        manager.config = {
+            hooks: [
+                {
+                    type: 'beforeStart',
+                    program: 'p1',
+                },
+                {
+                    type: 'beforeStart',
+                    program: 'p2',
+                }
+            ] as Hook[],
+        } as any;
 
-        const hooks = new Hooks(manager as any);
-        const spawnStub = hooks['processes'].spawnForOutput = sinon.stub();
-        spawnStub.withArgs('p1').returns(Promise.resolve({
+        const hooks = injector.resolve(Hooks);
+        processes.spawnForOutput.withArgs('p1').returns(Promise.resolve({
             status: 0,
             stdout: '',
             stderr: '',
         }));
-        spawnStub.withArgs('p2').returns(Promise.resolve({
+        processes.spawnForOutput.withArgs('p2').returns(Promise.resolve({
             status: 1,
             stdout: '',
             stderr: '',
@@ -58,8 +69,8 @@ describe('Test class Hooks', () => {
 
         await hooks.executeHooks(HookTypeEnum.beforeStart);
 
-        expect(spawnStub.callCount).to.equal(2);
-        expect(manager.discord.relayRconMessage.callCount).to.equal(1);
+        expect(processes.spawnForOutput.callCount).to.equal(2);
+        expect(discord.relayRconMessage.callCount).to.equal(1);
 
     });
 

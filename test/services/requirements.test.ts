@@ -1,15 +1,24 @@
+import 'reflect-metadata';
+
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, stub, stubClass } from '../util';
 import * as sinon from 'sinon';
-import * as fs from 'fs';
 import * as path from 'path';
 import { Requirements } from '../../src/services/requirements';
-import { Logger } from '../../src/util/logger';
-import { Processes } from '../../src/util/processes';
-import { NetSH } from '../../src/util/netsh';
+import { Processes } from '../../src/services/processes';
+import { NetSH } from '../../src/services/netsh';
+import { DependencyContainer, container } from 'tsyringe';
+import { FSAPI } from '../../src/util/apis';
+import { Manager } from '../../src/control/manager';
 
 describe('Test class Requirements', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let processes: StubInstance<Processes>;
+    let netSh: StubInstance<NetSH>;
+    let fs: FSAPI;
 
     before(() => {
         disableConsole();
@@ -20,46 +29,43 @@ describe('Test class Requirements', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(Manager, stubClass(Manager));
+        injector.register(NetSH, stubClass(NetSH));
+        injector.register(Processes, stubClass(Processes));
+
+        fs = memfs(undefined, undefined, injector);
+        // make sure pwd exists
+        fs.mkdirSync('', { recursive: true })
+        
+        netSh = injector.resolve(NetSH) as any;
+        
+        processes = injector.resolve(Processes) as any;
+
+        manager = injector.resolve(Manager) as any;
+        manager.getServerExePath.returns('testserver/server.exe');
     });
 
     it('Requirements-checkFirewall-Rulesabsent', async () => {
-        const rulesStub = sinon.stub()
+        netSh.getRulesByPath
             .withArgs(path.resolve('testserver/server.exe'))
-            .returns(Promise.resolve([])) 
-        const netSh = {
-            getRulesByPath: rulesStub 
-        } as Partial<NetSH>;
+            .returns(Promise.resolve([]));
 
-        const requirements = new Requirements(
-            'testserver/server.exe',
-            undefined as any as Logger,
-            netSh as any as NetSH,
-            undefined as any as Processes,
-        );
+        const requirements = injector.resolve(Requirements);
         
         const resNotFound = await requirements.checkFirewall();
         expect(resNotFound).to.be.false;
     });
 
     it('Requirements-checkFirewall-RulesPresent', async () => {
-        const rulesStub = sinon.stub()
+        netSh.getRulesByPath
             .withArgs(path.resolve('testserver/server.exe'))
             .returns(Promise.resolve([{
                 test: 'test'
             }]));
-        
-        const netSh = {
-            getRulesByPath: rulesStub 
-        } as Partial<NetSH>;
 
-        const requirements = new Requirements(
-            'testserver/server.exe',
-            undefined as any as Logger,
-            netSh as any as NetSH,
-            undefined as any as Processes,
-        );
+        const requirements = injector.resolve(Requirements);
 
         const res = await requirements.checkFirewall();
         expect(res).to.be.true;
@@ -67,39 +73,32 @@ describe('Test class Requirements', () => {
 
 
     it('Requirements-checkDirectX-Absent', async () => {
-        const requirements = new Requirements('');
-
-        const existsStub = ImportMock.mockFunction(fs, 'existsSync', false);
+        const requirements = injector.resolve(Requirements);
 
         const resNotFound = await requirements.checkDirectX();
         expect(resNotFound).to.be.false;
-        expect(existsStub.called).to.be.true;
     });
 
     it('Requirements-checkDirectX-Present', async () => {
-        const requirements = new Requirements('');
-
-        const existsStub = ImportMock.mockFunction(fs, 'existsSync', true);
-
+        const existsStub = sinon.stub(fs, 'existsSync').returns(true);
+        const requirements = injector.resolve(Requirements);
+        
         const res = await requirements.checkDirectX();
         expect(res).to.be.true;
         expect(existsStub.called).to.be.true;
     });
 
     it('Requirements-checkVCRedist-Absent', async () => {
-        const requirements = new Requirements('');
-
-        const existsStub = ImportMock.mockFunction(fs, 'existsSync', false);
+        const requirements = injector.resolve(Requirements);
 
         const resNotFound = await requirements.checkVcRedist();
         expect(resNotFound).to.be.false;
-        expect(existsStub.called).to.be.true;
     });
 
     it('Requirements-checkVCRedist-Present', async () => {
-        const requirements = new Requirements('');
+        const requirements = injector.resolve(Requirements);
 
-        const existsStub = ImportMock.mockFunction(fs, 'existsSync', true);
+        const existsStub = sinon.stub(fs, 'existsSync').returns(true);
 
         const res = await requirements.checkVcRedist();
         expect(res).to.be.true;
@@ -107,109 +106,84 @@ describe('Test class Requirements', () => {
     });
 
     it('Requirements-checkWinErrReporting-Absent', async () => {
-        const requirements = new Requirements('');
-
-        ImportMock.mockFunction(fs, 'writeFileSync'); // prevent writing
-
-        const processesStub = sinon.stub(requirements['processes'], 'spawnForOutput');
-        processesStub.returns(Promise.resolve({
+        processes.spawnForOutput
+            .resolves({
                 status: 0,
                 stderr: '',
                 stdout: '0x0', // marker for enabled
-            }));
+            });
+            
+        const requirements = injector.resolve(Requirements);
 
         const resNotFound = await requirements.checkWinErrorReporting();
         expect(resNotFound).to.be.false;
     });
 
     it('Requirements-checkWinErrReporting-Present', async () => {
-        const processesStub = {
-            spawnForOutput: sinon.stub()
-                .returns(Promise.resolve({
-                    status: 0,
-                    stderr: '',
-                    stdout: '0x1', // marker for disabled
-                }))
-        } as Partial<Processes>;
-        const requirements = new Requirements(
-            '',
-            undefined as any as Logger,
-            undefined as any as NetSH,
-            processesStub as any as Processes,
-        );
-
-        ImportMock.mockFunction(fs, 'writeFileSync'); // prevent writing
+        processes.spawnForOutput.resolves({
+            status: 0,
+            stderr: '',
+            stdout: '0x1', // marker for disabled
+        });
+        
+        const requirements = injector.resolve(Requirements);
 
         const res = await requirements.checkWinErrorReporting();
         expect(res).to.be.true;
     });
 
     it('Requirements-checkRuntimeLibs', async () => {
-        const requirements = new Requirements('');
+        const requirements = injector.resolve(Requirements);
 
-        sinon.stub(requirements, 'checkVcRedist').returns(Promise.resolve(true));
-        sinon.stub(requirements, 'checkDirectX').returns(Promise.resolve(true));
+        sinon.stub(requirements, 'checkVcRedist').resolves(true);
+        sinon.stub(requirements, 'checkDirectX').resolves(true);
         
         const res = await requirements.checkRuntimeLibs();
         expect(res).to.be.true;
     });
 
     it('Requirements-checkOptionals', async () => {
-        const requirements = new Requirements('');
+        const requirements = injector.resolve(Requirements);
 
-        sinon.stub(requirements, 'checkWinErrorReporting').returns(Promise.resolve(true));
+        sinon.stub(requirements, 'checkWinErrorReporting').resolves(true);
         
         const res = await requirements.checkOptionals();
         expect(res).to.be.true;
     });
 
     it('Requirements-checkLinuxLib-Present', async () => {
-        const processesStub = {
-            spawnForOutput: sinon.stub()
-                .returns(Promise.resolve({
-                    status: 0,
-                    stderr: '',
-                    stdout: 'Present',
-                }))
-        } as Partial<Processes>;
-        const requirements = new Requirements(
-            '',
-            undefined as any as Logger,
-            undefined as any as NetSH,
-            processesStub as any as Processes,
-        );
+        processes.spawnForOutput.resolves({
+            status: 0,
+            stderr: '',
+            stdout: 'Present',
+        });
+        const requirements = injector.resolve(Requirements);
 
         const res = await requirements.isLinuxLibPresent('test');
         expect(res).to.be.true;
     });
     
     it('Requirements-checkLinuxLib-Absent', async () => {
-        const processesStub = {
-            spawnForOutput: sinon.stub()
-                .returns(Promise.resolve({
-                    status: 0,
-                    stderr: '',
-                    stdout: '',
-                }))
-        } as Partial<Processes>;
-        const requirements = new Requirements(
-            '',
-            undefined as any as Logger,
-            undefined as any as NetSH,
-            processesStub as any as Processes,
-        );
+        processes.spawnForOutput.resolves({
+            status: 0,
+            stderr: '',
+            stdout: '',
+        });
+        const requirements = injector.resolve(Requirements);
 
         const res = await requirements.isLinuxLibPresent('test');
         expect(res).to.be.false;
     });
 
     it('Requirements-check-exitMissingLib', async () => {
-        const requirements = new Requirements('');
+        const exitMock = processes.exit;
+        const requirements = injector.resolve(Requirements);
 
         sinon.stub(requirements, 'checkFirewall').returns(Promise.resolve(true));
         sinon.stub(requirements, 'checkOptionals').returns(Promise.resolve(true));
+        
+        // expect process exit when libs are missing
         sinon.stub(requirements, 'checkRuntimeLibs').returns(Promise.resolve(false));
-        const exitMock = ImportMock.mockFunction(process, 'exit');
 
         await requirements.check();
         

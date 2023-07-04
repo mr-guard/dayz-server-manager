@@ -26,7 +26,7 @@ export class Logger {
     public static defaultLogFile: string = 'server-manager.log';
 
     public static wrapWithFileLogger(fnc: any): any {
-
+        /* istanbul ignore next */
         return (msg: string, data: any[]) => {
             if (data?.length) {
                 fnc(msg, data);
@@ -39,10 +39,10 @@ export class Logger {
                 Logger.defaultLogFile,
                 `${msg} - ${JSON.stringify(data)}`,
             ).then(
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                (e) => { /* ignore */ },
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                (e) => { /* ignore */ },
+                /* istanbul ignore next */
+                () => { /* ignore */ },
+                /* istanbul ignore next */
+                () => { /* ignore */ },
             );
         };
 

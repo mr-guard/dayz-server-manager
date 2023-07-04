@@ -1,17 +1,13 @@
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
+import * as sinon from 'sinon';
 
 import { Logger, LogLevel } from '../../src/util/logger';
+import { LoggerFactory } from '../../src/services/loggerfactory';
 
 
 describe('Test class Logger', () => {
 
     const origLog = Logger.LogLevelFncs[LogLevel.ERROR];
-    
-    beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
-    });
 
     after(() => {
         Logger.LogLevelFncs[LogLevel.ERROR] = origLog;
@@ -19,11 +15,11 @@ describe('Test class Logger', () => {
 
     it('Logger-logAllInputs', () => {
 
-        const stub = ImportMock.mockFunction(console, 'error');
+        const stub = sinon.stub();;
 
         Logger.LogLevelFncs[LogLevel.ERROR] = stub;
 
-        const logger = new Logger('TestContext');
+        const logger = new LoggerFactory().createLogger('TestContext');
         
         const errorMsg = 'TestErrorMessage!!!';
         logger.log(

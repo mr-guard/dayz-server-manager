@@ -8,12 +8,15 @@ import { loggerMiddleware } from '../middleware/logger';
 import { Manager } from '../control/manager';
 import { Server } from 'http';
 import { Request } from '../types/interface';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
+import { IService } from '../types/service';
+import { LoggerFactory } from '../services/loggerfactory';
+import { InterfaceDispatcher } from './interface';
+import { injectable, singleton } from 'tsyringe';
 
-
-export class REST {
-
-    private log = new Logger('REST');
+@singleton()
+@injectable()
+export class REST extends IService {
 
     public express: express.Application | undefined;
     public server: Server | undefined;
@@ -27,11 +30,15 @@ export class REST {
     private readonly UI_FILES = path.join(__dirname, '../ui');
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private dispatcher: InterfaceDispatcher,
+    ) {
+        super(loggerFactory.createLogger('REST'));
+    }
 
-    // for easier tests
-    private createExpress(): express.Application {
+    /* istanbul ignore next function for easier tests */
+    public createExpress(): express.Application {
         return express();
     }
 
@@ -53,7 +60,11 @@ export class REST {
         this.setupExpress();
 
         // controllers
-        this.express.get('/version', (req, res) => res.send(this.manager.APP_VERSION));
+        this.express.get(
+            '/version',
+            /* istanbul ignore next */
+            (req, res) => res.send(this.manager.APP_VERSION),
+        );
         this.express.use(
             '/api',
             this.router,
@@ -77,11 +88,27 @@ export class REST {
 
     private setupExpress(): void {
         // cors
-        this.express.all('*', (req, res, next) => this.handleCors(req, res, next));
+        this.express.all(
+            '*',
+            /* istanbul ignore next */
+            (req, res, next) => this.handleCors(req, res, next),
+        );
 
-        this.express.get('/login', (req, res) => this.handleUiFileRequest(req, res));
-        this.express.get('/dashboard/*', (req, res) => this.handleUiFileRequest(req, res));
-        this.express.get('/dashboard', (req, res) => this.handleUiFileRequest(req, res));
+        this.express.get(
+            '/login',
+            /* istanbul ignore next */
+            (req, res) => this.handleUiFileRequest(req, res),
+        );
+        this.express.get(
+            '/dashboard/*',
+            /* istanbul ignore next */
+            (req, res) => this.handleUiFileRequest(req, res),
+        );
+        this.express.get(
+            '/dashboard',
+            /* istanbul ignore next */
+            (req, res) => this.handleUiFileRequest(req, res),
+        );
     }
 
     private handleCors(req: express.Request, res: express.Response, next: express.NextFunction): void {
@@ -110,13 +137,14 @@ export class REST {
         }
         this.router.use(basicAuth({ users, challenge: false }));
 
-        for (const [resource, command] of this.manager.interface!.commandMap) {
+        for (const [resource, command] of (this.dispatcher.getCommands() || [])) {
 
             if (command.disableRest) continue;
 
             this.log.log(LogLevel.DEBUG, `Registering ${command.method} ${resource}`);
             (this.router as any)[command.method](
                 `/${resource}`,
+                /* istanbul ignore next */
                 (req, res) => {
                     void this.handleCommand(
                         req,
@@ -150,7 +178,7 @@ export class REST {
         internalRequest.resource = resource;
         internalRequest.user = username;
 
-        const internalResponse = await this.manager.interface.execute(internalRequest);
+        const internalResponse = await this.dispatcher.execute(internalRequest);
 
         res.status(internalResponse.status).send(internalResponse.body);
     }

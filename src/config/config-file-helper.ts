@@ -1,28 +1,39 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { merge } from '../util/merge';
-import { Paths } from '../util/paths';
+import { Paths } from '../services/paths';
 import { Config } from './config';
 import { generateConfigTemplate } from './config-template';
 import { parseConfigFileContent, validateConfig } from './config-validate';
+import { inject, injectable, singleton } from 'tsyringe';
+import { FSAPI, InjectionTokens } from '../util/apis';
+import { IService } from '../types/service';
+import { LoggerFactory } from '../services/loggerfactory';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const configschema = require('./config.schema.json');
 
-export class ConfigFileHelper {
+@singleton()
+@injectable()
+export class ConfigFileHelper extends IService {
 
-    private log = new Logger('Config');
+    public static readonly CFG_NAME = 'server-manager.json';
 
-    private paths = new Paths();
+    public constructor(
+        loggerFactory: LoggerFactory,
+        private paths: Paths,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('Config'));
+    }
 
     public getConfigFilePath(): string {
-        return path.join(this.paths.cwd(), 'server-manager.json');
+        return path.join(this.paths.cwd(), ConfigFileHelper.CFG_NAME);
     }
 
     private getConfigFileContent(cfgPath: string): string {
-        if (fs.existsSync(cfgPath)) {
-            return fs.readFileSync(cfgPath)?.toString();
+        if (this.fs.existsSync(cfgPath)) {
+            return this.fs.readFileSync(cfgPath)?.toString();
         }
         throw new Error('Config file does not exist');
     }
@@ -84,7 +95,7 @@ export class ConfigFileHelper {
     }
 
     private writeConfigFile(content: string): void {
-        fs.writeFileSync(
+        this.fs.writeFileSync(
             this.getConfigFilePath(),
             content,
         );

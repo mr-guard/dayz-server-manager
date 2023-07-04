@@ -1,14 +1,21 @@
-import { Logger, LogLevel } from './logger';
+import { injectable, singleton } from 'tsyringe';
+import { IService } from '../types/service';
+import { LogLevel } from '../util/logger';
 import { Paths } from './paths';
 import { Processes } from './processes';
+import { LoggerFactory } from './loggerfactory';
 
-export class NetSH {
+@singleton()
+@injectable()
+export class NetSH extends IService {
 
-    private log = new Logger('NetSH');
-
-    private processes = new Processes();
-
-    private paths = new Paths();
+    public constructor(
+        loggerFactory: LoggerFactory,
+        private processes: Processes,
+        private paths: Paths,
+    ) {
+        super(loggerFactory.createLogger('NetSH'));
+    }
 
     public async addRule(path: string): Promise<void> {
         await this.processes.spawnForOutput(

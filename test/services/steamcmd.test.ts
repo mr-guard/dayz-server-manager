@@ -1,15 +1,25 @@
+import 'reflect-metadata';
+
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
 import * as path from 'path';
-import * as sinon from 'sinon';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
-import * as downloadModule from '../../src/util/download';
-import * as compareFolderModule from '../../src/util/compare-folders';
 import { SteamCMD } from '../../src/services/steamcmd';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Paths } from '../../src/services/paths';
+import { Manager } from '../../src/control/manager';
+import { Processes } from '../../src/services/processes';
+import { FSAPI } from '../../src/util/apis';
+import { Downloader } from '../../src/services/download';
 
 describe('Test class SteamCMD', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let paths: StubInstance<Paths>;
+    let processes: StubInstance<Processes>;
+    let fs: FSAPI;
+    let download: StubInstance<Downloader>;
 
     before(() => {
         disableConsole();
@@ -20,50 +30,140 @@ describe('Test class SteamCMD', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Paths, stubClass(Paths), { lifecycle: Lifecycle.Singleton });
+        injector.register(Processes, stubClass(Processes), { lifecycle: Lifecycle.Singleton });
+        injector.register(Downloader, stubClass(Downloader), { lifecycle: Lifecycle.Singleton });
+
+        fs = memfs({}, '/', injector);
+        download = injector.resolve(Downloader) as any;
+        manager = injector.resolve(Manager) as any;
+        paths = injector.resolve(Paths) as any;
+        processes = injector.resolve(Processes) as any;
     });
 
-    // TODO Extract cleanup tests
-    it('SteamCmd-checkSteamCmd', async () => {
+    it('SteamCmd-checkSteamCmd-cleanupDownloadFail', async () => {
 
-        const expectedSteamCmdPath = path.join(
-            'testCwd',
+        const expectedSteamCmdPath = path.resolve(
+            '/testCwd',
             'testSteamCmd'
         );
-        const expectedSteamCmdExePath = path.join(
-            expectedSteamCmdPath,
-            'steamcmd.exe',
-        );
-        const expectedZipPath = path.join(
+        const expectedZipPath = path.resolve(
             expectedSteamCmdPath,
             'steamcmd.zip',
         );
 
-        const existsMock = ImportMock.mockFunction(fs, 'existsSync');
-        existsMock.withArgs(expectedSteamCmdExePath).returns(false);
-        existsMock.withArgs(expectedZipPath).returns(true);
-        const unlinkMock = ImportMock.mockFunction(fs, 'unlinkSync');
-        const unlinkZipMock = unlinkMock.withArgs(expectedZipPath);
-
-        let downloadMock = ImportMock.mockFunction(downloadModule, 'download')
-            .throws('test');
-        let extractMock = ImportMock.mockFunction(downloadModule, 'extractZip')
-            .throws('test');
-
-        const manager = {
-            config: {
-                steamCmdPath: 'testSteamCmd',
+        fs = memfs(
+            {
+                'testCwd': {
+                    'testSteamCmd': {
+                        'steamcmd.zip': 'zip-data',
+                    },
+                },
             },
+            '/',
+            injector,
+        );
+
+        download.download.throws('test');
+
+        manager.config = {
+            steamCmdPath: 'testSteamCmd',
         } as any;
 
-        const steamCmd = new SteamCMD(manager);
-        steamCmd['paths'].cwd = () => 'testCwd';
+        const steamCmd = injector.resolve(SteamCMD);
         steamCmd['extractDelay'] = 10;
+        
+        paths.cwd.returns('/testCwd');
+        
+        // should cleanup
+        const resDownloadErr = await steamCmd.checkSteamCmd();
+        expect(resDownloadErr).to.be.false;
+        expect(fs.existsSync(expectedZipPath)).to.be.false;
+    });
+
+    it('SteamCmd-checkSteamCmd-cleanupExtractFail', async () => {
+
+        const expectedSteamCmdPath = path.resolve(
+            '/testCwd',
+            'testSteamCmd'
+        );
+        const expectedZipPath = path.resolve(
+            expectedSteamCmdPath,
+            'steamcmd.zip',
+        );
+
+        fs = memfs(
+            {
+                'testCwd': {
+                    'testSteamCmd': {
+                        'steamcmd.zip': 'zip-data',
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+
+        download.extractZip.throws('test');
+
+        manager.config = {
+            steamCmdPath: 'testSteamCmd',
+        } as any;
+
+        const steamCmd = injector.resolve(SteamCMD);
+        steamCmd['extractDelay'] = 10;
+        
+        paths.cwd.returns('/testCwd');
+        
+        // should cleanup
+        const resExtractErr = await steamCmd.checkSteamCmd();
+        expect(resExtractErr).to.be.false;
+        expect(fs.existsSync(expectedZipPath)).to.be.false;
+    });
+
+    it('SteamCmd-checkSteamCmd', async () => {
+
+        const expectedSteamCmdPath = path.resolve(
+            '/testCwd',
+            'testSteamCmd'
+        );
+        const expectedSteamCmdExePath = path.resolve(
+            expectedSteamCmdPath,
+            'steamcmd.exe',
+        );
+        const expectedZipPath = path.resolve(
+            expectedSteamCmdPath,
+            'steamcmd.zip',
+        );
+
+        fs = memfs(
+            {
+                'testCwd': {
+                    'testSteamCmd': {
+                        'steamcmd.zip': 'zip-data',
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+
+        manager.config = {
+            steamCmdPath: 'testSteamCmd',
+        } as any;
+
+        const steamCmd = injector.resolve(SteamCMD);
+        steamCmd['extractDelay'] = 10;
+        
+        paths.cwd.returns('/testCwd');
         
         let timeoutThrown = false;
         let retried = false;
-        steamCmd['processes'].spawnForOutput = async (cmd, args, ops) => {
+        processes.spawnForOutput.callsFake(async (cmd, args, ops) => {
             if (timeoutThrown) {
                 retried = true;
                 return {
@@ -78,142 +178,133 @@ describe('Test class SteamCMD', () => {
                 stderr: '',
                 stdout: '',
             };
-        }
+        })
 
-        // should cleanup
-        const resDownloadErr = await steamCmd.checkSteamCmd();
-        expect(resDownloadErr).to.be.false;
-        expect(unlinkZipMock.callCount).to.equal(1);
-        
-        unlinkMock.reset();
-        downloadMock.restore();
-        downloadMock = ImportMock.mockFunction(downloadModule, 'download');
-        const resExtractErr = await steamCmd.checkSteamCmd();
-        expect(resExtractErr).to.be.false;
-        expect(unlinkZipMock.callCount).to.equal(1);
-
-        unlinkMock.reset();
-        downloadMock.reset();
-        extractMock.restore();
-        extractMock = ImportMock.mockFunction(downloadModule, 'extractZip');
         const res = await steamCmd.checkSteamCmd();
-
-        expect(downloadMock.callCount).to.equal(1);
-        expect(extractMock.callCount).to.equal(1);
-        expect(unlinkZipMock.callCount).to.equal(1);
-        expect(retried).to.be.true;
+        
         expect(res).to.be.true;
+        expect(fs.existsSync(expectedZipPath)).to.be.false;
+        
+        expect(download.download.callCount).to.equal(1);
+        expect(download.extractZip.callCount).to.equal(1);
+        expect(retried).to.be.true;
     });
 
     it('SteamCmd-checkServer', async () => {
 
-        const existsMock = ImportMock.mockFunction(fs, 'existsSync')
-            .withArgs(path.join('testserver', 'server.exe'))
-            .returns(true);
-        const manager = {
-            config: {
-                serverExe: 'server.exe',
+        fs = memfs(
+            {
+                'testserver': {
+                    'server.exe': 'exe',
+                },
             },
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
 
-        const steamCmd = new SteamCMD(manager);
+        manager.config = {
+            serverExe: 'server.exe',
+        } as any;
+        manager.getServerPath.returns('/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
 
         const res = await steamCmd.checkServer();
 
         expect(res).to.be.true;
-        expect(existsMock.callCount).to.equal(1);
 
     });
 
     it('SteamCmd-updateServer', async () => {
 
-        const existsServerMock = ImportMock.mockFunction(fs, 'existsSync')
-            .withArgs(path.join('testserver', 'server.exe'))
-            .returns(true);
-
-        const ensureMock = ImportMock.mockFunction(fse, 'ensureDirSync')
-            .withArgs('testserver')
-            .returns(true);
-
-        const manager = {
-            config: {
-                serverExe: 'server.exe',
-            },
-            getServerPath: () => 'testserver',
+        manager.config = {
+            serverExe: 'server.exe',
         } as any;
+        manager.getServerPath.returns('/testserver');
+        paths.cwd.returns('/');
 
-        const steamCmd = new SteamCMD(manager);
-        let calledArgs;
-        steamCmd['processes'].spawnForOutput = async (cmd, args, ops) => {
+        const steamCmd = injector.resolve(SteamCMD);
+
+        let calledArgs: string[] | undefined;
+        processes.spawnForOutput.callsFake(async (cmd, args, ops) => {
             calledArgs = args;
+
+            fs.writeFileSync('/testserver/server.exe', 'exe');
+
             return {
                 status: 0,
                 stderr: '',
                 stdout: '',
             };
-        }
+        });
 
         const res = await steamCmd.updateServer();
 
         expect(res).to.be.true;
-        expect(ensureMock.callCount).to.equal(1);
-
-        expect(calledArgs).to.include('testserver');
+        expect(calledArgs).to.include('/testserver');
         expect(calledArgs).to.include(SteamCMD['DAYZ_SERVER_APP_ID']);
 
     });
 
     it('SteamCmd-modParams', async () => {
 
-        const existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        const readFileMock = ImportMock.mockFunction(fs, 'readFileSync')
-            .withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath'
+        fs = memfs(
+            {
+                'testcwd/testwspath/steamapps/workshop/content': {
+                    [SteamCMD['DAYZ_APP_ID']]: {
+                        '1234567': {
+                            'meta.cpp': 'name = "Test Mod"',
+                        },
+                    },
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
 
-        const steamCmd = new SteamCMD(manager);
-        steamCmd['paths'].cwd = () => 'testcwd';
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
         
-        const res = await steamCmd.buildWsModParams();
+        const res = steamCmd.buildWsModParams();
 
         expect(res).to.include('@Test-Mod');
     });
 
+    
     it('SteamCmd-updateMods', async () => {
 
-        const existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        const ensureDirMock = ImportMock.mockFunction(fse, 'ensureDirSync');
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        const readFileMock = ImportMock.mockFunction(fs, 'readFileSync')
-            .withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath'
+        fs = memfs(
+            {
+                'testcwd/testwspath/steamapps/workshop/content': {
+                    [SteamCMD['DAYZ_APP_ID']]: {
+                        '1234567': {
+                            'meta.cpp': 'name = "Test Mod"',
+                        },
+                    },
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
 
-        const steamCmd = new SteamCMD(manager);
-        steamCmd['paths'].cwd = () => 'testcwd';
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
 
         let calledCount = 0;
         let calledArgs;
-        steamCmd['processes'].spawnForOutput = async (cmd, args, ops) => {
+        processes.spawnForOutput.callsFake(async (cmd, args, ops) => {
             calledCount++;
             calledArgs = args;
             return {
@@ -221,174 +312,275 @@ describe('Test class SteamCMD', () => {
                 stderr: '',
                 stdout: '',
             };
-        }
+        });
 
         const res = await steamCmd.updateMods();
 
         expect(res).to.be.true;
         expect(calledCount).to.equal(1);
 
-        expect(calledArgs).to.include(path.join('testcwd','testwspath'));
+        expect(calledArgs).to.include(path.join('/testcwd','testwspath'));
         expect(calledArgs).to.include('1234567');
         expect(calledArgs).to.include(SteamCMD['DAYZ_APP_ID']);
 
     });
 
+    
     it('SteamCmd-checkMods', async () => {
 
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        let existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-
-        let readFileMock = ImportMock.mockFunction(fs, 'readFileSync');
-        readFileMock.withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath'
+       fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': 'name = "Test Mod"',
+                            },
+                        },
+                    },
+                    'testserver': {
+                        '@Test-Mod': {},
+                    },
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
 
-        const steamCmd = new SteamCMD(manager);
-        steamCmd['paths'].cwd = () => 'testcwd';
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
 
         const res = await steamCmd.checkMods();
         expect(res).to.be.true;
-        
-        existsMock.restore();
-        existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        existsMock.withArgs(path.join(expectedModsPath, '1234567')).returns(false);
-        const resNotFound = await steamCmd.checkMods();
-        expect(resNotFound).to.be.false;
-
-        existsMock.restore();
-        existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        existsMock.withArgs(path.join('testserver', '@Test-Mod')).returns(false);
-        const resNotInstalled = await steamCmd.checkMods();
-        expect(resNotInstalled).to.be.false;
-
-        existsMock.restore();
-        existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        readFileMock.restore();
-        readFileMock = ImportMock.mockFunction(fs, 'readFileSync');
-        readFileMock.withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp')).returns('')
-        const resNoName = await steamCmd.checkMods();
-        expect(resNoName).to.be.false;
-
-
     });
 
-    it('SteamCmd-installMods-copy', async () => {
+    it('SteamCmd-checkModsNotFound', async () => {
 
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        let existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        let unlinkMock = ImportMock.mockFunction(fs, 'unlinkSync');
-        let copyKeyMock = ImportMock.mockFunction(fs.promises, 'copyFile');
-
-        let readFileMock = ImportMock.mockFunction(fs, 'readFileSync');
-        readFileMock.withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-        readFileMock.withArgs(path.join('testserver', '@Test-Mod', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-        let dirHashMock = ImportMock.mockFunction(compareFolderModule, 'sameDirHash', Promise.resolve(false));
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath',
-                linkModDirs: false,
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {},
+                    },
+                    'testserver': {
+                        '@Test-Mod': {},
+                    },
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
 
-        const steamCmd = new SteamCMD(manager);
-        sinon.stub(steamCmd['paths'], 'cwd').returns('testcwd');
-        const copyStub = sinon.stub(steamCmd['paths'], 'copyDirFromTo');
-        copyStub.withArgs(
-            path.join(expectedModsPath, '1234567'),
-            path.join('testserver', '@Test-Mod'),
-        ).returns(Promise.resolve(true));
-        const findFilesStub = sinon.stub(steamCmd['paths'], 'findFilesInDir')
-            .returns(Promise.resolve(['modKeys/testkey.bikey']));
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
+
+        const resNotFound = await steamCmd.checkMods();
+        expect(resNotFound).to.be.false;
+    });
+
+    it('SteamCmd-checkModsNotInstalled', async () => {
+
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': 'name = "Test Mod"',
+                            },
+                        },
+                    },
+                    'testserver': {},
+                },
+            },
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
+
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
+
+        const resNotInstalled = await steamCmd.checkMods();
+        expect(resNotInstalled).to.be.false;
+        
+    });
+
+    it('SteamCmd-checkMods-NoName', async () => {
+
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': '',
+                            },
+                        },
+                    },
+                    'testserver': {
+                        '@Test-Mod': {},
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
+
+        manager.config = {
+            steamWorkshopPath: 'testwspath'
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
+
+        const resNoName = await steamCmd.checkMods();
+        expect(resNoName).to.be.false;
+    });
+
+    
+    it('SteamCmd-installMods-copy', async () => {
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': 'name = "Test Mod"',
+                                'modKeys': {
+                                    'testkey.bikey': 'bikey',
+                                }
+                            },
+                        },
+                    },
+                    'testserver': {},
+                },
+            },
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
+        paths.findFilesInDir.resolves([
+            `/testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}/1234567/modKeys/testkey.bikey`,
+        ]);
+        paths.copyDirFromTo.resolves(true);
+
+        manager.config = {
+            steamWorkshopPath: 'testwspath',
+            linkModDirs: false,
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
 
         const res = await steamCmd.installMods();
         expect(res).to.be.true;
-        // expect(dirHashMock.callCount).to.equal(1);
-        // console.log(readFileMock.getCalls());
-        expect(copyStub.callCount).to.equal(0);
-        expect(copyKeyMock.callCount).to.equal(1);
-
+        expect(paths.copyDirFromTo.firstCall.args).to.include(path.join('/testcwd', 'testserver', '@Test-Mod'));
+        
+        expect(fs.readFileSync('/testcwd/testserver/keys/testkey.bikey') + '').to.equal('bikey');
     });
 
     it('SteamCmd-installMods-link', async () => {
-
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        let existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        let unlinkMock = ImportMock.mockFunction(fs, 'unlinkSync');
-        let copyKeyMock = ImportMock.mockFunction(fs.promises, 'copyFile');
-
-        let readFileMock = ImportMock.mockFunction(fs, 'readFileSync');
-        readFileMock.withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath',
-                linkModDirs: true,
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': 'name = "Test Mod"',
+                                'modKeys': {
+                                    'testkey.bikey': 'bikey',
+                                }
+                            },
+                        },
+                    },
+                    'testserver': {},
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
-        } as any;
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
+        paths.findFilesInDir.resolves([
+            `/testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}/1234567/modKeys/testkey.bikey`,
+        ]);
+        paths.linkDirsFromTo.resolves(true);
 
-        const steamCmd = new SteamCMD(manager);
-        sinon.stub(steamCmd['paths'], 'cwd').returns('testcwd');
-        const linkStub = sinon.stub(steamCmd['paths'], 'linkDirsFromTo');
-        linkStub.withArgs(
-            path.join(expectedModsPath, '1234567'),
-            path.join('testserver', '@Test-Mod'),
-        ).returns(true);
-        const findFilesStub = sinon.stub(steamCmd['paths'], 'findFilesInDir')
-            .returns(Promise.resolve(['modKeys/testkey.bikey']));
+        manager.config = {
+            steamWorkshopPath: 'testwspath',
+            linkModDirs: true,
+        } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
+
+        const steamCmd = injector.resolve(SteamCMD);
 
         const res = await steamCmd.installMods();
         expect(res).to.be.true;
-        expect(linkStub.callCount).to.equal(1);
-        expect(copyKeyMock.callCount).to.equal(1);
-
+        expect(paths.linkDirsFromTo.firstCall.args).to.include(path.join('/testcwd', 'testserver', '@Test-Mod'));
+        
+        expect(fs.readFileSync('/testcwd/testserver/keys/testkey.bikey') + '').to.equal('bikey');
     });
 
+    it('SteamCmd-updateMods-Error', async () => {
 
-    it('SteamCmd-updateMods', async () => {
-
-        const existsMock = ImportMock.mockFunction(fs, 'existsSync', true);
-        const ensureDirMock = ImportMock.mockFunction(fse, 'ensureDirSync');
-        const expectedModsPath = `testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}`;
-        const readFileMock = ImportMock.mockFunction(fs, 'readFileSync')
-            .withArgs(path.join(expectedModsPath, '1234567', 'meta.cpp'))
-            .returns('name = "Test Mod"');
-
-
-        const manager = {
-            config: {
-                steamWorkshopPath: 'testwspath'
+        fs = memfs(
+            {
+                'testcwd': {
+                    'testwspath/steamapps/workshop/content': {
+                        [SteamCMD['DAYZ_APP_ID']]: {
+                            '1234567': {
+                                'meta.cpp': 'name = "Test Mod"',
+                                'modKeys': {
+                                    'testkey.bikey': 'bikey',
+                                }
+                            },
+                        },
+                    },
+                    'testserver': {},
+                },
             },
-            getModIdList: () => ['1234567'],
-            getServerPath: () => 'testserver',
+            '/',
+            injector,
+        );
+        paths.cwd.returns('/testcwd');
+        
+        manager.config = {
+            steamWorkshopPath: 'testwspath',
+            linkModDirs: true,
         } as any;
+        manager.getModIdList.returns(['1234567']);
+        manager.getServerPath.returns('/testcwd/testserver');
 
-        const steamCmd = new SteamCMD(manager);
-        steamCmd['progressLog'] = false;
-        steamCmd['paths'].cwd = () => 'testcwd';
-        const spawnStub = sinon.stub(steamCmd['processes'], 'spawnForOutput')
+        const spawnStub = processes.spawnForOutput
             .throws({
                 status: 10,
                 stderr: '',
                 stdout: '',
-            })
+            });
+
+        const steamCmd = injector.resolve(SteamCMD);
+        steamCmd['progressLog'] = false;        
 
         const res = await steamCmd.updateMods();
         expect(res).to.be.false;

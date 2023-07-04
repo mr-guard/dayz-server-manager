@@ -10,7 +10,8 @@
         "downlevelIteration": true,
         "types": [
             "node",
-            "mocha"
+            "mocha",
+            "reflect-metadata"
         ]
     },
     "include": [

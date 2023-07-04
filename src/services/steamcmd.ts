@@ -1,16 +1,19 @@
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Manager } from '../control/manager';
-import { Paths } from '../util/paths';
-import { Processes } from '../util/processes';
-import { download, extractTar, extractZip } from '../util/download';
-import { Logger, LogLevel } from '../util/logger';
+import { Paths } from '../services/paths';
+import { Processes } from '../services/processes';
+import { LogLevel } from '../util/logger';
 import { sameDirHash } from '../util/compare-folders';
 import { IService } from '../types/service';
 import { detectOS } from '../util/detect-os';
+import { inject, injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { FSAPI, InjectionTokens } from '../util/apis';
+import { Downloader } from './download';
 
-export class SteamCMD implements IService {
+@singleton()
+@injectable()
+export class SteamCMD extends IService {
 
     private static readonly DAYZ_APP_ID = '221100';
     private static readonly DAYZ_SERVER_APP_ID = '223350';
@@ -19,17 +22,18 @@ export class SteamCMD implements IService {
     // time to wait after the zip has been extracted (to avoid errors)
     private extractDelay = 5000;
 
-    private log = new Logger('SteamCMD');
-
-    private paths = new Paths();
-
-    private processes = new Processes();
-
     private progressLog: boolean = true;
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private paths: Paths,
+        private processes: Processes,
+        private downloader: Downloader,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('SteamCMD'));
+    }
 
     private getCmdPath(): string {
         let cmdFolder = this.manager.config?.steamCmdPath ?? '';
@@ -44,86 +48,53 @@ export class SteamCMD implements IService {
 
     private async downloadSteamCmd(): Promise<boolean> {
 
-        const cmdPath = path.dirname(this.getCmdPath());
+        const cmdPath = path.resolve(path.dirname(this.getCmdPath()));
 
-        if (detectOS() === 'windows') {
-            const zipPath = path.join(cmdPath, 'steamcmd.zip');
+        const isWindows = detectOS() === 'windows';
+        const dlPath = isWindows
+            ? path.join(cmdPath, 'steamcmd.zip')
+            : path.join(cmdPath, 'steamcmd.tar.gz');
+        const url = isWindows
+            ? 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip'
+            : 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz';
 
-            try {
-                await download(
-                    'https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip',
-                    zipPath,
-                );
-                this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
-            } catch (e) {
-                this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
-                if (fs.existsSync(zipPath)) {
-                    fs.unlinkSync(zipPath);
-                }
-                return false;
+        try {
+            await this.downloader.download(
+                url,
+                dlPath,
+            );
+            this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
+            if (this.fs.existsSync(dlPath)) {
+                this.fs.unlinkSync(dlPath);
             }
-
-            try {
-                await extractZip(zipPath, { dir: path.resolve(cmdPath) });
-                this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
-            } catch (e) {
-                this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
-                if (fs.existsSync(zipPath)) {
-                    fs.unlinkSync(zipPath);
-                }
-                return false;
-            }
-
-            if (fs.existsSync(zipPath)) {
-                fs.unlinkSync(zipPath);
-            }
-
-            // wait for the exe not to be 'busy'
-            await new Promise((r) => setTimeout(r, this.extractDelay));
-
-            return true;
+            return false;
         }
 
-        if (detectOS() === 'linux') {
-            const tarPath = path.join(cmdPath, 'steamcmd.tar.gz');
-
-            try {
-                await download(
-                    'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz',
-                    tarPath,
-                );
-                this.log.log(LogLevel.IMPORTANT, 'Download of SteamCMD done');
-            } catch (e) {
-                this.log.log(LogLevel.ERROR, 'Failed to download SteamCMD', e);
-                if (fs.existsSync(tarPath)) {
-                    fs.unlinkSync(tarPath);
-                }
-                return false;
+        try {
+            if (isWindows) {
+                await this.downloader.extractZip(dlPath, cmdPath);
+            } else {
+                await this.downloader.extractTar(dlPath, cmdPath);
             }
-
-            try {
-                await extractTar(tarPath, path.resolve(cmdPath));
-                this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
-            } catch (e) {
-                this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
-                if (fs.existsSync(tarPath)) {
-                    fs.unlinkSync(tarPath);
-                }
-                return false;
+            this.log.log(LogLevel.IMPORTANT, 'Extraction of SteamCMD done');
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, 'Failed to extract SteamCMD', e);
+            if (this.fs.existsSync(dlPath)) {
+                this.fs.unlinkSync(dlPath);
             }
-
-            if (fs.existsSync(tarPath)) {
-                fs.unlinkSync(tarPath);
-            }
-
-            // wait for the exe not to be 'busy'
-            await new Promise((r) => setTimeout(r, this.extractDelay));
-
-            return true;
-
+            return false;
         }
 
-        return false;
+        if (this.fs.existsSync(dlPath)) {
+            this.fs.unlinkSync(dlPath);
+        }
+
+        // wait for the exe not to be 'busy'
+        await new Promise((r) => setTimeout(r, this.extractDelay));
+
+        return true;
     }
 
     private async installSteamCmd(): Promise<boolean> {
@@ -138,7 +109,7 @@ export class SteamCMD implements IService {
             return false;
         }
 
-        if (!fs.existsSync(this.getCmdPath())) {
+        if (!this.fs.existsSync(this.getCmdPath())) {
             if (!await this.downloadSteamCmd()) {
                 return false;
             }
@@ -151,8 +122,8 @@ export class SteamCMD implements IService {
     private getLoginArgs(): string[] {
         return [
             '+login',
-            this.manager.config!.steamUsername,
-            this.manager.config!.steamPassword ?? '',
+            this.manager.config.steamUsername,
+            this.manager.config.steamPassword ?? '',
         ];
     }
 
@@ -205,14 +176,14 @@ export class SteamCMD implements IService {
         const serverExe = this.manager.config?.serverExe;
 
         return !!serverFolder && !!serverExe
-        && fs.existsSync(path.join(serverFolder, serverExe));
+        && this.fs.existsSync(path.join(serverFolder, serverExe));
 
     }
 
     public async updateServer(): Promise<boolean> {
 
         const serverPath = this.manager.getServerPath();
-        fse.ensureDirSync(serverPath);
+        this.fs.mkdirSync(serverPath, { recursive: true });
 
         const success = await this.execute([
             '+force_install_dir',
@@ -234,7 +205,7 @@ export class SteamCMD implements IService {
     }
 
     private getWsBasePath(): string {
-        let wsPath = this.manager.config!.steamWorkshopPath;
+        let wsPath = this.manager.config.steamWorkshopPath;
         if (!path.isAbsolute(wsPath)) {
             wsPath = path.join(this.paths.cwd(), wsPath);
         }
@@ -248,20 +219,21 @@ export class SteamCMD implements IService {
     public getWsModName(modId: string): string {
         const wsPath = this.getWsPath();
         const modMeta = path.join(wsPath, modId, 'meta.cpp');
-        if (!fs.existsSync(modMeta)) {
+        if (!this.fs.existsSync(modMeta)) {
             return '';
         }
-        const metaContent = fs.readFileSync(modMeta).toString();
-        const names = metaContent.match(/name[\s]*=.*/g) ?? [];
-        const modName = names.pop()?.split('=')[1]?.trim() ?? '';
-        if (modName) {
-            return '@' + modName
-                .replace(/\//g, '-')
-                .replace(/\\/g, '-')
-                .replace(/ /g, '-')
-                .replace(/[^a-zA-Z0-9\-_]/g, '');
-        }
-        return '';
+        const metaContent = this.fs.readFileSync(modMeta).toString();
+        const names = metaContent.match(/name\s*=.*/g) ?? [];
+        const modName = names
+            .pop()
+            ?.split('=')[1]
+            ?.trim()
+            ?.replace(/\//g, '-')
+            ?.replace(/\\/g, '-')
+            ?.replace(/ /g, '-')
+            ?.replace(/[^a-zA-Z0-9\-_]/g, '')
+            || '';
+        return modName ? `@${modName}` : '';
     }
 
     public buildWsModParams(): string[] {
@@ -272,7 +244,7 @@ export class SteamCMD implements IService {
     public async updateMod(modId: string): Promise<boolean> {
 
         const wsBasePath = this.getWsBasePath();
-        fse.ensureDirSync(wsBasePath);
+        this.fs.mkdirSync(wsBasePath, { recursive: true });
 
         const success = await this.execute([
             '+force_install_dir',
@@ -311,13 +283,13 @@ export class SteamCMD implements IService {
         const modMeta = path.join(modDir, 'meta.cpp');
         const serverMeta = path.join(serverDir, 'meta.cpp');
         if (
-            !fs.existsSync(modMeta)
-            || !fs.existsSync(serverMeta)
+            !this.fs.existsSync(modMeta)
+            || !this.fs.existsSync(serverMeta)
         ) {
             return false;
         }
 
-        return `${fs.readFileSync(modMeta)}` === `${fs.readFileSync(serverMeta)}`;
+        return `${this.fs.readFileSync(modMeta)}` === `${this.fs.readFileSync(serverMeta)}`;
     }
 
     public async installMod(modId: string): Promise<boolean> {
@@ -344,7 +316,7 @@ export class SteamCMD implements IService {
             if (
                 !isUp2Date
                 && this.manager.config.copyModDeepCompare
-                && await sameDirHash(modDir, serverDir)
+                && await sameDirHash(this.fs, modDir, serverDir)
             ) {
                 isUp2Date = true;
             }
@@ -371,14 +343,24 @@ export class SteamCMD implements IService {
 
         }
 
-        return this.copyModKeys(modId);
+        return true;
     }
 
     public async installMods(): Promise<boolean> {
         const modIds = this.manager.getModIdList();
+
+        const installed = Promise.all(modIds.map((modId) => this.installMod(modId)));
+        if (!await installed) {
+            return false;
+        }
+
+        this.fs.mkdirSync(
+            path.join(this.manager.getServerPath(), 'keys'),
+            { recursive: true },
+        );
         let success = true;
         for (const modId of modIds) {
-            success = success && (await this.installMod(modId));
+            success = success && (await this.copyModKeys(modId));
         }
         return success;
     }
@@ -393,10 +375,10 @@ export class SteamCMD implements IService {
             const keyName = path.basename(key);
             this.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
             const target = path.join(keysFolder, keyName);
-            if (fs.existsSync(target)) {
-                fs.unlinkSync(target);
+            if (this.fs.existsSync(target)) {
+                this.fs.unlinkSync(target);
             }
-            await fs.promises.copyFile(key, target);
+            await this.fs.promises.copyFile(key, target);
         }
         return true;
     }
@@ -406,7 +388,7 @@ export class SteamCMD implements IService {
         return this.manager.getModIdList()
             .every((modId) => {
                 const modDir = path.join(wsPath, modId);
-                if (!fs.existsSync(modDir)) {
+                if (!this.fs.existsSync(modDir)) {
                     this.log.log(LogLevel.ERROR, `Mod ${modId} was not found`);
                     return false;
                 }
@@ -418,8 +400,8 @@ export class SteamCMD implements IService {
                 }
 
                 const modServerDir = path.join(this.manager.getServerPath(), modName);
-                if (!fs.existsSync(modServerDir)) {
-                    this.log.log(LogLevel.ERROR, `Mod Link for ${modName} was not found`);
+                if (!this.fs.existsSync(modServerDir)) {
+                    this.log.log(LogLevel.ERROR, `Mod Link/Folder for ${modName} in serverfolder was not found`);
                     return false;
                 }
 

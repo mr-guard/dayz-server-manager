@@ -1,96 +1,42 @@
-import 'reflect-metadata';
-
-import { DiscordBot } from '../services/discord';
-import { REST } from '../interface/rest';
-import { RCON } from '../services/rcon';
 import { Config, UserLevel } from '../config/config';
-import * as fs from 'fs';
-import { SteamCMD } from '../services/steamcmd';
-import { Paths } from '../util/paths';
+import { Paths } from '../services/paths';
 import * as path from 'path';
-import { Monitor } from '../services/monitor';
-import { Metrics } from '../services/metrics';
-import { Interface } from '../interface/interface';
 import { Logger, LogLevel } from '../util/logger';
-import { Events } from '../services/events';
-import { LogReader } from '../services/log-reader';
-import { Backups } from '../services/backups';
-import { IngameReport } from '../services/ingame-report';
-import { Service } from '../types/service';
-import { Database } from '../services/database';
 import { ServerInfo } from '../types/server-info';
-import { MissionFiles } from '../services/mission-files';
-import { Hooks } from '../services/hooks';
-import { ConfigFileHelper } from '../config/config-file-helper';
+import { LoggerFactory } from '../services/loggerfactory';
+import { inject, injectable, singleton } from 'tsyringe';
+import { FSAPI, InjectionTokens } from '../util/apis';
 
+@singleton()
+@injectable()
 export class Manager {
 
     public readonly APP_VERSION!: string;
 
-    private log = new Logger('Manager');
+    private log: Logger;
 
-    private paths = new Paths();
-
-    public configHelper = new ConfigFileHelper();
-
-    // services
-    @Service({ type: Interface, stateful: false })
-    public interface!: Interface;
-
-    @Service({ type: REST, stateful: true })
-    public rest!: REST;
-
-    @Service({ type: DiscordBot, stateful: true })
-    public discord!: DiscordBot;
-
-    @Service({ type: RCON, stateful: true })
-    public rcon!: RCON;
-
-    @Service({ type: SteamCMD, stateful: false })
-    public steamCmd!: SteamCMD;
-
-    @Service({ type: Monitor, stateful: true })
-    public monitor!: Monitor;
-
-    @Service({ type: Metrics, stateful: true })
-    public metrics!: Metrics;
-
-    @Service({ type: Events, stateful: true })
-    public events!: Events;
-
-    @Service({ type: LogReader, stateful: true })
-    public logReader!: LogReader;
-
-    @Service({ type: Backups, stateful: false })
-    public backup!: Backups;
-
-    @Service({ type: IngameReport, stateful: true })
-    public ingameReport!: IngameReport;
-
-    @Service({ type: Database, stateful: true })
-    public database!: Database;
-
-    @Service({ type: MissionFiles, stateful: false })
-    public missionFiles!: MissionFiles;
-
-    @Service({ type: Hooks, stateful: false })
-    public hooks!: Hooks;
-
-
+    private config$!: Config;
     public initDone: boolean = false;
 
     public constructor(
-        private config$: Config,
+        loggerFactory: LoggerFactory,
+        private paths: Paths,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
+        this.log = loggerFactory.createLogger('Manager');
         this.initDone = false;
 
         const versionFilePath = path.join(__dirname, '../VERSION');
-        if (fs.existsSync(versionFilePath)) {
-            this.APP_VERSION = fs.readFileSync(versionFilePath).toString();
+        if (this.fs.existsSync(versionFilePath)) {
+            this.APP_VERSION = this.fs.readFileSync(versionFilePath).toString();
         } else {
             this.APP_VERSION = 'UNKNOWN';
         }
         this.log.log(LogLevel.IMPORTANT, `Starting DZSM Version: ${this.APP_VERSION}`);
+    }
+
+    public set config(config: Config) {
+        this.config$ = config;
     }
 
     public get config(): Config {

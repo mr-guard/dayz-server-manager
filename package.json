@@ -29,7 +29,7 @@
     "buildMainPbo": "node scripts/mkdir.js dist/mods/@DayZServerManager/addons && bash -c 'makepbo -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts dist/mods/@DayZServerManager/addons/Scripts.pbo'",
     "buildExpPbo": "node scripts/mkdir.js dist/mods/@DayZServerManagerExpansion/addons && bash -c 'makepbo -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts dist/mods/@DayZServerManagerExpansion/addons/Scripts.pbo'",
     "buildPbos": "npm run buildMainPbo && npm run buildExpPbo",
-    "test": "nyc --check-coverage --lines 80 mocha",
+    "test": "nyc --check-coverage --lines 85 --functions 100 mocha",
     "test:watch": "mocha -w --reporter min"
   },
   "author": "",
@@ -79,7 +79,12 @@
       "ts"
     ],
     "spec": [
-      "test/**/*.test.ts"
+      "test/config/*",
+      "test/types/*",
+      "test/util/*",
+      "test/services/*",
+      "test/interface/*",
+      "test/control/*"
     ],
     "require": [
       "ts-node/register"
@@ -112,6 +117,7 @@
     "del-cli": "3.0.1",
     "eslint": "^7.22.0",
     "eslint-config-bamboo": "^5.1.0",
+    "memfs": "^3.5.3",
     "mocha": "^8.4.0",
     "nyc": "^15.1.0",
     "pkg": "5.2.0",
@@ -144,6 +150,7 @@
     "sudo-prompt": "^9.2.1",
     "swagger-ui-express": "^4.3.0",
     "tail": "2.2.2",
-    "tar": "^6.1.11"
+    "tar": "^6.1.11",
+    "tsyringe": "^4.8.0"
   }
 }

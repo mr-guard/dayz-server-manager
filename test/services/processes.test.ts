@@ -1,14 +1,19 @@
 import { expect } from '../expect';
-import { ProcessEntry } from '../../src/util/processes';
-import { SystemInfo } from '../../src/util/processes';
-import { Processes } from '../../src/util/processes';
+import {
+    ProcessEntry,
+    SystemInfo,
+    Processes,
+    ProcessSpawner,
+    WindowsProcessFetcher,
+} from '../../src/services/processes';
 import * as childProcess from 'child_process';
 import * as os from "os";
-import { Logger, LogLevel } from '../../src/util/logger';
-import { merge } from '../../src/util/merge';
-import * as Sinon from 'sinon';
-import { ImportMock } from 'ts-mock-imports';
-import { disableConsole, enableConsole } from '../util';
+import * as sinon from 'sinon';
+import { disableConsole, enableConsole, stubClass } from '../util';
+import { DependencyContainer, container } from 'tsyringe';
+import { Paths } from '../../src/services/paths';
+import { LoggerFactory } from '../../src/services/loggerfactory';
+import { InjectionTokens } from '../../src/util/apis';
 
 export const WMIC_OUTPUT = `
 
@@ -164,7 +169,9 @@ describe('Test class SystemInfo', () => {
 
 });
 
-describe('Test class Processes', () => {
+describe('Test class WinProcesseFetcher', () => {
+
+    let injector: DependencyContainer;
 
     before(() => {
         disableConsole();
@@ -175,19 +182,24 @@ describe('Test class Processes', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(ProcessSpawner, stubClass(ProcessSpawner));
+        injector.register(Paths, stubClass(Paths))
     });
 
-    it('Processes-getProcessList', async () => {
-        const processes = new Processes();
+    it('WinProcesses-getProcessList', async () => {
+        const processes = injector.resolve(WindowsProcessFetcher);
 
-        processes['windowsProcessFetcher']['spawner']
-            .spawnForOutput = async () => ({
-                status: 0,
-                stdout: WMIC_OUTPUT,
-                stderr: '',
-            });
+        (injector.resolve(Paths).samePath as sinon.SinonStub)
+            .returns(false)
+            .withArgs('C:\\Discord\\app-1.0.X\\Discord.exe', 'C:\\Discord\\app-1.0.X\\Discord.exe').returns(true);
+
+        (injector.resolve(ProcessSpawner).spawnForOutput as sinon.SinonStub).returns({
+            status: 0,
+            stdout: WMIC_OUTPUT,
+            stderr: '',
+        });
 
         const result = await processes.getProcessList('C:\\Discord\\app-1.0.X\\Discord.exe');
 
@@ -195,68 +207,31 @@ describe('Test class Processes', () => {
         expect(result.length).to.equal(2);
         expect(result[0].ProcessId).to.equal('14300');
         expect(result[0].ExecutablePath).to.equal('C:\\Discord\\app-1.0.X\\Discord.exe');
-
-        const spent = (2151093750 + 1351406250) / 10000;
-        expect(processes.getProcessCPUSpent(result[0])).to.equal(spent);
-
-        Sinon.stub(processes, 'getProcessUptime').returns(
-            spent * 10
-        );
-
-        expect(processes.getProcessCPUUsage(result[0])).to.equal(
-            Math.round(
-                10 / Math.max(os.cpus().length, 1)
-            )
-        );
-
-        expect(processes.getProcessCPUUsage(result[0], result[0])).to.equal(0);
     });
 
-    it('Processes-killProcess', async () => {
-        const processes = new Processes();
-        
-        const spawnMock = ImportMock.mockFunction(childProcess, 'spawn').returns({
-            on: (t, r) => {
-                r();
-            },
-        });
-        
-        const pid = 'abdfsdfsdf1234######';
+});
 
-        await processes.killProcess(pid);
+describe('Test class ProcessesSpawner', () => {
 
-        expect(spawnMock.callCount).to.equal(1);
-        expect(spawnMock.firstCall.args[1]).to.include(pid);
+    let injector: DependencyContainer;
+
+    before(() => {
+        disableConsole();
     });
 
-    it('Processes-killProcess', () => {
-        const processes = new Processes();
-        
-        const spawnMock = ImportMock.mockFunction(childProcess, 'spawn').returns({
-            on: (t, r) => {
-                r('error :)');
-            },
-        });
-        
-        const pid = 'abdfsdfsdf1234######';
-
-        expect(processes.killProcess(pid)).to.be.rejected;
+    after(() => {
+        enableConsole();
     });
 
-    it('Processes-getSystemUsage', () => {
-        const processes = new Processes();
-        const result = processes.getSystemUsage();
-
-        expect(result).to.be.not.undefined;
-        expect(result.avgLoad).to.be.not.undefined;
-        expect(result.cpu).to.be.not.undefined;
-        expect(result.memFree).to.be.not.undefined;
-        expect(result.memTotal).to.be.not.undefined;
-        expect(result.uptime).to.be.not.undefined;
+    beforeEach(() => {
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(LoggerFactory, LoggerFactory);
+        injector.register(InjectionTokens.childProcess, { useValue: childProcess });
     });
 
-    it('Processes-spawnForOutput-fail', async () => {
-        const processes = new Processes();
+    it('ProcessesSpawner-spawnForOutput-fail', async () => {
+        const processes = injector.resolve(ProcessSpawner);
         const resultErr = await processes.spawnForOutput(
             'node',
             [
@@ -271,8 +246,8 @@ describe('Test class Processes', () => {
         expect(resultErr.stderr).to.equal('TestError\n');
     });
 
-    it('Processes-spawnForOutput-throw', async () => {
-        const processes = new Processes();
+    it('ProcessesSpawner-spawnForOutput-throw', async () => {
+        const processes = injector.resolve(ProcessSpawner);
         expect(processes.spawnForOutput(
             'node',
             [
@@ -282,8 +257,8 @@ describe('Test class Processes', () => {
         )).to.be.rejected;
     });
 
-    it('Processes-spawnForOutput', async () => {
-        const processes = new Processes();
+    it('ProcessesSpawner-spawnForOutput', async () => {
+        const processes = injector.resolve(ProcessSpawner);
         
         let handlerStdout = '';
         let handlerStderr = '';
@@ -308,6 +283,102 @@ describe('Test class Processes', () => {
         expect(result.stdout).to.equal('TestLog\n');
         expect(handlerStdout).to.equal('TestLog\n');
         expect(handlerStderr).to.equal('');
+    });
+});
+
+describe('Test class Processes', () => {
+
+    let injector: DependencyContainer;
+
+    before(() => {
+        disableConsole();
+    });
+
+    after(() => {
+        enableConsole();
+    });
+
+    beforeEach(() => {
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(ProcessSpawner, stubClass(ProcessSpawner));
+        injector.register(WindowsProcessFetcher, stubClass(WindowsProcessFetcher))
+    });
+
+    it('Processes-getProcessList', async () => {
+        
+        injector.register(Paths, stubClass(Paths))
+        injector.register(WindowsProcessFetcher, WindowsProcessFetcher)
+        const processes = injector.resolve(Processes);
+
+        (injector.resolve(Paths).samePath as sinon.SinonStub)
+            .returns(false)
+            .withArgs('C:\\Discord\\app-1.0.X\\Discord.exe', 'C:\\Discord\\app-1.0.X\\Discord.exe').returns(true);
+
+        (injector.resolve(ProcessSpawner).spawnForOutput as sinon.SinonStub).returns({
+            status: 0,
+            stdout: WMIC_OUTPUT,
+            stderr: '',
+        });
+
+        const result = await processes.getProcessList('C:\\Discord\\app-1.0.X\\Discord.exe');
+
+        // Expect result
+        expect(result.length).to.equal(2);
+        expect(result[0].ProcessId).to.equal('14300');
+        expect(result[0].ExecutablePath).to.equal('C:\\Discord\\app-1.0.X\\Discord.exe');
+
+        const spent = (2151093750 + 1351406250) / 10000;
+        expect(processes.getProcessCPUSpent(result[0])).to.equal(spent);
+
+        sinon.stub(processes, 'getProcessUptime').returns(
+            spent * 10
+        );
+
+        expect(processes.getProcessCPUUsage(result[0])).to.equal(
+            Math.round(
+                10 / Math.max(os.cpus().length, 1)
+            )
+        );
+
+        expect(processes.getProcessCPUUsage(result[0], result[0])).to.equal(0);
+    });
+
+    it('Processes-killProcess', async () => {
+        const processes = injector.resolve(Processes);
+        
+        const spawnMock = (injector.resolve(ProcessSpawner).spawnForOutput as sinon.SinonStub)
+            .resolves(null);
+        
+        const pid = 'abdfsdfsdf1234######';
+
+        await processes.killProcess(pid);
+
+        expect(spawnMock.callCount).to.equal(1);
+        expect(spawnMock.firstCall.args[1]).to.include(pid);
+    });
+
+    it('Processes-killProcess-throws', () => {
+        const processes = injector.resolve(Processes);
+        
+        const spawnMock = (injector.resolve(ProcessSpawner).spawnForOutput as sinon.SinonStub)
+            .rejects('error :)');
+
+        const pid = 'abdfsdfsdf1234######';
+
+        expect(processes.killProcess(pid)).to.be.rejected;
+    });
+
+    it('Processes-getSystemUsage', () => {
+        const processes = injector.resolve(Processes);
+        const result = processes.getSystemUsage();
+
+        expect(result).to.be.not.undefined;
+        expect(result.avgLoad).to.be.not.undefined;
+        expect(result.cpu).to.be.not.undefined;
+        expect(result.memFree).to.be.not.undefined;
+        expect(result.memTotal).to.be.not.undefined;
+        expect(result.uptime).to.be.not.undefined;
     });
 
 });

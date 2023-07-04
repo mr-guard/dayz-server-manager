@@ -1,14 +1,17 @@
 import { Connection, IPacketResponse, Socket } from '@senfo/battleye';
 import { Manager } from '../control/manager';
 import * as dgram from 'dgram';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { RconBan, RconPlayer } from '../types/rcon';
 import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
 import { matchRegex } from '../util/match-regex';
+import { delay, inject, injectable, registry, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { Monitor } from './monitor';
+import { DiscordBot } from './discord';
+import { FSAPI, InjectionTokens, RCONSOCKETFACTORY } from '../util/apis';
 
 export class BattleyeConf {
 
@@ -21,11 +24,17 @@ export class BattleyeConf {
 
 }
 
-export class RCON implements IStatefulService {
+@singleton()
+@registry([
+    {
+        token: InjectionTokens.rconSocket,
+        useFactory: /* istanbul ignore next */ () => /* istanbul ignore next */ () => new Socket(),
+    },
+])
+@injectable()
+export class RCON extends IStatefulService {
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
-
-    private log = new Logger('RCON');
 
     private socket: Socket | undefined;
     private connection: Connection | undefined;
@@ -38,15 +47,22 @@ export class RCON implements IStatefulService {
     private duplicateMessageCacheSize: number = 3;
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        @inject(delay(() => Monitor)) private monitor: Monitor,
+        @inject(delay(() => DiscordBot)) private discord: DiscordBot,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+        @inject(InjectionTokens.rconSocket) private socketFactory: RCONSOCKETFACTORY,
+    ) {
+        super(loggerFactory.createLogger('RCON'));
+    }
 
     public isConnected(): boolean {
         return this.connected;
     }
 
     private createSocket(): Socket {
-        return new Socket();
+        return this.socketFactory();
     }
 
     public async start(skipServerWait?: boolean): Promise<void> {
@@ -94,9 +110,9 @@ export class RCON implements IStatefulService {
         if (skipServerWait) {
             this.setupConnection();
         } else {
-            this.manager.monitor.registerStateListener('rconInit', (state: ServerState) => {
+            this.monitor.registerStateListener('rconInit', (state: ServerState) => {
                 if (this.connection || state !== ServerState.STARTED) return;
-                this.manager.monitor.removeStateListener('rconInit');
+                this.monitor.removeStateListener('rconInit');
                 this.setupConnection();
             });
         }
@@ -137,7 +153,7 @@ export class RCON implements IStatefulService {
             }
 
             this.log.log(LogLevel.DEBUG, `message`, message);
-            void this.manager.discord?.relayRconMessage(message);
+            void this.discord.relayRconMessage(message);
         });
 
         this.connection.on('command', (data, resolved, packet) => {
@@ -219,16 +235,16 @@ export class RCON implements IStatefulService {
         const rConPassword = this.getRconPassword();
         const rConPort = this.getRconPort();
 
-        fse.ensureDirSync(battleyePath);
+        this.fs.mkdirSync(battleyePath, { recursive: true });
         try {
-            fs.readdirSync(battleyePath).forEach((x) => {
+            this.fs.readdirSync(battleyePath).forEach((x) => {
                 const lower = x.toLowerCase();
                 if (lower.includes('beserver') && lower.endsWith('.cfg')) {
-                    fs.unlinkSync(path.join(battleyePath, x));
+                    this.fs.unlinkSync(path.join(battleyePath, x));
                 }
             });
         } catch {}
-        fs.writeFileSync(
+        this.fs.writeFileSync(
             battleyeConfPath,
             `RConPassword ${rConPassword}\nRestrictRCon 0\nRConPort ${rConPort}`,
         );
@@ -261,7 +277,10 @@ export class RCON implements IStatefulService {
 
             this.connection.removeAllListeners();
             if (this.connection.connected) {
-                this.connection.once('error', () => { /* ignore */ });
+                this.connection.on(
+                    'error',
+                    /* istanbul ignore next */ () => { /* ignore */ },
+                );
                 this.connection.kill(new Error('Reload'));
                 this.connection = undefined;
                 this.connected = false;

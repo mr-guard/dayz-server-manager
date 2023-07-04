@@ -1,17 +1,57 @@
-
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
 import * as path from 'path';
-import { spawnSync } from 'child_process';
-import { Logger, LogLevel } from './logger';
-import { detectOS } from './detect-os';
+import { LogLevel } from '../util/logger';
+import { detectOS } from '../util/detect-os';
+import { inject, injectable, singleton } from 'tsyringe';
+import { CHILDPROCESSAPI, FSAPI, InjectionTokens } from '../util/apis';
+import { IService } from '../types/service';
+import { LoggerFactory } from './loggerfactory';
 
-export class Paths {
+export const copySync = (fs: FSAPI, source: string, target: string): void => {
 
-    private log = new Logger('Paths');
+    // src=somedir/test target=tmp -> tmp/test
+    if (fs.lstatSync(source).isDirectory()) {
+        if (!fs.existsSync(target)) {
+            fs.mkdirSync(target, { recursive: true });
+        }
+        fs.readdirSync(source).forEach((file) => {
+            const curSource = path.join(source, file);
+            const curTarget = path.join(target, file);
+            if (fs.lstatSync(curSource).isDirectory()) {
+                copySync(fs, curSource, curTarget);
+            } else {
+                fs.copyFileSync(curSource, curTarget);
+            }
+        });
+    } else {
+        if (!fs.existsSync(target)) {
+            fs.mkdirSync(target, { recursive: true });
+        }
+        fs.copyFileSync(source, path.join(target, path.basename(source)));
+    }
+};
 
+@singleton()
+@injectable()
+export class Paths extends IService {
+
+    private workingDir: string = process.cwd();
+
+    public constructor(
+        loggerFactory: LoggerFactory,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+        @inject(InjectionTokens.childProcess) private childProcess: CHILDPROCESSAPI,
+    ) {
+        super(loggerFactory.createLogger('Paths'));
+    }
+
+    /* istanbul ignore next */
+    public setCwd(workingDir: string): void {
+        this.workingDir = workingDir;
+    }
+
+    /* istanbul ignore next */
     public cwd(): string {
-        return process.cwd();
+        return this.workingDir;
     }
 
     public samePath(p1: string, p2: string): boolean {
@@ -36,14 +76,14 @@ export class Paths {
     public async findFilesInDir(dir: string, filter?: RegExp): Promise<string[]> {
         const results: string[] = [];
 
-        if (!fs.existsSync(dir)) {
+        if (!this.fs.existsSync(dir)) {
             return results;
         }
 
-        const files = await fse.readdir(dir);
+        const files = await this.fs.promises.readdir(dir);
         for (const file of files) {
             const filename = path.join(dir, file);
-            const stat = await fse.lstat(filename);
+            const stat = await this.fs.promises.lstat(filename);
             if (stat.isDirectory()) {
                 results.push(...(await this.findFilesInDir(filename, filter)));
             } else if (!filter || filter.test(filename)) {
@@ -55,25 +95,25 @@ export class Paths {
 
     // https://github.com/vercel/pkg/issues/420
     public copyFromPkg(src: string, dest: string): void {
-        const stat = fs.lstatSync(src);
+        const stat = this.fs.lstatSync(src);
         if (stat.isDirectory()) {
-            const files = fs.readdirSync(src);
+            const files = this.fs.readdirSync(src);
             for (const file of files) {
                 const fullPath = path.join(src, file);
                 const fullDest = path.join(dest, file);
                 this.copyFromPkg(fullPath, fullDest);
             }
         } else {
-            fse.ensureDirSync(path.dirname(dest));
-            const buff = fs.readFileSync(src);
-            fs.writeFileSync(dest, buff);
+            this.fs.mkdirSync(path.dirname(dest), { recursive: true });
+            const buff = this.fs.readFileSync(src);
+            this.fs.writeFileSync(dest, buff);
         }
     }
 
     public removeLink(target: string): boolean {
         if (detectOS() === 'windows') {
             // cmd //c rmdir "$__TARGET_DIR"
-            return (spawnSync(
+            return (this.childProcess.spawnSync(
                 'cmd',
                 [
                     '/c',
@@ -88,18 +128,18 @@ export class Paths {
         if (detectOS() === 'linux') {
 
             try {
-                const stats = fse.statSync(target);
+                const stats = this.fs.statSync(target);
                 if (stats.isSymbolicLink()) {
-                    fse.unlinkSync(target);
+                    this.fs.unlinkSync(target);
                 } else if (stats.isDirectory()) {
-                    fse.rmSync(
+                    this.fs.rmSync(
                         target,
                         {
                             recursive: true,
                         },
                     );
                 } else {
-                    fse.rmSync(target);
+                    this.fs.rmSync(target);
                 }
             } catch {
                 return false;
@@ -115,13 +155,13 @@ export class Paths {
         if (detectOS() === 'windows') {
             // cmd //c mklink //j "$__TARGET_DIR" "$__SOURCE_DIR"
             try {
-                if (fs.existsSync(target)) {
+                if (this.fs.existsSync(target)) {
                     if (!this.removeLink(target)) {
                         this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
                         return false;
                     }
                 }
-                return (spawnSync(
+                return (this.childProcess.spawnSync(
                     'cmd',
                     [
                         '/c',
@@ -139,13 +179,13 @@ export class Paths {
 
         if (detectOS() === 'linux') {
             try {
-                if (fs.existsSync(target)) {
+                if (this.fs.existsSync(target)) {
                     if (!this.removeLink(target)) {
                         this.log.log(LogLevel.ERROR, 'Could not remove link before creating new one');
                         return false;
                     }
                 }
-                fs.symlinkSync(source, target);
+                this.fs.symlinkSync(source, target);
                 return true;
             } catch (e) {
                 this.log.log(LogLevel.ERROR, `Error linking ${source} to ${target}`, e);
@@ -158,15 +198,14 @@ export class Paths {
 
     public async copyDirFromTo(source: string, target: string): Promise<boolean> {
         try {
-            if (fs.existsSync(target)) {
+            if (this.fs.existsSync(target)) {
                 if (!this.removeLink(target)) {
                     this.log.log(LogLevel.ERROR, 'Could not remove dir before creating new one');
                     return false;
                 }
             }
 
-            await fse.ensureDir(target);
-            await fse.copy(source, target);
+            copySync(this.fs, source, target);
 
             return true;
         } catch (e) {
@@ -176,3 +215,4 @@ export class Paths {
     }
 
 }
+

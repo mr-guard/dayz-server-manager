@@ -1,16 +1,28 @@
+import { injectable, singleton } from 'tsyringe';
 import { UserLevel } from '../config/config';
 import { Manager } from '../control/manager';
+import { Backups } from '../services/backups';
+import { LogReader } from '../services/log-reader';
+import { LoggerFactory } from '../services/loggerfactory';
+import { Metrics } from '../services/metrics';
+import { MissionFiles } from '../services/mission-files';
+import { Monitor, ServerDetector, SystemReporter } from '../services/monitor';
+import { RCON } from '../services/rcon';
+import { SteamCMD } from '../services/steamcmd';
 import { Request, Response } from '../types/interface';
-import { Logger, LogLevel } from '../util/logger';
+import { IService } from '../types/service';
+import { LogLevel } from '../util/logger';
 import { merge } from '../util/merge';
 import { makeTable } from '../util/table';
 import { constants as HTTP } from 'http2';
+import { ConfigFileHelper } from '../config/config-file-helper';
 
 export type RequestHandler = (request: Request) => Promise<Response>;
 export type RequestMethods = 'get' | 'post' | 'put' | 'delete';
 
 export class RequestTemplate {
 
+    /* istanbul ignore next */
     public action: RequestHandler = async (r) => {
         return {
             status: HTTP.HTTP_STATUS_GONE,
@@ -35,15 +47,68 @@ export class RequestTemplate {
 
 }
 
-export class Interface {
+@singleton()
+@injectable()
+/* istanbul ignore next */
+export class InterfaceDispatcher extends IService {
 
-    private log = new Logger('Manager');
+    private handler: (req: Request) => Promise<Response>;
+
+    private commandHandler: () => Map<string, RequestTemplate>;
+
+    public registerHandler(handler: (req: Request) => Promise<Response>): void {
+        this.handler = handler;
+    }
+
+    public registerCommandHandler(handler: () => Map<string, RequestTemplate>): void {
+        this.commandHandler = handler;
+    }
+
+    /* istanbul ignore next */
+    public async execute(req: Request): Promise<Response> {
+        if (!this.handler) {
+            return new Response(
+                HTTP.HTTP_STATUS_SERVICE_UNAVAILABLE,
+                'Handler not yet registered',
+            );
+        }
+        return this.handler(req);
+    }
+
+    /* istanbul ignore next */
+    public getCommands(): Map<string, RequestTemplate> {
+        if (!this.commandHandler) {
+            return null;
+        }
+        return this.commandHandler();
+    }
+
+}
+
+@singleton()
+@injectable()
+export class Interface extends IService {
 
     public commandMap!: Map<string, RequestTemplate>;
 
-    public constructor(
-        public manager: Manager,
+    public constructor( // NOSONAR
+        loggerFactory: LoggerFactory,
+        private dispatcher: InterfaceDispatcher,
+        private manager: Manager,
+        private rcon: RCON,
+        private monitor: Monitor,
+        private systemReporter: SystemReporter,
+        private serverDetector: ServerDetector,
+        private metrics: Metrics,
+        private steamCmd: SteamCMD,
+        private logReader: LogReader,
+        private backup: Backups,
+        private missionFiles: MissionFiles,
+        private configFileHelper: ConfigFileHelper,
     ) {
+        super(loggerFactory.createLogger('Manager'));
+        this.dispatcher.registerHandler(/* istanbul ignore next */ (req) => this.execute(req));
+        this.dispatcher.registerCommandHandler(/* istanbul ignore next */ () => this.commandMap);
         this.setupCommandMap();
     }
 
@@ -115,7 +180,7 @@ export class Interface {
                 level: 'moderate',
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.rcon?.lock(),
+                    () => this.rcon.lock(),
                 ),
             })],
             ['unlock', RequestTemplate.build({
@@ -123,7 +188,7 @@ export class Interface {
                 level: 'moderate',
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.rcon?.unlock(),
+                    () => this.rcon.unlock(),
                 ),
             })],
             ['global', RequestTemplate.build({
@@ -132,7 +197,7 @@ export class Interface {
                 params: ['message'],
                 action: this.singleParamWrapper(
                     'message',
-                    (message) => this.manager.rcon?.global(message),
+                    (message) => this.rcon.global(message),
                 ),
             })],
             ['kickall', RequestTemplate.build({
@@ -140,7 +205,7 @@ export class Interface {
                 level: 'moderate',
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.rcon?.kickAll(),
+                    () => this.rcon.kickAll(),
                 ),
             })],
             ['kick', RequestTemplate.build({
@@ -149,7 +214,7 @@ export class Interface {
                 params: ['player'],
                 action: this.singleParamWrapper(
                     'player',
-                    (player) => this.manager.rcon?.kick(player),
+                    (player) => this.rcon.kick(player),
                 ),
             })],
             ['ban', RequestTemplate.build({
@@ -158,7 +223,7 @@ export class Interface {
                 params: ['player'],
                 action: this.singleParamWrapper(
                     'player',
-                    (player) => this.manager.rcon?.ban(player),
+                    (player) => this.rcon.ban(player),
                 ),
             })],
             ['removeban', RequestTemplate.build({
@@ -167,7 +232,7 @@ export class Interface {
                 params: ['player'],
                 action: this.singleParamWrapper(
                     'player',
-                    (player) => this.manager.rcon?.removeBan(player),
+                    (player) => this.rcon.removeBan(player),
                 ),
             })],
             ['reloadbans', RequestTemplate.build({
@@ -175,7 +240,7 @@ export class Interface {
                 level: 'moderate',
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.rcon?.reloadBans(),
+                    () => this.rcon.reloadBans(),
                 ),
             })],
             ['restart', RequestTemplate.build({
@@ -185,7 +250,7 @@ export class Interface {
                 paramsOptional: true,
                 action: this.singleParamWrapper(
                     'force',
-                    (force) => this.manager.monitor?.killServer(!!force && force !== 'false'),
+                    (force) => this.monitor.killServer(!!force && force !== 'false'),
                     false,
                     true,
                 ),
@@ -196,7 +261,7 @@ export class Interface {
                 action: (req) => this.executeWithResult(
                     req,
                     async () => {
-                        return this.manager.monitor.restartLock;
+                        return this.monitor.restartLock;
                     },
                 ),
             })],
@@ -206,9 +271,7 @@ export class Interface {
                 action: (req) => this.executeWithoutResult(
                     req,
                     async () => {
-                        if (this.manager.monitor) {
-                            this.manager.monitor.restartLock = true;
-                        }
+                        this.monitor.restartLock = true;
                     },
                 ),
             })],
@@ -218,9 +281,7 @@ export class Interface {
                 action: (req) => this.executeWithoutResult(
                     req,
                     async () => {
-                        if (this.manager.monitor) {
-                            this.manager.monitor.restartLock = false;
-                        }
+                        this.monitor.restartLock = false;
                     },
                 ),
             })],
@@ -237,7 +298,7 @@ export class Interface {
                         req,
                         () => {
                             const ts = req.query?.since ? Number(req.query.since) : undefined;
-                            return this.manager.metrics.fetchMetrics(
+                            return this.metrics.fetchMetrics(
                                 req.query.type,
                                 ts,
                             );
@@ -255,7 +316,7 @@ export class Interface {
                     async (maxAgeDays) => {
                         const days = Number(maxAgeDays);
                         if (days > 0) {
-                            this.manager.metrics.deleteMetrics(days * 24 * 60 * 60 * 1000);
+                            this.metrics.deleteMetrics(days * 24 * 60 * 60 * 1000);
                         }
                     },
                     false,
@@ -273,7 +334,7 @@ export class Interface {
                     }
                     return this.executeWithResult(
                         req,
-                        () => this.manager.logReader.fetchLogs(req.query.type, req.query.since ? Number(req.query.since) : undefined),
+                        () => this.logReader.fetchLogs(req.query.type, req.query.since ? Number(req.query.since) : undefined),
                     );
                 },
             })],
@@ -311,7 +372,7 @@ export class Interface {
                     async (config) => {
 
                         try {
-                            this.manager.configHelper.writeConfig(config);
+                            this.configFileHelper.writeConfig(config);
                             return true;
                         } catch (e) {
                             throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
@@ -329,7 +390,7 @@ export class Interface {
                 action: (req) => this.executeWithResult(
                     req,
                     () => {
-                        return this.manager.steamCmd.updateMods();
+                        return this.steamCmd.updateMods();
                     },
                 ),
             })],
@@ -340,7 +401,7 @@ export class Interface {
                 action: (req) => this.executeWithResult(
                     req,
                     () => {
-                        return this.manager.steamCmd.updateServer();
+                        return this.steamCmd.updateServer();
                     },
                 ),
             })],
@@ -349,7 +410,7 @@ export class Interface {
                 level: 'manage',
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.backup.createBackup(),
+                    () => this.backup.createBackup(),
                 ),
             })],
             ['getbackups', RequestTemplate.build({
@@ -357,7 +418,7 @@ export class Interface {
                 level: 'manage',
                 action: (req) => this.executeWithResult(
                     req,
-                    () => this.manager.backup.getBackups(),
+                    () => this.backup.getBackups(),
                 ),
             })],
             ['writemissionfile', RequestTemplate.build({
@@ -367,7 +428,7 @@ export class Interface {
                 params: ['file', 'content', 'createBackup'],
                 action: (req) => this.executeWithoutResult(
                     req,
-                    () => this.manager.missionFiles.writeMissionFile(
+                    () => this.missionFiles.writeMissionFile(
                         req.body?.file,
                         req.body?.content,
                         req.body?.createBackup,
@@ -385,7 +446,7 @@ export class Interface {
                     }
                     return this.executeWithResult(
                         req,
-                        () => this.manager.missionFiles.readMissionFile(req.query.file),
+                        () => this.missionFiles.readMissionFile(req.query.file),
                     );
                 },
             })],
@@ -399,7 +460,7 @@ export class Interface {
                     }
                     return this.executeWithResult(
                         req,
-                        () => this.manager.missionFiles.readMissionDir(req.query.dir),
+                        () => this.missionFiles.readMissionDir(req.query.dir),
                     );
                 },
             })],
@@ -456,7 +517,7 @@ export class Interface {
     }
 
     private getDayZProcesses = async (req: Request): Promise<any> => {
-        const result = await this.manager.monitor?.getDayZProcesses();
+        const result = await this.serverDetector.getDayZProcesses();
         if (!result?.length) {
             throw new Response(
                 HTTP.HTTP_STATUS_NOT_FOUND,
@@ -478,7 +539,7 @@ export class Interface {
     };
 
     private getSystemReport = async (req: Request): Promise<any> => {
-        const result = await this.manager.monitor?.getSystemReport();
+        const result = await this.systemReporter.getSystemReport();
         if (!result) {
             throw new Response(HTTP.HTTP_STATUS_NOT_FOUND, 'Could not determine system state');
         }
@@ -487,16 +548,16 @@ export class Interface {
 
     private getPlayers = async (req: Request): Promise<any> => {
         if (this.acceptsText(req)) {
-            return this.manager.rcon?.getPlayersRaw();
+            return this.rcon.getPlayersRaw();
         }
-        return this.manager.rcon?.getPlayers();
+        return this.rcon.getPlayers();
     };
 
     private getBans = async (req: Request): Promise<any> => {
         if (this.acceptsText(req)) {
-            return this.manager.rcon?.getBansRaw();
+            return this.rcon.getBansRaw();
         }
-        return this.manager.rcon?.getBans();
+        return this.rcon.getBans();
     };
 
     // apply RBAC and audit
@@ -516,7 +577,7 @@ export class Interface {
             }
 
             if (req.resource && x.method !== 'get') {
-                void this.manager.metrics.pushMetricValue(
+                void this.metrics.pushMetricValue(
                     'AUDIT',
                     {
                         timestamp: new Date().valueOf(),

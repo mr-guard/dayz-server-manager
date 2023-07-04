@@ -3,13 +3,11 @@ import { ImportMock } from 'ts-mock-imports'
 import * as path from 'path';
 
 import { Manager } from '../../src/control/manager';
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
 import { Config } from '../../src/config/config';
-
-const getConfiguredManager = (): Manager => {
-    const manager = new Manager(new Config());
-    return manager;
-};
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Paths } from '../../src/services/paths';
+import { FSAPI } from '../../src/util/apis';
 
 const defaultAdmins = [{
     userId: "admin",
@@ -27,6 +25,11 @@ const defaultAdmins = [{
 
 describe('Test class Manager', () => {
 
+    let injector: DependencyContainer;
+
+    let paths: StubInstance<Paths>;
+    let fs: FSAPI;
+
     before(() => {
         disableConsole();
     });
@@ -38,7 +41,22 @@ describe('Test class Manager', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Paths, stubClass(Paths), { lifecycle: Lifecycle.Singleton });
+        
+        paths = injector.resolve(Paths) as any;
+        paths.cwd.returns(process.cwd());
+        fs = memfs({}, '/', injector);
     });
+
+    const getConfiguredManager = (): Manager => {
+        const manager = injector.resolve(Manager);
+        manager.config = new Config();
+        return manager;
+    };
 
     it('Manager-getServerPath', () => {
         const manager = getConfiguredManager();
@@ -143,36 +161,6 @@ describe('Test class Manager', () => {
         expect(result).to.be.true;
     });
 
-    // it('Manager-getHooks', () => {
-    //     const manager = getConfiguredManager();
-    //     manager.config.hooks = null;
-    //     const resultUndef = manager.getHooks('beforeStart');
-    //     manager.config.hooks = [{
-    //         type: 'beforeStart',
-    //         program: '',
-    //     }];
-    //     const result = manager.getHooks('beforeStart');
-        
-    //     // Expect result
-    //     expect(resultUndef).to.be.not.undefined;
-    //     expect(resultUndef).to.be.empty;
-    //     expect(result).to.be.not.undefined;
-    //     expect(result).to.be.not.empty;
-    // });
-
-    // it('Manager-getHooks-unknown-type', () => {
-    //     const manager = getConfiguredManager();
-    //     manager.config.hooks.push({
-    //         type: 'beforeStart',
-    //         program: '',
-    //     });
-    //     const resultNotThere = manager.getHooks('what?' as HookType);
-
-    //     // Expect result
-    //     expect(resultNotThere).to.be.not.undefined;
-    //     expect(resultNotThere).to.be.empty;
-    // });
-
     it('Manager-getWebPort-default', () => {
         const manager = getConfiguredManager();
         const result = manager.getWebPort();
@@ -188,6 +176,31 @@ describe('Test class Manager', () => {
 
         // Expect result
         expect(result).to.be.equal(9999);
+    });
+
+    it('Manager-getServerInfo', () => {
+        const manager = getConfiguredManager();
+        const result = manager.getServerInfo();
+
+        // Expect result
+        expect(result).to.be.not.undefined;
+    });
+
+    it('Manager-getModList', () => {
+        const manager = getConfiguredManager();
+        manager.config.steamWsMods = [
+            'mod1',
+            {
+                workshopId: 'mod2'
+            },
+            ''
+        ];
+        const result = manager.getModIdList();
+
+        // Expect result
+        expect(result).to.lengthOf(2);
+        expect(result).to.contain('mod1');
+        expect(result).to.contain('mod2');
     });
 
 });

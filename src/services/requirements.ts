@@ -1,11 +1,17 @@
-import { Logger, LogLevel } from '../util/logger';
-import { Processes } from '../util/processes';
-import * as fs from 'fs';
+import { LogLevel } from '../util/logger';
+import { Processes } from '../services/processes';
 import * as path from 'path';
-import { NetSH } from '../util/netsh';
+import { NetSH } from '../services/netsh';
 import { detectOS } from '../util/detect-os';
+import { IService } from '../types/service';
+import { LoggerFactory } from './loggerfactory';
+import { Manager } from '../control/manager';
+import { FSAPI, InjectionTokens } from '../util/apis';
+import { inject, injectable, singleton } from 'tsyringe';
 
-export class Requirements {
+@singleton()
+@injectable()
+export class Requirements extends IService {
 
     private readonly VCREDIST_LINK = 'https://www.microsoft.com/en-us/download/details.aspx?id=52685';
     private readonly VCREDIST_MARKER_DLL = 'VCRuntime140.dll';
@@ -20,17 +26,20 @@ export class Requirements {
     + '"DontShowUI"=dword:00000001';
 
     public constructor(
-        private serverExePath: string,
-        private log = new Logger('Requirements'),
-        private netSh = new NetSH(),
-        private processes = new Processes(),
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private netSh: NetSH,
+        private processes: Processes,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('Requirements'));
+    }
 
     public async checkFirewall(): Promise<boolean> {
         this.log.log(LogLevel.DEBUG, 'Checking Firewall');
 
         if (detectOS() === 'windows') {
-            const exePath = path.resolve(this.serverExePath);
+            const exePath = path.resolve(this.manager.getServerExePath());
             const firewallRules = await this.netSh.getRulesByPath(exePath);
             if (firewallRules?.length) {
                 this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
@@ -58,7 +67,7 @@ export class Requirements {
     public async checkDirectX(): Promise<boolean> {
         this.log.log(LogLevel.DEBUG, 'Checking DirectX');
         const dx11Exists = this.POSSIBLE_PATHS.map((searchPath) => {
-            return fs.existsSync(
+            return this.fs.existsSync(
                 path.resolve(
                     path.join(
                         searchPath,
@@ -83,7 +92,7 @@ export class Requirements {
 
     public async checkVcRedist(): Promise<boolean> {
         const vcRedistExists = this.POSSIBLE_PATHS.map((searchPath) => {
-            return fs.existsSync(
+            return this.fs.existsSync(
                 path.resolve(
                     path.join(
                         searchPath,
@@ -190,7 +199,7 @@ export class Requirements {
                 '\n\nWindows Error Reporting Settings are not setup to avoid the server from getting stuck.\n'
                     + 'You change this by executing the fix_win_err_report.reg located in the server manager config directory.\n\n',
             );
-            fs.writeFileSync(
+            this.fs.writeFileSync(
                 'fix_win_err_report.reg',
                 this.REG_WIN_ERRORS,
             );
@@ -221,7 +230,7 @@ export class Requirements {
         // check runtime libs
         if (!await this.checkRuntimeLibs()) {
             this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
-            process.exit(0);
+            this.processes.exit(0);
         }
     }
 

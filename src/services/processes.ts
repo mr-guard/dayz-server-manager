@@ -1,10 +1,14 @@
-import { spawn, SpawnOptions } from 'child_process';
+import { SpawnOptions } from 'child_process';
 import * as os from 'os';
-import { detectOS } from './detect-os';
-import { Logger, LogLevel } from './logger';
-import { merge } from './merge';
+import { detectOS } from '../util/detect-os';
+import { LogLevel } from '../util/logger';
+import { merge } from '../util/merge';
 import { Paths } from './paths';
 import * as ps from '@senfo/process-list';
+import { inject, injectable, singleton } from 'tsyringe';
+import { CHILDPROCESSAPI, InjectionTokens } from '../util/apis';
+import { IService } from '../types/service';
+import { LoggerFactory } from './loggerfactory';
 
 export class ProcessEntry {
 
@@ -54,9 +58,16 @@ export interface IProcessSpawner {
     ): Promise<SpawnOutput>;
 }
 
-class ProcessSpawner implements IProcessSpawner {
+@singleton()
+@injectable()
+export class ProcessSpawner extends IService implements IProcessSpawner {
 
-    private log = new Logger('ProcessSpawn');
+    public constructor(
+        loggerFactory: LoggerFactory,
+        @inject(InjectionTokens.childProcess) private childProcess: CHILDPROCESSAPI,
+    ) {
+        super(loggerFactory.createLogger('ProcessSpawn'));
+    }
 
     public async spawnForOutput(
         cmd: string,
@@ -66,7 +77,7 @@ class ProcessSpawner implements IProcessSpawner {
         return new Promise((r, e) => {
             const startTS = new Date().valueOf();
             try {
-                const spawnedProcess = spawn(
+                const spawnedProcess = this.childProcess.spawn(
                     cmd,
                     args,
                     opts?.spawnOpts,
@@ -99,9 +110,17 @@ class ProcessSpawner implements IProcessSpawner {
                     });
                 }
 
-                spawnedProcess.on('error', (error) => {
-                    this.log.log(LogLevel.ERROR, error?.message ?? 'Spawned processes threw an error', error);
-                });
+                spawnedProcess.on(
+                    'error',
+                    /* istanbul ignore next */
+                    (error) => {
+                        this.log.log(
+                            LogLevel.ERROR,
+                            error?.message ?? 'Spawned processes threw an error',
+                            error,
+                        );
+                    },
+                );
 
                 spawnedProcess.on('close', (code) => {
 
@@ -142,15 +161,19 @@ export interface IProcessFetcher {
     getProcessList(exeName?: string): Promise<ProcessEntry[]>;
 }
 
-class WindowsProcessFetcher implements IProcessFetcher {
+@singleton()
+@injectable()
+export class WindowsProcessFetcher extends IService implements IProcessFetcher {
 
     private static readonly WMIC_VALUES = Object.keys(new ProcessEntry());
 
-    private log = new Logger('WinProcesses');
-
-    private spawner = new ProcessSpawner();
-
-    private paths = new Paths();
+    public constructor(
+        loggerFactory: LoggerFactory,
+        private spawner: ProcessSpawner,
+        private paths: Paths,
+    ) {
+        super(loggerFactory.createLogger('WinProcesses'));
+    }
 
     public async getProcessList(exeName?: string): Promise<ProcessEntry[]> {
         const result = await this.spawner.spawnForOutput(
@@ -199,14 +222,18 @@ class WindowsProcessFetcher implements IProcessFetcher {
 
 }
 
+@singleton()
+@injectable()
+export class Processes extends IService implements IProcessSpawner, IProcessFetcher {
 
-export class Processes implements IProcessSpawner, IProcessFetcher {
+    public constructor(
+        loggerFactory: LoggerFactory,
+        private spawner: ProcessSpawner,
+        private windowsProcessFetcher: WindowsProcessFetcher,
+    ) {
+        super(loggerFactory.createLogger('Processes'));
+    }
 
-    private log = new Logger('Processes');
-
-    private spawner = new ProcessSpawner();
-
-    private windowsProcessFetcher = new WindowsProcessFetcher();
 
     public async getProcessList(exeName?: string): Promise<ProcessEntry[]> {
 
@@ -216,18 +243,21 @@ export class Processes implements IProcessSpawner, IProcessFetcher {
 
         const snapshot = await ps.snapshot();
         return snapshot
-            .map((x) => ({
-                /* eslint-disable @typescript-eslint/naming-convention */
-                Name: x.name,
-                ProcessId: String(x.pid),
-                ExecutablePath: x.path,
-                CommandLine: x.cmdline,
-                PrivatePageCount: x.vmem, // TODO
-                CreationDate: String(x.starttime.valueOf()), // TODO
-                UserModeTime: x.utime, // TODO
-                KernelModeTime: x.stime, // TODO
-                /* eslint-enable @typescript-eslint/naming-convention */
-            }));
+            .map(
+                /* istanbul ignore next */
+                (x) => ({
+                    /* eslint-disable @typescript-eslint/naming-convention */
+                    Name: x.name,
+                    ProcessId: String(x.pid),
+                    ExecutablePath: x.path,
+                    CommandLine: x.cmdline,
+                    PrivatePageCount: x.vmem, // TODO
+                    CreationDate: String(x.starttime.valueOf()), // TODO
+                    UserModeTime: x.utime, // TODO
+                    KernelModeTime: x.stime, // TODO
+                    /* eslint-enable @typescript-eslint/naming-convention */
+                }),
+            );
     }
 
     public getProcessCPUSpent(proc: ProcessEntry): number {
@@ -235,6 +265,7 @@ export class Processes implements IProcessSpawner, IProcessFetcher {
         + (Number(proc.KernelModeTime) / 10000);
     }
 
+    /* istanbul ignore next */
     public getProcessUptime(proc: ProcessEntry): number {
         const start = new Date(proc.CreationDate).valueOf();
         const now = new Date().valueOf();
@@ -296,6 +327,16 @@ export class Processes implements IProcessSpawner, IProcessFetcher {
         opts?: Partial<ProcessSpawnOpts>,
     ): Promise<SpawnOutput> {
         return this.spawner.spawnForOutput(cmd, args, opts);
+    }
+
+    /**
+     * Method proxy to be able to mock process exit.
+     *
+     * @param status process exit code
+     */
+    /* istanbul ignore next */
+    public exit(status: number): never {
+        process.exit(status);
     }
 
 }

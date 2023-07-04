@@ -25,9 +25,15 @@ export class SystemReport {
     public server?: UsageItem;
 
     public format(): string {
+
+        const perCpuUsage = this.system.cpuEach?.map(
+            /* istanbul ignore next */
+            (x) => `${x}%`,
+        ).join(' ');
+
         const report = [
             'System Usage:',
-            `CPU: ${this.system.cpuTotal}% (${this.system.cpuEach?.map((x) => `${x}%`).join(' ')})`,
+            `CPU: ${this.system.cpuTotal}% (${perCpuUsage || '-'})`,
             `RAM: ${this.system.mem} MB / ${this.system.memTotal} MB`,
             'Manager:',
             `CPU: ${this.manager.cpuTotal}%`,

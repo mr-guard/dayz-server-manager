@@ -5,26 +5,26 @@ import {
 } from 'discord.js';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
 import { IStatefulService } from '../types/service';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { Manager } from '../control/manager';
+import { injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
 
-export class DiscordBot implements IStatefulService {
-
-    private log = new Logger('Discord');
+@singleton()
+@injectable()
+export class DiscordBot extends IStatefulService {
 
     public client: Client | undefined;
+    private ready = false;
 
-    private messageHandler: DiscordMessageHandler;
-
-    private debug: boolean = false;
+    public debug: boolean = false;
 
     public constructor(
-        public manager: Manager,
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private messageHandler: DiscordMessageHandler,
     ) {
-        this.messageHandler = new DiscordMessageHandler(
-            manager,
-            this,
-        );
+        super(loggerFactory.createLogger('Discord'));
     }
 
     public async start(): Promise<void> {
@@ -34,27 +34,34 @@ export class DiscordBot implements IStatefulService {
             return;
         }
 
-        this.client = new Client();
-        this.client.on('ready', () => this.onReady());
+        const client = new Client();
+        client.on('ready', () => this.onReady());
         if (this.debug) {
-            this.client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
-            this.client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
-            this.client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
+            client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
+            client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
+            client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
         }
-        this.client.on('message', (m) => this.onMessage(m));
-        this.client.on('disconnect', (d) => {
+        client.on('message', (m) => this.onMessage(m));
+        client.on('disconnect', (d) => {
             if (d?.wasClean) {
                 this.log.log(LogLevel.INFO, 'disconnect');
             } else {
                 this.log.log(LogLevel.ERROR, 'disconnect', d);
             }
         });
-        this.client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
-        await this.client.login(this.manager.config?.discordBotToken);
+        client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
+
+        try {
+            await client.login(this.manager.config.discordBotToken);
+            this.client = client;
+        } catch (e) {
+            this.log.log(LogLevel.WARN, 'Not starting discord bot, login failed', e);
+        }
     }
 
     private onReady(): void {
         this.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
+        this.ready = true;
     }
 
     private onMessage(message: Message): void {
@@ -72,6 +79,7 @@ export class DiscordBot implements IStatefulService {
     }
 
     public async stop(): Promise<void> {
+        this.ready = false;
         if (this.client) {
             await this.client.destroy();
             this.client = undefined;
@@ -80,14 +88,15 @@ export class DiscordBot implements IStatefulService {
 
     public async relayRconMessage(message: string): Promise<void> {
 
-        if (!this.client) {
+        if (!this.client || !this.ready) {
+            this.log.log(LogLevel.WARN, `Not sending message because client did not start or is not yet ready`);
             return;
         }
 
-        const rconChannels = this.manager.config?.discordChannels.filter((x) => x.mode === 'rcon');
+        const rconChannels = this.manager.config.discordChannels?.filter((x) => x.mode === 'rcon');
         const matching = this.client?.guilds?.first()?.channels?.filter((channel) => {
             return rconChannels?.some((x) => x.channel === channel.name?.toLowerCase()) ?? false;
-        }).array() ?? [];
+        }).array() || [];
         for (const x of matching) {
             try {
                 await (x as TextChannel).send(message);

@@ -1,13 +1,27 @@
+import 'reflect-metadata';
+
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
 import * as path from 'path';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
+import * as sinon from 'sinon';
 import { ServerState } from '../../src/types/monitor';
 import { BattleyeConf, RCON } from '../../src/services/rcon';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { Monitor, ServerStateListener } from '../../src/services/monitor';
+import { DiscordBot } from '../../src/services/discord';
+import { FSAPI, InjectionTokens } from '../../src/util/apis';
+import { Connection, Socket } from '@senfo/battleye';
 
 describe('Test class RCON', () => {
+
+    let injector: DependencyContainer;
+    
+    let manager: StubInstance<Manager>;
+    let monitor: StubInstance<Monitor>;
+    let discord: StubInstance<DiscordBot>;
+    let fs: FSAPI;
+    let socket: StubInstance<Socket>;
 
     before(() => {
         disableConsole();
@@ -18,8 +32,19 @@ describe('Test class RCON', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
+        injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
+        
+        socket = new (stubClass(Socket)) as any;
+        injector.register(InjectionTokens.rconSocket, { useValue: () => socket });
+
+        manager = injector.resolve(Manager) as any;
+        monitor = injector.resolve(Monitor) as any;
+        discord = injector.resolve(DiscordBot) as any;
+        fs = memfs({}, '/', injector);
     });
 
     it('Battleye conf', () => {
@@ -30,18 +55,12 @@ describe('Test class RCON', () => {
 
     it('RCON', async () => {
     
-        let startCallBack;
-        const manager = {
-            monitor: {
-                registerStateListener: (t, c) => {
-                    startCallBack = c;
-                },
-                removeStateListener: (t) => {},
-            },
-            config: {}
-        } as any;
-
-        const rcon = new RCON(manager);
+        let startCallBack: ServerStateListener;
+        monitor.registerStateListener.callsFake((_, c) => {
+            startCallBack = c;
+        });
+        
+        const rcon = injector.resolve(RCON);
 
         let commandCalled = false;
 
@@ -72,36 +91,32 @@ describe('Test class RCON', () => {
             kill: (e) => {
                 killCalled = true;
             },
-        };
+        } as any as Connection;
 
         let rconDest;
         let rconOpts;
-        const sock = {
-            on: (t, c) => {
-                if (t === 'listening') c(sock);
+        
+        socket.on.callsFake(
+            (t: any, c: Function): Socket => {
+                if (t === 'listening') c({
+                    address: () => 'test',
+                });
                 else c(null);
+                return socket;
             },
-            address: () => 'test',
-
-            connection: (dest, opts) => {
-                rconDest = dest;
-                rconOpts = opts;
-                return conn;
-            },
-
-            removeAllListeners: () => {},
-
-            socket: {
-                close: (c) => c(),
-            }
-        } as any;
-        rcon['createSocket'] = () => sock;
+        );
+        socket.connection.callsFake((dest: any, opts: any) => {
+            rconDest = dest;
+            rconOpts = opts;
+            return conn;
+        });
 
         await rcon.start();
 
-        expect(startCallBack).to.be.not.undefined;
+        expect(startCallBack!).to.be.not.undefined;
 
-        startCallBack(ServerState.STARTED);
+        expect(rcon.isConnected()).to.be.false;
+        startCallBack!(ServerState.STARTED);
 
         expect(msgCb).to.be.not.undefined;
         expect(cmdCb).to.be.not.undefined;
@@ -117,8 +132,10 @@ describe('Test class RCON', () => {
         await errCb(new Error('test'));
 
         expect(commandCalled).to.be.false;
+        
         await conCb();
-        await new Promise((r) => setTimeout(r, 100));
+        expect(rcon.isConnected()).to.be.true;
+        
         expect(commandCalled).to.be.not.undefined;
 
         await rcon.stop();
@@ -128,13 +145,31 @@ describe('Test class RCON', () => {
     it('RCON-commands', async () => {
     
         let sentCommand;
-        const rcon = new RCON(null!);
-        rcon['connected'] = true;
-        rcon['connection'] = {
+        const connection = {
             command: (cmd: string) => {
                 sentCommand = cmd;
-            }
-        } as any;
+                return {
+                    data: cmd,
+                }
+            },
+            on: sinon.stub()
+                .callsFake((t, c) => {
+                    if (t == 'connected') {
+                        c();
+                    }
+                }),
+        } as any as Connection;
+        socket.connection.callsFake(() => {
+            return connection;
+        });
+
+        const rcon = injector.resolve(RCON);
+        
+        await rcon.start(true);
+        expect(rcon.isConnected()).to.be.true;
+
+        await rcon.shutdown();
+        expect(sentCommand).to.equal('#shutdown');
 
         await rcon.unlock();
         expect(sentCommand).to.equal('#unlock');
@@ -164,9 +199,7 @@ describe('Test class RCON', () => {
 
     it('RCON-players', async () => {
     
-        const rcon = new RCON(null!);
-        rcon['connected'] = true;
-        rcon['connection'] = {
+        const connection = {
             command: (cmd: string) => {
                 if (cmd === 'players') {
                     return {
@@ -176,8 +209,16 @@ describe('Test class RCON', () => {
                         `
                     };
                 }
-            }
-        } as any;
+            },
+            on: sinon.stub()
+                .withArgs('connection')
+                .callsArg(1),
+        } as any as Connection;
+        socket.connection.returns(connection);
+
+        const rcon = injector.resolve(RCON);
+        
+        await rcon.start(true);
 
         const res = await rcon.getPlayers();
         expect(res.length).to.equal(2);
@@ -186,11 +227,8 @@ describe('Test class RCON', () => {
 
     it('RCON-kickAll', async () => {
     
-        const rcon = new RCON(null!);
-        rcon['connected'] = true;
-        
         let kicks: string[] = [];
-        rcon['connection'] = {
+        const connection = {
             command: (cmd: string) => {
                 if (cmd === 'players') {
                     return {
@@ -202,51 +240,27 @@ describe('Test class RCON', () => {
                 } else if (cmd.includes('kick')) {
                     kicks.push(cmd);
                 }
-            }
-        } as any;
+            },
+            on: sinon.stub()
+                .withArgs('connection')
+                .callsArg(1),
+        } as any as Connection;
+        socket.connection.returns(connection);
 
-        const res = await rcon.kickAll();
+        const rcon = injector.resolve(RCON);
+        
+        await rcon.start(true);
+
+        await rcon.kickAll();
         expect(kicks.length).to.equal(2);
         expect(kicks.some((x) => x === 'kick 1')).to.be.true;
         expect(kicks.some((x) => x === 'kick 2')).to.be.true;
 
     });
 
-    it('RCON-conf', async () => {
-    
-        ImportMock.mockFunction(fse, 'ensureDirSync');
-        const readDirMock = ImportMock.mockFunction(fs, 'readdirSync', ['beserver.txt', 'beserver.cfg']);
-        const rmMock = ImportMock.mockFunction(fs, 'unlinkSync');
-        const writeMock = ImportMock.mockFunction(fs, 'writeFileSync');
-
-        const rcon = new RCON({
-            config: {
-                profilesPath: 'profs'
-            },
-            getServerPath: () => 'test',
-        } as any);
-        
-        await rcon.createBattleyeConf();
-        
-        expect(readDirMock.callCount).to.equal(1);
-        expect(rmMock.callCount).to.equal(1);
-        expect(writeMock.callCount).to.equal(1);
-        expect(writeMock.firstCall.args[0]).to.equal(
-            path.join(
-                'test',
-                'profs',
-                'battleye',
-                'BEServer_x64.cfg'
-            )
-        );
-
-    });
-
     it('RCON-bans', async () => {
     
-        const rcon = new RCON(null!);
-        rcon['connected'] = true;
-        rcon['connection'] = {
+        const connection = {
             command: (cmd: string) => {
                 if (cmd === 'bans') {
                     return {
@@ -256,11 +270,79 @@ describe('Test class RCON', () => {
                         `
                     };
                 }
-            }
-        } as any;
+            },
+            on: sinon.stub()
+                .withArgs('connection')
+                .callsArg(1),
+        } as any as Connection;
+        socket.connection.returns(connection);
+
+        const rcon = injector.resolve(RCON);
+        
+        await rcon.start(true);
 
         const res = await rcon.getBans();
         expect(res.length).to.equal(2);
+
+    });
+
+    it('RCON-conf', async () => {
+    
+        fs = memfs(
+            {
+                'test': {
+                    'profs': {
+                        'battleye': {
+                            'beserver.txt': '',
+                            'beserver.cfg': '',
+                        },
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+        manager.getServerPath.returns('/test')
+        manager.config = {
+            profilesPath: 'profs'
+        } as any;
+        
+        const rcon = injector.resolve(RCON);
+        
+        await rcon.createBattleyeConf();
+        
+        expect(
+            fs.existsSync(
+                path.resolve(
+                    '/test',
+                    'profs',
+                    'battleye',
+                    'BEServer_x64.cfg'
+                ),
+            ),
+        ).to.be.true;
+
+        expect(
+            fs.existsSync(
+                path.resolve(
+                    '/test',
+                    'profs',
+                    'battleye',
+                    'beserver.cfg'
+                ),
+            ),
+        ).to.be.false;
+
+        expect(
+            fs.existsSync(
+                path.resolve(
+                    '/test',
+                    'profs',
+                    'battleye',
+                    'beserver.txt'
+                ),
+            ),
+        ).to.be.true;
 
     });
 

@@ -5,6 +5,7 @@ export class Request {
     public body?: any;
     public query?: any;
     public user?: string;
+    public channel?: string;
 
 }
 

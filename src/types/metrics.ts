@@ -1,6 +1,8 @@
+/* istanbul ignore file */
+
 import { Request } from './interface';
 
-// eslint-disable-next-line no-shadow
+/* eslint-disable no-shadow */
 export enum MetricTypeEnum {
     SYSTEM = 'SYSTEM',
     PLAYERS = 'PLAYERS',
@@ -8,6 +10,7 @@ export enum MetricTypeEnum {
     INGAME_PLAYERS = 'INGAME_PLAYERS',
     INGAME_VEHICLES = 'INGAME_VEHICLES',
 }
+/* eslint-enable no-shadow */
 
 export type MetricType = keyof typeof MetricTypeEnum;
 
