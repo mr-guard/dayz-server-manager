@@ -25,6 +25,8 @@ jobs:
       run: npm ci --ignore-scripts
     - name: Install ui deps
       run: npm run installUi
+    - name: Download prebuilts for tests
+      run: npm run downloadPrebuildLinux
 
     - name: Build
       run: npm run build
