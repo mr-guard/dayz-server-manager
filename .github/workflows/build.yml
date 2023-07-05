@@ -22,9 +22,12 @@ jobs:
       uses: arma-actions/mikero-tools@latest
     
     - name: Install deps
-      run: npm i --ignore-scripts
+      run: npm ci --ignore-scripts
     - name: Install ui deps
       run: npm run installUi
+
+    - name: Build
+      run: npm run build
 
     - name: Test
       run: npm test | tee test-output.log
@@ -53,9 +56,6 @@ jobs:
         message: ${{ env.COVERAGE }}
         color: green
         namedLogo: typescript
-
-    - name: Build
-      run: npm run build
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')

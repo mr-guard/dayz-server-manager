@@ -2,6 +2,9 @@
   "name": "dayz-server-manager",
   "description": "A server installer and watch-dog for dayz with built-in Discord and RCon bot",
   "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/mr-guard/dayz-server-manager"
+  },
   "main": "dist/index.js",
   "scripts": {
     "postinstall": "npm run installUi",
@@ -13,9 +16,9 @@
     "installPtyLinux": "cd node_modules/node-pty-prebuilt-multiarch && npx prebuild-install -d -r node -t v14.0.0 --arch x64 --platform linux",
     "installProcessList": "cd node_modules/@senfo/process-list && npx prebuild-install -d -r node -t v14.0.0 --arch x64 --platform win32",
     "installProcessListLinux": "cd node_modules/@senfo/process-list && npx prebuild-install -d -r node -t v14.0.0 --arch x64 --platform linux",
-    "installUi": "cd ui && npm i",
+    "installUi": "cd ui && npm ci",
     "packWindows": "del-cli build/dayz-server-manager* && cp VERSION dist/VERSION && pkg --out-path build -t node14-win-x64 .",
-    "packLinux": "npmdel-cli build/dayz-server-manager* && cp VERSION dist/VERSION && pkg --out-path build -t node14-linux-x64 .",
+    "packLinux": "del-cli build/dayz-server-manager* && cp VERSION dist/VERSION && pkg --out-path build -t node14-linux-x64 .",
     "buildUi": "del-cli dist/ui && cd ui && npm run build",
     "mkdirExec": "node scripts/mkdir.js exec",
     "buildUiIfAbsent": "node scripts/exists.js dist/ui || npm run buildUi",
