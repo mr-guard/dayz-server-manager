@@ -32,7 +32,7 @@ jobs:
       run: npm run build
 
     - name: Test
-      run: npm test | tee test-output.log
+      run: npm test | tee test-output.log ; test ${PIPESTATUS[0]} -eq 0
     
     - name: Prepare coverage badge
       if: contains('refs/heads/master refs/heads/experimental', github.ref)
