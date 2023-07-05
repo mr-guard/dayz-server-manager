@@ -9,12 +9,7 @@ on:
       - '*'
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-    secrets: inherit
-
   build:
-    needs: [test]
 
     runs-on: ubuntu-latest
     steps:
@@ -30,7 +25,35 @@ jobs:
       run: npm i --ignore-scripts
     - name: Install ui deps
       run: npm run installUi
+
+    - name: Test
+      run: npm test | tee test-output.log
     
+    - name: Prepare coverage badge
+      if: contains('refs/heads/master refs/heads/experimental', github.ref)
+      run: |
+        SUMMARY="$(cat test-output.log | tail -3 | head -1)"
+        TOKENS=($SUMMARY)
+        echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
+        REF=${{ github.ref }}
+        echo "github.ref: $REF"
+        IFS='/' read -ra PATHS <<< "$REF"
+        BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+        echo $BRANCH_NAME
+        echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+    
+    - name: Create the Badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      if: contains('refs/heads/master refs/heads/experimental', github.ref)
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 442a5cdea03dd79a87b34339a7a16a2c
+        filename: dayz-server-manager__${{ env.BRANCH }}.json
+        label: Test Coverage
+        message: ${{ env.COVERAGE }}
+        color: green
+        namedLogo: typescript
+
     - name: Build
       run: npm run build
 

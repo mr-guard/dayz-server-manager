@@ -2,11 +2,12 @@
 
 [![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/mr-guard/dayz-server-manager/)
 [![license](https://img.shields.io/github/license/mr-guard/dayz-server-manager.svg)](https://github.com/mr-guard/dayz-server-manager/blob/master/LICENSE)
-![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)  
-
-[![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)
+[![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)](https://github.com/mr-guard/dayz-server-manager)
+[![CodeCoverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/mr-guard/442a5cdea03dd79a87b34339a7a16a2c/raw/dayz-server-manager__master.json)](https://github.com/mr-guard/dayz-server-manager)
 [![GitHub commits](https://img.shields.io/github/commits-since/mr-guard/dayz-server-manager/latest.svg)](https://GitHub.com/mr-guard/dayz-server-manager/commit/)
+[![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/latest)
 [![Github all releases](https://img.shields.io/github/downloads/mr-guard/dayz-server-manager/total.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)  
+[![Discord](https://img.shields.io/discord/970272136688205874)](https://discord.gg/pKwJcXutBa)
 
 
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
