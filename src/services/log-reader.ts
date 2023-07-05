@@ -7,7 +7,7 @@ import * as tail from 'tail';
 import { ServerState } from '../types/monitor';
 import { FileDescriptor, LogMessage, LogType, LogTypeEnum } from '../types/log-reader';
 import { reverseIndexSearch } from '../util/reverse-index-search';
-import { inject, injectable, singleton } from 'tsyringe';
+import { delay, inject, injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { Monitor } from './monitor';
 import { FSAPI, InjectionTokens } from '../util/apis';
@@ -46,7 +46,7 @@ export class LogReader extends IStatefulService {
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        private monitor: Monitor,
+        @inject(delay(() => Monitor)) private monitor: Monitor,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('LogReader'));

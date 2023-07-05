@@ -144,6 +144,11 @@ describe('Test class ManagerController', () => {
         
         expect(testStateful.start.called).to.be.true;
         expect(manager.initDone).to.be.true;
+
+        expect(steamCmd.checkSteamCmd.called).to.be.true;
+        expect(steamCmd.checkServer.called).to.be.true;
+        expect(steamCmd.checkMods.called).to.be.true;
+        expect(steamCmd.installMods.called).to.be.true;
         
         await controller.stop();
 

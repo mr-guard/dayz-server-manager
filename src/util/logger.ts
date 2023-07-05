@@ -25,6 +25,8 @@ export class Logger {
     public static defaultLogLevel: LogLevel = LogLevel.INFO;
     public static defaultLogFile: string = 'server-manager.log';
 
+    private static lastWrite: Promise<any> = Promise.resolve();
+
     public static wrapWithFileLogger(fnc: any): any {
         /* istanbul ignore next */
         return (msg: string, data: any[]) => {
@@ -34,16 +36,18 @@ export class Logger {
                 fnc(msg);
             }
 
-            // TODO sync up and keep file open
-            void fs.promises.appendFile(
-                Logger.defaultLogFile,
-                `${msg} - ${JSON.stringify(data)}`,
-            ).then(
-                /* istanbul ignore next */
-                () => { /* ignore */ },
-                /* istanbul ignore next */
-                () => { /* ignore */ },
-            );
+            // sync to the last write
+            this.lastWrite = this.lastWrite
+                .then(/* istanbul ignore next */ () => {
+                    return fs.promises.appendFile(
+                        Logger.defaultLogFile,
+                        `${msg} - ${JSON.stringify(data)}\n`,
+                    ).then(
+                        () => { /* ignore */ },
+                        /* istanbul ignore next */
+                        () => { /* ignore */ },
+                    );
+                });
         };
 
     }

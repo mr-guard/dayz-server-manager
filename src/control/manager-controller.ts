@@ -56,6 +56,11 @@ export class ManagerController {
     }
 
     private getStatefulServices(): IStatefulService[] {
+        this.log.log(
+            LogLevel.DEBUG,
+            'Currently Registered Services',
+            ([...((container as any)._registry).entries()].map((x) => x[0]?.name || x[0])),
+        );
         const statefulServices = [];
         for (const [token] of ((container as any)._registry).entries()) {
             const protos = [];
