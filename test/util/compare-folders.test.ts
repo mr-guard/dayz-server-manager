@@ -7,14 +7,18 @@ describe('Test compare folder', () => {
 
     it('compare-folders', async () => {
 
-        const f1 = 'Test123/Test/meme.png';
-        const f2 = 'Test123\\Test/meme.png';
-        const f3 = 'Test123\\Test/meme2.png';
+        const f1 = '/Test123/Test/meme.png';
+        const f2 = '/Test123\\Test/meme.png';
+        const f3 = '/Test123\\Test/meme2.png';
         
         const fs = memfs({
-            [f1]: 'test',
-            [f3]: 'test123',
-        }, process.cwd());
+            'Test123': {
+                'Test': {
+                    'meme.png': 'test',
+                    'meme2.png': 'test123',
+                },
+            },
+        }, '/');
 
         const nonExists = 'i-dont-exist';
 
