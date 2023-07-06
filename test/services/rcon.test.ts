@@ -313,7 +313,7 @@ describe('Test class RCON', () => {
         
         expect(
             fs.existsSync(
-                path.resolve(
+                path.join(
                     '/test',
                     'profs',
                     'battleye',
@@ -324,7 +324,7 @@ describe('Test class RCON', () => {
 
         expect(
             fs.existsSync(
-                path.resolve(
+                path.join(
                     '/test',
                     'profs',
                     'battleye',
@@ -335,7 +335,7 @@ describe('Test class RCON', () => {
 
         expect(
             fs.existsSync(
-                path.resolve(
+                path.join(
                     '/test',
                     'profs',
                     'battleye',

@@ -49,7 +49,7 @@ describe('Test class Requirements', () => {
 
     it('Requirements-checkFirewall-Rulesabsent', async () => {
         netSh.getRulesByPath
-            .withArgs(path.resolve('testserver/server.exe'))
+            .withArgs('testserver/server.exe')
             .returns(Promise.resolve([]));
 
         const requirements = injector.resolve(Requirements);
@@ -60,7 +60,7 @@ describe('Test class Requirements', () => {
 
     it('Requirements-checkFirewall-RulesPresent', async () => {
         netSh.getRulesByPath
-            .withArgs(path.resolve('testserver/server.exe'))
+            .withArgs('testserver/server.exe')
             .returns(Promise.resolve([{
                 test: 'test'
             }]));

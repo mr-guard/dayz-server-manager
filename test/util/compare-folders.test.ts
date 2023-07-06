@@ -14,7 +14,7 @@ describe('Test compare folder', () => {
         const fs = memfs({
             [f1]: 'test',
             [f3]: 'test123',
-        });
+        }, process.cwd());
 
         const nonExists = 'i-dont-exist';
 

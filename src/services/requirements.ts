@@ -39,7 +39,7 @@ export class Requirements extends IService {
         this.log.log(LogLevel.DEBUG, 'Checking Firewall');
 
         if (detectOS() === 'windows') {
-            const exePath = path.resolve(this.manager.getServerExePath());
+            const exePath = this.manager.getServerExePath();
             const firewallRules = await this.netSh.getRulesByPath(exePath);
             if (firewallRules?.length) {
                 this.log.log(LogLevel.DEBUG, 'Firewall is OK!');
@@ -68,11 +68,9 @@ export class Requirements extends IService {
         this.log.log(LogLevel.DEBUG, 'Checking DirectX');
         const dx11Exists = this.POSSIBLE_PATHS.map((searchPath) => {
             return this.fs.existsSync(
-                path.resolve(
-                    path.join(
-                        searchPath,
-                        this.DX11_MARKER_DLL,
-                    ),
+                path.join(
+                    searchPath,
+                    this.DX11_MARKER_DLL,
                 ),
             );
         }).some((x) => x);
@@ -93,11 +91,9 @@ export class Requirements extends IService {
     public async checkVcRedist(): Promise<boolean> {
         const vcRedistExists = this.POSSIBLE_PATHS.map((searchPath) => {
             return this.fs.existsSync(
-                path.resolve(
-                    path.join(
-                        searchPath,
-                        this.VCREDIST_MARKER_DLL,
-                    ),
+                path.join(
+                    searchPath,
+                    this.VCREDIST_MARKER_DLL,
                 ),
             );
         }).some((x) => x);

@@ -77,11 +77,9 @@ export class LogReader extends IStatefulService {
     private getProfilesDir(): string {
         const profiles = this.manager.config.profilesPath;
         if (!path.isAbsolute(profiles)) {
-            return path.resolve(
-                path.join(
-                    this.manager.getServerPath(),
-                    profiles,
-                ),
+            return path.join(
+                this.manager.getServerPath(),
+                profiles,
             );
         }
         return profiles;

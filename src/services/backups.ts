@@ -26,7 +26,7 @@ export class Backups extends IService {
 
         await this.fs.promises.mkdir(backups, { recursive: true });
 
-        const mpmissions = path.resolve(path.join(this.manager.getServerPath(), 'mpmissions'));
+        const mpmissions = path.join(this.manager.getServerPath(), 'mpmissions');
         if (!this.fs.existsSync(mpmissions)) {
             this.log.log(LogLevel.WARN, 'Skipping backup because mpmissions folder does not exist');
             return;
@@ -44,10 +44,10 @@ export class Backups extends IService {
     }
 
     private getBackupDir(): string {
-        if (path.isAbsolute(this.manager.config.backupPath)) {
+        if (this.paths.isAbsolute(this.manager.config.backupPath)) {
             return this.manager.config.backupPath;
         }
-        return path.resolve(path.join(this.paths.cwd(), this.manager.config.backupPath));
+        return path.join(this.paths.cwd(), this.manager.config.backupPath);
     }
 
     public async getBackups(): Promise<FileDescriptor[]> {

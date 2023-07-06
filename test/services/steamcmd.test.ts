@@ -47,11 +47,11 @@ describe('Test class SteamCMD', () => {
 
     it('SteamCmd-checkSteamCmd-cleanupDownloadFail', async () => {
 
-        const expectedSteamCmdPath = path.resolve(
+        const expectedSteamCmdPath = path.join(
             '/testCwd',
             'testSteamCmd'
         );
-        const expectedZipPath = path.resolve(
+        const expectedZipPath = path.join(
             expectedSteamCmdPath,
             'steamcmd.zip',
         );
@@ -87,11 +87,11 @@ describe('Test class SteamCMD', () => {
 
     it('SteamCmd-checkSteamCmd-cleanupExtractFail', async () => {
 
-        const expectedSteamCmdPath = path.resolve(
+        const expectedSteamCmdPath = path.join(
             '/testCwd',
             'testSteamCmd'
         );
-        const expectedZipPath = path.resolve(
+        const expectedZipPath = path.join(
             expectedSteamCmdPath,
             'steamcmd.zip',
         );
@@ -127,15 +127,15 @@ describe('Test class SteamCMD', () => {
 
     it('SteamCmd-checkSteamCmd', async () => {
 
-        const expectedSteamCmdPath = path.resolve(
+        const expectedSteamCmdPath = path.join(
             '/testCwd',
             'testSteamCmd'
         );
-        const expectedSteamCmdExePath = path.resolve(
+        const expectedSteamCmdExePath = path.join(
             expectedSteamCmdPath,
             'steamcmd.exe',
         );
-        const expectedZipPath = path.resolve(
+        const expectedZipPath = path.join(
             expectedSteamCmdPath,
             'steamcmd.zip',
         );

@@ -51,7 +51,21 @@ export class Paths extends IService {
 
     /* istanbul ignore next */
     public cwd(): string {
-        return this.workingDir;
+        return this.resolve(this.workingDir);
+    }
+
+    /* istanbul ignore next */
+    public resolve(...parts: string[]): string {
+        if (this.isAbsolute(parts[0])) {
+            return path.join(...parts);
+        }
+        return path.resolve(...parts);
+    }
+
+    /* istanbul ignore next */
+    public isAbsolute(fspath: string): boolean {
+        // absolute windows paths are not detected on linux
+        return path.isAbsolute(fspath) || /^[a-zA-Z]:[/\\].*/.test(fspath);
     }
 
     public samePath(p1: string, p2: string): boolean {

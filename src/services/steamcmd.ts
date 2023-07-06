@@ -37,7 +37,7 @@ export class SteamCMD extends IService {
 
     private getCmdPath(): string {
         let cmdFolder = this.manager.config?.steamCmdPath ?? '';
-        if (!path.isAbsolute(cmdFolder)) {
+        if (!this.paths.isAbsolute(cmdFolder)) {
             cmdFolder = path.join(this.paths.cwd(), cmdFolder);
         }
         return path.join(
@@ -48,7 +48,7 @@ export class SteamCMD extends IService {
 
     private async downloadSteamCmd(): Promise<boolean> {
 
-        const cmdPath = path.resolve(path.dirname(this.getCmdPath()));
+        const cmdPath = path.dirname(this.getCmdPath());
 
         const isWindows = detectOS() === 'windows';
         const dlPath = isWindows
