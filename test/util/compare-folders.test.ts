@@ -8,7 +8,7 @@ describe('Test compare folder', () => {
     it('compare-folders', async () => {
 
         const f1 = '/Test123/Test/meme.png';
-        const f2 = '/Test123\\Test/meme.png';
+        const f2 = '/Test123/Test/meme.png';
         const f3 = '/Test123\\Test/meme2.png';
         
         const fs = memfs({
