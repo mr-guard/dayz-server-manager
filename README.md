@@ -31,6 +31,7 @@ The goal was to break down the initial effort to a minimum while providing confi
     7. [Change Server Name / Password / Admin Password](#guide-change-server-name-password)
     8. [Change the server port](#guide-change-server-port)
     9. [Add scheduled events](#guide-add-events)
+    10. [Add Hooks](#guide-add-hooks)
 6. [Steam CMD](#steam-cmd)
 7. [TODOs](#todo)
 8. [Default folder layout](#folder-layout)
@@ -350,6 +351,30 @@ Example:<br>
             "Hello world"
         ]
     }
+],
+...
+```
+
+<br><a name="guide-add-hooks"></a>
+### Adding hooks <hr>  
+
+Hooks can be used to trigger external scripts or programs on certain events.  
+This can be useful to so manual configuration or other custom stuff.
+
+Possible hook types are:
+
+* beforeStart - triggered right before server start
+* missionChanged - triggered after the mission files were changed (i.e. types editor save)
+
+In the server manager config add a hook object to the hooks array like so:  
+
+```json
+...
+"hooks": [
+  {
+    "type": "beforeStart",
+    "program": "path/to/your/script.bat"
+  }
 ],
 ...
 ```
