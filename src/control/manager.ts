@@ -49,7 +49,7 @@ export class Manager {
             return path.join(this.paths.cwd(), 'DayZServer');
         }
 
-        if (!path.isAbsolute(serverFolder)) {
+        if (!this.paths.isAbsolute(serverFolder)) {
             return path.join(this.paths.cwd(), serverFolder);
         }
         return serverFolder;

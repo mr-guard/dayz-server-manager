@@ -76,6 +76,7 @@ describe('Test class Manager', () => {
         manager.config.serverPath = 'TestDayZServer';
         const resultRel = manager.getServerPath();
 
+        paths.isAbsolute.returns(true);
         manager.config.serverPath = 'C:/TestDayZServer';
         const resultAbs = manager.getServerPath();
 
