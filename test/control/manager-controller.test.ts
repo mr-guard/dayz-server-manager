@@ -9,7 +9,7 @@ import { Manager } from '../../src/control/manager';
 import { expect } from '../expect';
 import { DependencyContainer, Lifecycle, container, injectable, singleton } from 'tsyringe';
 import { ConfigWatcher } from '../../src/services/config-watcher';
-import { ServerDetector } from '../../src/services/monitor';
+import { ServerDetector } from '../../src/services/server-detector';
 import { SteamCMD } from '../../src/services/steamcmd';
 import { IngameReport } from '../../src/services/ingame-report';
 import { Requirements } from '../../src/services/requirements';

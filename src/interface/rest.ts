@@ -1,7 +1,6 @@
 import * as express from 'express';
 import * as basicAuth from 'express-basic-auth';
 import * as compression from 'compression';
-// import * as cors from 'cors';
 import * as path from 'path';
 import { loggerMiddleware } from '../middleware/logger';
 
@@ -11,8 +10,9 @@ import { Request } from '../types/interface';
 import { LogLevel } from '../util/logger';
 import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
-import { InterfaceDispatcher } from './interface';
 import { injectable, singleton } from 'tsyringe';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -32,7 +32,7 @@ export class REST extends IService {
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        private dispatcher: InterfaceDispatcher,
+        private eventBus: EventBus,
     ) {
         super(loggerFactory.createLogger('REST'));
     }
@@ -42,7 +42,7 @@ export class REST extends IService {
         return express();
     }
 
-    public start(): Promise<void> {
+    public async start(): Promise<void> {
         this.express = this.createExpress();
 
         this.port = this.manager.getWebPort();
@@ -69,7 +69,7 @@ export class REST extends IService {
             '/api',
             this.router,
         );
-        this.setupRouter();
+        await this.setupRouter();
 
         return new Promise(
             (r) => {
@@ -129,7 +129,7 @@ export class REST extends IService {
         res.sendFile(path.join(this.UI_FILES, 'index.html'));
     }
 
-    private setupRouter(): void {
+    private async setupRouter(): Promise<void> {
 
         const users: { [k: string]: string } = {};
         for (const user of (this.manager.config?.admins ?? [])) {
@@ -137,7 +137,8 @@ export class REST extends IService {
         }
         this.router.use(basicAuth({ users, challenge: false }));
 
-        for (const [resource, command] of (this.dispatcher.getCommands() || [])) {
+        const commandMap = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS)) || [];
+        for (const [resource, command] of commandMap) {
 
             if (command.disableRest) continue;
 
@@ -178,7 +179,7 @@ export class REST extends IService {
         internalRequest.resource = resource;
         internalRequest.user = username;
 
-        const internalResponse = await this.dispatcher.execute(internalRequest);
+        const internalResponse = await this.eventBus.request(InternalEventTypes.INTERFACE_REQUEST, internalRequest);
 
         res.status(internalResponse.status).send(internalResponse.body);
     }

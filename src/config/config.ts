@@ -729,6 +729,15 @@ export class Config {
     public steamWorkshopPath: string = 'Workshop';
 
     /**
+     * Path to where to keep workshop meta data (relative or absolute)
+     * Default is current directory (PWD / CWD) + SteamMeta
+     *
+     * Note: this is the folder that containes steam meta data
+     * about your server and mods (i.e. last updates, mod sizes etc.)
+     */
+    public steamMetaPath: string = 'SteamMeta';
+
+    /**
      * List of Mod IDs (workshop id, not modname!) the server should use
      */
     public steamWsMods: (string | WorkshopMod)[] = [];
@@ -762,6 +771,22 @@ export class Config {
      * Whether to deep compare mods instead of just checking for update timestamps
      */
     public copyModDeepCompare: boolean = false;
+
+    /**
+     * How many mods to update at the same time via SteamCMD.
+     * Setting this to a too high value will increase the chance to get timeouts.
+     * Setting this to a too low value will increase the chance to get rate limited.
+     */
+    public updateModsMaxBatchSize: number = 5;
+
+    /**
+     * Limits the steam cmd mod updates by filesize.
+     * SteamCMD often gets timeouts if the total file size of the mods is too large.
+     * Setting this to a too high value will increase the chance to get timeouts.
+     * Setting this to a too low value will increase the chance to get rate limited.
+     * Default is roughly 1GB. Mods larger than that will still be downloaded.
+     */
+    public updateModsMaxBatchFileSize: number = 1_000_000_000;
 
     // /////////////////////////// Events ///////////////////////////////////////
 
@@ -825,6 +850,26 @@ export class Config {
     // /////////////////////////// Hooks ///////////////////////////////////////
     /**
      * Hooks to define custom behaviour when certain events happen
+     *
+     * Example:
+     * <pre>
+     * ...
+     * {
+     *   "type": "beforeStart",
+     *   "program": "path/to/your/script.bat"
+     * }
+     * ...
+     * </pre>
+     * or
+     * <pre>
+     * ...
+     * {
+     *   "type": "beforeStart",
+     *   "program": "cmd.exe",
+     *   "params": ["/c", "path/to/your/script.bat"]
+     * }
+     * ...
+     * </pre>
      */
     public hooks: Hook[] = [];
 

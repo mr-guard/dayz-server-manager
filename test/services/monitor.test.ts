@@ -1,7 +1,10 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
-import { Monitor, ServerDetector, ServerStarter, SystemReporter } from '../../src/services/monitor';
+import { StubInstance, disableConsole, enableConsole, memfs, sleep, stubClass } from '../util';
+import { Monitor } from '../../src/services/monitor';
+import { SystemReporter } from '../../src/services/system-reporter';
+import { ServerDetector } from '../../src/services/server-detector';
+import { ServerStarter } from '../../src/services/server-starter';
 import * as sinon from 'sinon';
 import { merge } from '../../src/util/merge';
 import { Processes, SystemInfo } from '../../src/services/processes';
@@ -15,6 +18,8 @@ import { RCON } from '../../src/services/rcon';
 import { SteamCMD } from '../../src/services/steamcmd';
 import { IngameReport } from '../../src/services/ingame-report';
 import { Hooks } from '../../src/services/hooks';
+import { EventBus } from '../../src/control/event-bus';
+import { InternalEventTypes } from '../../src/types/events';
 
 describe('Test class ServerDetector', () => {
 
@@ -186,9 +191,9 @@ describe('Test class ServerStarter', () => {
         
         steamCmd.checkMods.callsFake(async () => {
             // mods should be ok after update
-            return steamCmd.updateMods.called;
+            return steamCmd.updateAllMods.called;
         });
-        steamCmd.updateMods.callsFake(async () => {
+        steamCmd.updateAllMods.callsFake(async () => {
             // should check before updating
             return steamCmd.checkMods.called;
         });
@@ -235,7 +240,7 @@ describe('Test class ServerStarter', () => {
         expect(steamCmd.checkServer.called).to.be.true;
         expect(steamCmd.updateServer.called).to.be.true;
         expect(steamCmd.checkMods.called).to.be.true;
-        expect(steamCmd.updateMods.called).to.be.true;
+        expect(steamCmd.updateAllMods.called).to.be.true;
         expect(spawnMock.callCount).to.equal(1);
         
         for (const argName of [
@@ -272,7 +277,7 @@ describe('Test class Monitor', () => {
 
     let manager: StubInstance<Manager>;
     let processes: StubInstance<Processes>;
-    let discord: StubInstance<DiscordBot>;
+    let eventBus: EventBus;
     let serverStarter: StubInstance<ServerStarter>;
     let serverDetector: StubInstance<ServerDetector>;
     let fs: FSAPI;
@@ -298,12 +303,13 @@ describe('Test class Monitor', () => {
         injector.register(Processes, stubClass(Processes), { lifecycle: Lifecycle.Singleton });
         injector.register(ServerStarter, stubClass(ServerStarter), { lifecycle: Lifecycle.Singleton });
         injector.register(ServerDetector, stubClass(ServerDetector), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
         
         fs = memfs({}, '/', injector);
 
         manager = injector.resolve(Manager) as any;
         processes = injector.resolve(Processes) as any;
-        discord = injector.resolve(DiscordBot) as any;
+        eventBus = injector.resolve(EventBus) as any;
         serverStarter = injector.resolve(ServerStarter) as any;
         serverDetector = injector.resolve(ServerDetector) as any;
     });
@@ -382,10 +388,13 @@ describe('Test class Monitor', () => {
         
     });
 
-    it('Monitor-stateChange', () => {
+    it('Monitor-stateChange', async () => {
         
         let sentMsg: string;
-        discord.relayRconMessage.callsFake(async (msg) => {sentMsg = msg});
+        eventBus.on(
+            InternalEventTypes.DISCORD_MESSAGE,
+            async (message) => {sentMsg = message},
+        );
 
         const monitor = injector.resolve(Monitor);
         
@@ -394,10 +403,16 @@ describe('Test class Monitor', () => {
         
         // register a listener
         let listenerCalled = false;
-        monitor.registerStateListener('test', (s) => listenerCalled = true);
+        const stateListener = eventBus.on(
+            InternalEventTypes.MONITOR_STATE_CHANGE,
+            async (s) => listenerCalled = true,
+        );
 
         // trigger change
         monitor['internalServerState'] = ServerState.STOPPED;
+
+        // await async listeners
+        await sleep(10);
 
         expect(sentMsg!).to.be.not.undefined;
         expect(monitor.serverState).to.equal(ServerState.STOPPED);
@@ -405,8 +420,12 @@ describe('Test class Monitor', () => {
 
         // test correct removal
         listenerCalled = false;
-        monitor.removeStateListener('test');
+        stateListener.off();
+        
         monitor['internalServerState'] = ServerState.STARTED;
+
+        // await async listeners
+        await sleep(10);
 
         expect(monitor.serverState).to.equal(ServerState.STARTED);
         expect(listenerCalled).to.be.false;
@@ -424,6 +443,9 @@ describe('Test class Monitor', () => {
 
     it('Monitor-stuckstate', async () => {
 
+        let emitted = 0;
+        eventBus.on(InternalEventTypes.DISCORD_MESSAGE, async () => emitted++);
+
         serverDetector.getDayZProcesses.resolves([{
             UserModeTime: `${100 * 10000}`,
             KernelModeTime: `${100 * 10000}`,
@@ -440,7 +462,7 @@ describe('Test class Monitor', () => {
         
         // discord msg is triggered async
         await new Promise((r) => setTimeout(r, 10));
-        expect(discord.relayRconMessage.callCount).to.equal(1);
+        expect(emitted).to.equal(1);
 
     });
 

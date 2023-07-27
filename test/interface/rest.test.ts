@@ -3,10 +3,12 @@ import { ImportMock } from 'ts-mock-imports'
 import { REST } from '../../src/interface/rest';
 import { Manager } from '../../src/control/manager';
 import { Application, Router } from 'express';
-import { Interface, InterfaceDispatcher } from '../../src/interface/interface';
+import { Interface} from '../../src/interface/interface';
 import { StubInstance, stubClass } from '../util';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import * as sinon from 'sinon';
+import { EventBus } from '../../src/control/event-bus';
+import { InternalEventTypes } from '../../src/types/events';
 
 
 describe('Test REST', () => {
@@ -14,7 +16,8 @@ describe('Test REST', () => {
     let injector: DependencyContainer;
 
     let manager: StubInstance<Manager>;
-    let dispatcher: StubInstance<InterfaceDispatcher>;
+    let eventBus: EventBus;
+    let interfaceServiceExecute: sinon.SinonStub;
     let interfaceService: StubInstance<Interface>;
 
     beforeEach(() => {
@@ -25,13 +28,13 @@ describe('Test REST', () => {
         injector = container.createChildContainer();
 
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
-        injector.register(InterfaceDispatcher, stubClass(InterfaceDispatcher), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
         injector.register(Interface, stubClass(Interface), { lifecycle: Lifecycle.Singleton });
         
         manager = injector.resolve(Manager) as any;
         manager.initDone = true;
 
-        dispatcher = injector.resolve(InterfaceDispatcher) as any;
+        eventBus = injector.resolve(EventBus) as any;
         interfaceService = injector.resolve(Interface) as any;
     });
 
@@ -47,7 +50,10 @@ describe('Test REST', () => {
         };
 
         Interface.prototype['setupCommandMap'].apply(interfaceService);
-        dispatcher.getCommands.returns(interfaceService.commandMap);
+        eventBus.on(
+            InternalEventTypes.INTERFACE_COMMANDS,
+            async () => interfaceService.commandMap,
+        );
 
         const rest = injector.resolve(REST);
 
@@ -127,7 +133,7 @@ describe('Test REST', () => {
         expect(registeredPaths.get('get')).to.include(`/login`);
         expect(registeredPaths.get('get')).to.include(`/dashboard`);
 
-        dispatcher.getCommands().forEach(
+        interfaceService.commandMap.forEach(
             (template, key) => {
                 if (!template.disableRest) {
                     expect(
@@ -141,10 +147,12 @@ describe('Test REST', () => {
 
     it('REST-handleCommand', async () => {
 
-        dispatcher.execute.resolves({
-            status: 200,
-            body: 'ok',
-        });
+        const requestStub = sinon.stub()
+            .resolves({
+                status: 200,
+                body: 'ok',
+            });
+        eventBus.on(InternalEventTypes.INTERFACE_REQUEST, requestStub);
 
         manager.initDone = false;
 
@@ -182,10 +190,10 @@ describe('Test REST', () => {
         expect(resResponseCode).to.equal(200);
         expect(resBody).to.be.not.undefined;
 
-        expect(dispatcher.execute.called).to.be.true;
-        expect(dispatcher.execute.firstCall.firstArg.body).to.equal(req.body);
-        expect(dispatcher.execute.firstCall.firstArg.resource).to.equal('testResource');
-        expect(dispatcher.execute.firstCall.firstArg.user).to.equal('admin');
+        expect(requestStub.called).to.be.true;
+        expect(requestStub.firstCall.lastArg.body).to.equal(req.body);
+        expect(requestStub.firstCall.lastArg.resource).to.equal('testResource');
+        expect(requestStub.firstCall.lastArg.user).to.equal('admin');
         
     });
 

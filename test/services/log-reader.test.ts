@@ -10,13 +10,15 @@ import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { Monitor } from '../../src/services/monitor';
 import { FSAPI } from '../../src/util/apis';
+import { EventBus } from '../../src/control/event-bus';
+import { InternalEventTypes } from '../../src/types/events';
 
 describe('Test class LogReader', () => {
 
     let injector: DependencyContainer;
 
     let manager: StubInstance<Manager>;
-    let monitor: StubInstance<Monitor>;
+    let eventBus: EventBus;
     let fs: FSAPI;
 
     before(() => {
@@ -35,11 +37,11 @@ describe('Test class LogReader', () => {
         injector = container.createChildContainer();
 
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
-        injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
         fs = memfs({}, '/', injector);
 
         manager = injector.resolve(Manager) as any;
-        monitor = injector.resolve(Monitor) as any;
+        eventBus = injector.resolve(EventBus);
     });
 
     it('LogReader-scan', async () => {
@@ -69,7 +71,7 @@ describe('Test class LogReader', () => {
             }
         });
 
-        monitor.registerStateListener.callsFake((t, c) => c(ServerState.STARTED));
+        
         manager.config = {
             profilesPath: 'profs',
         } as any;
@@ -80,6 +82,7 @@ describe('Test class LogReader', () => {
 
 
         await logReader.start();
+        eventBus.emit(InternalEventTypes.MONITOR_STATE_CHANGE, ServerState.STARTED, undefined as any);
         await new Promise((r) => setTimeout(r, 100));
         await logReader.stop();
 

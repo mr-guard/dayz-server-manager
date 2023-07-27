@@ -11,7 +11,7 @@ import { Monitor } from '../../src/services/monitor';
 import { Manager } from '../../src/control/manager';
 import { RCON } from '../../src/services/rcon';
 import { Backups } from '../../src/services/backups';
-import { DiscordBot } from '../../src/services/discord';
+import { EventBus } from '../../src/control/event-bus';
 
 describe('Test class Events', () => {
 
@@ -21,7 +21,6 @@ describe('Test class Events', () => {
     let monitor: StubInstance<Monitor>;
     let rcon: StubInstance<RCON>;
     let backup: StubInstance<Backups>;
-    let discord: StubInstance<DiscordBot>;
 
     before(() => {
         disableConsole();
@@ -42,13 +41,11 @@ describe('Test class Events', () => {
         injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
         injector.register(RCON, stubClass(RCON), { lifecycle: Lifecycle.Singleton });
         injector.register(Backups, stubClass(Backups), { lifecycle: Lifecycle.Singleton });
-        injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
 
         manager = injector.resolve(Manager) as any;
         monitor = injector.resolve(Monitor) as any;
         rcon = injector.resolve(RCON) as any;
         backup = injector.resolve(Backups) as any;
-        discord = injector.resolve(DiscordBot) as any;
     });
 
     it('Events', async () => {

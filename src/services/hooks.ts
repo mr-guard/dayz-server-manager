@@ -4,8 +4,9 @@ import { IService } from '../types/service';
 import { LogLevel } from '../util/logger';
 import { Processes } from '../services/processes';
 import { LoggerFactory } from './loggerfactory';
-import { DiscordBot } from './discord';
-import { delay, inject, injectable, singleton } from 'tsyringe';
+import { injectable, singleton } from 'tsyringe';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -15,7 +16,7 @@ export class Hooks extends IService {
         loggerFactory: LoggerFactory,
         private manager: Manager,
         private processes: Processes,
-        @inject(delay(() => DiscordBot)) private discord: DiscordBot,
+        private eventBus: EventBus,
     ) {
         super(loggerFactory.createLogger('Hooks'));
     }
@@ -42,7 +43,10 @@ export class Hooks extends IService {
                     const msg = `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`;
                     this.log.log(LogLevel.ERROR, msg, hookOut);
 
-                    void this.discord.relayRconMessage(msg);
+                    this.eventBus.emit(
+                        InternalEventTypes.DISCORD_MESSAGE,
+                        msg,
+                    );
                 }
             }
         }

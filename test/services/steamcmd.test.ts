@@ -1,15 +1,185 @@
 import 'reflect-metadata';
 
 import { expect } from '../expect';
-import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
+import { StubInstance, disableConsole, enableConsole, fakeChildProcess, fakeHttps, memfs, stubClass } from '../util';
 import * as path from 'path';
-import { SteamCMD } from '../../src/services/steamcmd';
+import * as requestModule from '../../src/util/request';
+import { DAYZ_APP_ID, DAYZ_SERVER_APP_ID, PublishedFileDetail, SteamCMD, SteamMetaData } from '../../src/services/steamcmd';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Paths } from '../../src/services/paths';
 import { Manager } from '../../src/control/manager';
 import { Processes } from '../../src/services/processes';
-import { FSAPI } from '../../src/util/apis';
+import { FSAPI, HTTPSAPI, InjectionTokens } from '../../src/util/apis';
 import { Downloader } from '../../src/services/download';
+import { Config } from '../../src/config/config';
+import { ImportMock } from 'ts-mock-imports';
+
+describe('Test class SteamMetaData', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let paths: StubInstance<Paths>;
+    let fs: FSAPI;
+    let https: StubInstance<HTTPSAPI>;
+
+    before(() => {
+        disableConsole();
+    });
+
+    after(() => {
+        ImportMock.restore();
+        enableConsole();
+    });
+
+    beforeEach(() => {
+        ImportMock.restore();
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        fakeChildProcess(injector);
+        injector.register(Paths, Paths, { lifecycle: Lifecycle.Singleton });
+        
+        fs = memfs({}, '/', injector);
+        https = fakeHttps(injector);
+
+        manager = injector.resolve(Manager) as any;
+        paths = injector.resolve(Paths) as any;
+    });
+
+    it('SteamMetaData-write-read-local-meta', async () => {
+        fs = memfs({}, '/', injector);
+
+        manager.config = {
+            m: 'testSteamCmd',
+            steamMetaPath: '/metadata'
+        } as Partial<Config> as Config;
+
+        const steamMeta = injector.resolve(SteamMetaData);
+        
+        steamMeta.writeLocalMeta(
+            '1234',
+            {
+                lastDownloaded: 1234
+            },
+        );
+        
+        const data = steamMeta.readLocalMeta('1234');
+
+        expect(data?.lastDownloaded).to.equal(1234);
+    });
+
+    it('SteamMetaData-update-local-meta', async () => {
+        fs = memfs({}, '/', injector);
+
+        manager.config = {
+            m: 'testSteamCmd',
+            steamMetaPath: '/metadata'
+        } as Partial<Config> as Config;
+
+        const steamMeta = injector.resolve(SteamMetaData);
+        
+        steamMeta.writeLocalMeta(
+            '1234',
+            {
+                lastDownloaded: 1234,
+            },
+        );
+
+        steamMeta.updateLocalModMeta(
+            '1234',
+            {
+                lastDownloaded: 4321
+            },
+        );
+        
+        const data = steamMeta.readLocalMeta('1234');
+
+        expect(data?.lastDownloaded).to.equal(4321);
+    });
+
+    it('SteamMetaData-update-local-meta', async () => {
+        fs = memfs({}, '/', injector);
+
+        manager.config = {
+            m: 'testSteamCmd',
+            steamMetaPath: '/metadata'
+        } as Partial<Config> as Config;
+
+        const steamMeta = injector.resolve(SteamMetaData);
+        
+        steamMeta.writeLocalMeta(
+            '1234',
+            {
+                lastDownloaded: 1234,
+            },
+        );
+
+        steamMeta.updateLocalModMeta(
+            '1234',
+            {
+                lastDownloaded: 4321
+            },
+        );
+        
+        const data = steamMeta.readLocalMeta('1234');
+
+        expect(data?.lastDownloaded).to.equal(4321);
+    });
+
+    it('SteamMetaData-modNeedsUpdate', async () => {
+        fs = memfs({
+            'metadata/1234.json': JSON.stringify({
+                lastDownloaded: 1234 * 1000,
+            }),
+            'metadata/4321.json': JSON.stringify({
+                lastDownloaded: 4321 * 1000,
+            }),
+        }, '/', injector);
+
+        manager.config = {
+            steamMetaPath: '/metadata'
+        } as Partial<Config> as Config;
+
+        const requestStub = ImportMock.mockFunction(requestModule, 'request');
+        requestStub.resolves({
+            statusCode: 200,
+            body: JSON.stringify({
+                response: {
+                    result: 200,
+                    resultcount: 2,
+                    publishedfiledetails: [
+                        {
+                            publishedfileid: '1234',
+                            time_updated: 2000,
+                        },
+                        {
+                            publishedfileid: '4321',
+                            time_updated: 2000,
+                        },
+                    ],
+                },
+            })
+        })
+
+        const steamMeta = injector.resolve(SteamMetaData);
+        
+        const response = await steamMeta.modNeedsUpdate([
+            // needs update because remote was updated after last download
+            '1234',
+            // needs update because local download timestamp is missing
+            '5678',
+            // does not need update because it was downloaded after the remote was updated
+            '4321',
+        ]);
+
+        expect(response).to.include('1234');
+        expect(response).to.include('5678');
+        expect(response).not.to.include('4321');
+    });
+
+});
 
 describe('Test class SteamCMD', () => {
 
@@ -20,6 +190,7 @@ describe('Test class SteamCMD', () => {
     let processes: StubInstance<Processes>;
     let fs: FSAPI;
     let download: StubInstance<Downloader>;
+    let steamMeta: StubInstance<SteamMetaData>;
 
     before(() => {
         disableConsole();
@@ -37,12 +208,14 @@ describe('Test class SteamCMD', () => {
         injector.register(Paths, stubClass(Paths), { lifecycle: Lifecycle.Singleton });
         injector.register(Processes, stubClass(Processes), { lifecycle: Lifecycle.Singleton });
         injector.register(Downloader, stubClass(Downloader), { lifecycle: Lifecycle.Singleton });
+        injector.register(SteamMetaData, stubClass(SteamMetaData), { lifecycle: Lifecycle.Singleton });
 
         fs = memfs({}, '/', injector);
         download = injector.resolve(Downloader) as any;
         manager = injector.resolve(Manager) as any;
         paths = injector.resolve(Paths) as any;
         processes = injector.resolve(Processes) as any;
+        steamMeta = injector.resolve(SteamMetaData) as any;
     });
 
     it('SteamCmd-checkSteamCmd-cleanupDownloadFail', async () => {
@@ -242,7 +415,7 @@ describe('Test class SteamCMD', () => {
 
         expect(res).to.be.true;
         expect(calledArgs).to.include('/testserver');
-        expect(calledArgs).to.include(SteamCMD['DAYZ_SERVER_APP_ID']);
+        expect(calledArgs).to.include(DAYZ_SERVER_APP_ID);
 
     });
 
@@ -251,7 +424,7 @@ describe('Test class SteamCMD', () => {
         fs = memfs(
             {
                 'testcwd/testwspath/steamapps/workshop/content': {
-                    [SteamCMD['DAYZ_APP_ID']]: {
+                    [DAYZ_APP_ID]: {
                         '1234567': {
                             'meta.cpp': 'name = "Test Mod"',
                         },
@@ -279,14 +452,25 @@ describe('Test class SteamCMD', () => {
     
     it('SteamCmd-updateMods', async () => {
 
+        const modList = [
+            // large mod (first batch, solo download)
+            '1234567',
+            
+            // no meta data (second batch)
+            '1111111',
+            '2222222',
+
+            // no update needed
+            '3333333',
+            
+            // third batch (not full, needs to be executed seperately)
+            '4444444',
+        ];
+
         fs = memfs(
             {
                 'testcwd/testwspath/steamapps/workshop/content': {
-                    [SteamCMD['DAYZ_APP_ID']]: {
-                        '1234567': {
-                            'meta.cpp': 'name = "Test Mod"',
-                        },
-                    },
+                    [DAYZ_APP_ID]: {},
                 },
             },
             '/',
@@ -295,18 +479,32 @@ describe('Test class SteamCMD', () => {
         paths.cwd.returns('/testcwd');
 
         manager.config = {
-            steamWorkshopPath: 'testwspath'
+            steamWorkshopPath: 'testwspath',
+            updateModsMaxBatchSize: 2,
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getModIdList.returns(modList);
         manager.getServerPath.returns('testserver');
+        steamMeta.modNeedsUpdate.callsFake(async (mods) => mods.filter((x) => x !== '3333333'));
+        steamMeta.getModsMetaData.resolves([
+            {
+                'publishedfileid': '1234567',
+                'file_size': 9_999_999_999,
+            } as PublishedFileDetail
+        ]);
 
         const steamCmd = injector.resolve(SteamCMD);
 
-        let calledCount = 0;
-        let calledArgs;
-        processes.spawnForOutput.callsFake(async (cmd, args, ops) => {
-            calledCount++;
-            calledArgs = args;
+        const spawnStub = processes.spawnForOutput.callsFake(async (cmd, args, ops) => {
+            
+            const modsBasePath = `/testcwd/testwspath/steamapps/workshop/content/${DAYZ_APP_ID}`;
+            for (const modId of modList) {
+                fs.mkdirSync(`${modsBasePath}/${modId}`, {recursive: true})
+                fs.writeFileSync(
+                    `${modsBasePath}/${modId}/meta.cpp`,
+                    `name = "Test Mod ${modId}"`
+                );
+            }
+            
             return {
                 status: 0,
                 stderr: '',
@@ -314,14 +512,23 @@ describe('Test class SteamCMD', () => {
             };
         });
 
-        const res = await steamCmd.updateMods();
+        const res = await steamCmd.updateAllMods();
 
         expect(res).to.be.true;
-        expect(calledCount).to.equal(1);
+        expect(spawnStub.callCount).to.equal(3);
 
-        expect(calledArgs).to.include(path.join('/testcwd','testwspath'));
-        expect(calledArgs).to.include('1234567');
-        expect(calledArgs).to.include(SteamCMD['DAYZ_APP_ID']);
+        expect(spawnStub.firstCall.args[1]).to.include(path.join('/testcwd','testwspath'));
+        expect(spawnStub.firstCall.args[1]).to.include('1234567');
+        expect(spawnStub.firstCall.args[1]).to.include(DAYZ_APP_ID);
+        
+        // check uneven mod cound
+        expect(spawnStub.lastCall.args[1]).to.include('4444444');
+
+        // no update needed should not be updated
+        expect(
+            spawnStub.getCalls().every(call => !call.args[1]?.includes('3333333'))
+        ).to.be.true;
+
 
     });
 
@@ -332,7 +539,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': 'name = "Test Mod"',
                             },
@@ -366,7 +573,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {},
+                        [DAYZ_APP_ID]: {},
                     },
                     'testserver': {
                         '@Test-Mod': {},
@@ -396,7 +603,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': 'name = "Test Mod"',
                             },
@@ -429,7 +636,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': '',
                             },
@@ -463,7 +670,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': 'name = "Test Mod"',
                                 'modKeys': {
@@ -480,7 +687,7 @@ describe('Test class SteamCMD', () => {
         );
         paths.cwd.returns('/testcwd');
         paths.findFilesInDir.resolves([
-            `/testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}/1234567/modKeys/testkey.bikey`,
+            `/testcwd/testwspath/steamapps/workshop/content/${DAYZ_APP_ID}/1234567/modKeys/testkey.bikey`,
         ]);
         paths.copyDirFromTo.resolves(true);
 
@@ -505,7 +712,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': 'name = "Test Mod"',
                                 'modKeys': {
@@ -522,7 +729,7 @@ describe('Test class SteamCMD', () => {
         );
         paths.cwd.returns('/testcwd');
         paths.findFilesInDir.resolves([
-            `/testcwd/testwspath/steamapps/workshop/content/${SteamCMD['DAYZ_APP_ID']}/1234567/modKeys/testkey.bikey`,
+            `/testcwd/testwspath/steamapps/workshop/content/${DAYZ_APP_ID}/1234567/modKeys/testkey.bikey`,
         ]);
         paths.linkDirsFromTo.resolves(true);
 
@@ -548,7 +755,7 @@ describe('Test class SteamCMD', () => {
             {
                 'testcwd': {
                     'testwspath/steamapps/workshop/content': {
-                        [SteamCMD['DAYZ_APP_ID']]: {
+                        [DAYZ_APP_ID]: {
                             '1234567': {
                                 'meta.cpp': 'name = "Test Mod"',
                                 'modKeys': {
@@ -570,6 +777,7 @@ describe('Test class SteamCMD', () => {
             linkModDirs: true,
         } as any;
         manager.getModIdList.returns(['1234567']);
+        steamMeta.modNeedsUpdate.resolves(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const spawnStub = processes.spawnForOutput
@@ -582,7 +790,7 @@ describe('Test class SteamCMD', () => {
         const steamCmd = injector.resolve(SteamCMD);
         steamCmd['progressLog'] = false;        
 
-        const res = await steamCmd.updateMods();
+        const res = await steamCmd.updateAllMods();
         expect(res).to.be.false;
         expect(spawnStub.callCount).to.be.greaterThan(1);
 

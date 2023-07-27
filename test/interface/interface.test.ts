@@ -2,18 +2,19 @@ import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
 import { Interface } from '../../src/interface/interface';
 import { Request } from '../../src/types/interface';
-import { ManagerController } from '../../src/control/manager-controller';
 import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { RCON } from '../../src/services/rcon';
-import { Monitor, ServerDetector, SystemReporter } from '../../src/services/monitor';
+import { Monitor } from '../../src/services/monitor';
 import { Metrics } from '../../src/services/metrics';
 import { SteamCMD } from '../../src/services/steamcmd';
 import { LogReader } from '../../src/services/log-reader';
 import { Backups } from '../../src/services/backups';
 import { MissionFiles } from '../../src/services/mission-files';
 import { ConfigFileHelper } from '../../src/config/config-file-helper';
+import { ServerDetector } from '../../src/services/server-detector';
+import { SystemReporter } from '../../src/services/system-reporter';
 
 
 describe('Test Interface', () => {
@@ -532,7 +533,7 @@ describe('Test Interface', () => {
     });
 
     it('execute-updateMods', async () => {
-        steamCmd.updateMods.resolves(true);
+        steamCmd.updateAllMods.resolves(true);
         const handler = injector.resolve(Interface);
         const request = {
             resource: 'updatemods',
@@ -541,7 +542,7 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
 
         expect(response.status).to.equal(200);
-        expect(steamCmd.updateMods.called).to.be.true;
+        expect(steamCmd.updateAllMods.called).to.be.true;
     });
 
     it('execute-updateServer', async () => {

@@ -2,10 +2,11 @@ import { GuildChannel, Message } from 'discord.js';
 import { Manager } from '../control/manager';
 import { LogLevel } from '../util/logger';
 import { Request } from '../types/interface';
-import { InterfaceDispatcher } from './interface';
 import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -16,7 +17,7 @@ export class DiscordMessageHandler extends IService {
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        private dispatcher: InterfaceDispatcher,
+        private eventBus: EventBus,
     ) {
         super(loggerFactory.createLogger('DiscordMsgHandler'));
     }
@@ -60,7 +61,7 @@ export class DiscordMessageHandler extends IService {
         //     return;
         // }
 
-        const handler = this.dispatcher.getCommands()?.get(command);
+        const handler = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS))?.get(command);
         if (!handler || handler.disableDiscord) {
             await message.reply('Command not found.');
             return;
@@ -90,7 +91,7 @@ export class DiscordMessageHandler extends IService {
             });
         }
 
-        const res = await this.dispatcher.execute(req);
+        const res = await this.eventBus.request(InternalEventTypes.INTERFACE_REQUEST, req);
 
         if (res.status >= 200 && res.status < 300) {
             // eslint-disable-next-line @typescript-eslint/no-base-to-string

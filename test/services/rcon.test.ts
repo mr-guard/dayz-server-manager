@@ -1,24 +1,26 @@
 import 'reflect-metadata';
 
 import { expect } from '../expect';
-import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
+import { StubInstance, disableConsole, enableConsole, memfs, sleep, stubClass } from '../util';
 import * as path from 'path';
 import * as sinon from 'sinon';
 import { ServerState } from '../../src/types/monitor';
 import { BattleyeConf, RCON } from '../../src/services/rcon';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
-import { Monitor, ServerStateListener } from '../../src/services/monitor';
+import { ServerStateListener } from '../../src/services/monitor';
 import { DiscordBot } from '../../src/services/discord';
 import { FSAPI, InjectionTokens } from '../../src/util/apis';
 import { Connection, Socket } from '@senfo/battleye';
+import { EventBus } from '../../src/control/event-bus';
+import { InternalEventTypes } from '../../src/types/events';
 
 describe('Test class RCON', () => {
 
     let injector: DependencyContainer;
     
     let manager: StubInstance<Manager>;
-    let monitor: StubInstance<Monitor>;
+    let eventBus: EventBus;
     let discord: StubInstance<DiscordBot>;
     let fs: FSAPI;
     let socket: StubInstance<Socket>;
@@ -35,14 +37,14 @@ describe('Test class RCON', () => {
         container.reset();
         injector = container.createChildContainer();
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
-        injector.register(Monitor, stubClass(Monitor), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
         injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
         
         socket = new (stubClass(Socket)) as any;
         injector.register(InjectionTokens.rconSocket, { useValue: () => socket });
 
         manager = injector.resolve(Manager) as any;
-        monitor = injector.resolve(Monitor) as any;
+        eventBus = injector.resolve(EventBus);
         discord = injector.resolve(DiscordBot) as any;
         fs = memfs({}, '/', injector);
     });
@@ -55,11 +57,6 @@ describe('Test class RCON', () => {
 
     it('RCON', async () => {
     
-        let startCallBack: ServerStateListener;
-        monitor.registerStateListener.callsFake((_, c) => {
-            startCallBack = c;
-        });
-        
         const rcon = injector.resolve(RCON);
 
         let commandCalled = false;
@@ -113,10 +110,12 @@ describe('Test class RCON', () => {
 
         await rcon.start();
 
-        expect(startCallBack!).to.be.not.undefined;
-
         expect(rcon.isConnected()).to.be.false;
-        startCallBack!(ServerState.STARTED);
+        
+        eventBus.emit(InternalEventTypes.MONITOR_STATE_CHANGE, ServerState.STARTED, undefined as any);
+
+        // await async listener
+        await sleep(10);
 
         expect(msgCb).to.be.not.undefined;
         expect(cmdCb).to.be.not.undefined;

@@ -9,6 +9,8 @@ import { LogLevel } from '../util/logger';
 import { Manager } from '../control/manager';
 import { injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -23,8 +25,14 @@ export class DiscordBot extends IStatefulService {
         loggerFactory: LoggerFactory,
         private manager: Manager,
         private messageHandler: DiscordMessageHandler,
+        private eventBus: EventBus,
     ) {
         super(loggerFactory.createLogger('Discord'));
+
+        this.eventBus.on(
+            InternalEventTypes.DISCORD_MESSAGE,
+            /* istanbul ignore next */ (message: string) => this.relayRconMessage(message),
+        );
     }
 
     public async start(): Promise<void> {

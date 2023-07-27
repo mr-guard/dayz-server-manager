@@ -6,9 +6,12 @@ import { merge } from '../util/merge';
 import { Paths } from './paths';
 import * as ps from '@senfo/process-list';
 import { inject, injectable, singleton } from 'tsyringe';
-import { CHILDPROCESSAPI, InjectionTokens } from '../util/apis';
+import { CHILDPROCESSAPI, InjectionTokens, PTYAPI } from '../util/apis';
 import { IService } from '../types/service';
 import { LoggerFactory } from './loggerfactory';
+
+// See: https://stackoverflow.com/questions/25245716/remove-all-ansi-colors-styles-from-strings
+const ansiRegex = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 
 export class ProcessEntry {
 
@@ -44,10 +47,11 @@ export interface SpawnOutput {
 export interface ProcessSpawnOpts {
     verbose: boolean;
     ignoreCodes: number[];
-    spawnOpts: SpawnOptions | any;
+    spawnOpts: SpawnOptions;
     dontThrow: boolean;
     stdOutHandler: (data: string) => any;
     stdErrHandler: (data: string) => any;
+    pty: boolean;
 }
 
 export interface IProcessSpawner {
@@ -65,6 +69,7 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
     public constructor(
         loggerFactory: LoggerFactory,
         @inject(InjectionTokens.childProcess) private childProcess: CHILDPROCESSAPI,
+        @inject(InjectionTokens.pty) private nodePty: PTYAPI,
     ) {
         super(loggerFactory.createLogger('ProcessSpawn'));
     }
@@ -74,6 +79,10 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
         args?: string[],
         opts?: Partial<ProcessSpawnOpts>,
     ): Promise<SpawnOutput> {
+        if (opts?.pty) {
+            return this.spawnForOutputPty(cmd, args, opts);
+        }
+
         return new Promise((r, e) => {
             const startTS = new Date().valueOf();
             try {
@@ -133,6 +142,81 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                         this.log.log(LogLevel.DEBUG, `Duration: ${new Date().valueOf() - startTS}`);
                     }
 
+                    if (!code || opts?.ignoreCodes?.includes(code) || opts?.dontThrow) {
+                        r({ status: code ?? 0, stdout, stderr });
+                    } else {
+                        // eslint-disable-next-line prefer-promise-reject-errors
+                        e({
+                            status: code,
+                            stdout,
+                            stderr,
+                        });
+                    }
+                });
+            } catch (error) {
+                if (opts?.dontThrow) {
+                    r({ status: 1, stdout: '', stderr: error?.message ?? '' });
+                } else {
+                    // eslint-disable-next-line prefer-promise-reject-errors
+                    e({ status: 1, stdout: '', stderr: error?.message ?? '' });
+                }
+            }
+        });
+    }
+
+    private async spawnForOutputPty(
+        cmd: string,
+        args?: string[],
+        opts?: Partial<ProcessSpawnOpts>,
+    ): Promise<SpawnOutput> {
+        return new Promise((r, e) => {
+            const startTS = new Date().valueOf();
+            try {
+                const pty = this.nodePty.spawn(
+                    cmd,
+                    args,
+                    {
+                        cwd: opts?.spawnOpts?.cwd,
+                        useConpty: false,
+                    },
+                );
+
+                let stdout = '';
+                const stderr = '';
+                const onData = pty.onData(async (data) => {
+
+                    // remove any special chars which break formatting
+                    data = data
+                        .replace(ansiRegex, '')
+                        .replace(/\r\n/g, '\n')
+                        .replace(/\r/, '')
+                        .trim();
+
+                    if (opts?.verbose) {
+                        this.log.log(LogLevel.DEBUG, `SPAWN OUT: ${data}`);
+                    }
+                    if (opts?.stdOutHandler) {
+                        opts?.stdOutHandler(data);
+                    }
+                    stdout += data;
+                });
+
+                const onExit = pty.onExit((event) => {
+                    const code = event.exitCode;
+
+                    if (opts?.verbose) {
+                        this.log.log(LogLevel.DEBUG, `Spawned process exited with code ${code}`);
+                        this.log.log(LogLevel.DEBUG, `Duration: ${new Date().valueOf() - startTS}`);
+                    }
+
+                    setTimeout(
+                        () => {
+                            onData.dispose();
+                            onExit.dispose();
+                            pty.kill();
+                        },
+                        10,
+                    );
                     if (!code || opts?.ignoreCodes?.includes(code) || opts?.dontThrow) {
                         r({ status: code ?? 0, stdout, stderr });
                     } else {

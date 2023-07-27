@@ -7,11 +7,12 @@ import { RconBan, RconPlayer } from '../types/rcon';
 import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
 import { matchRegex } from '../util/match-regex';
-import { delay, inject, injectable, registry, singleton } from 'tsyringe';
+import { inject, injectable, registry, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
-import { Monitor } from './monitor';
-import { DiscordBot } from './discord';
 import { FSAPI, InjectionTokens, RCONSOCKETFACTORY } from '../util/apis';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
+import { Listener } from 'eventemitter2';
 
 export class BattleyeConf {
 
@@ -46,11 +47,12 @@ export class RCON extends IStatefulService {
     private duplicateMessageCache: string[] = [];
     private duplicateMessageCacheSize: number = 3;
 
+    private stateListener?: Listener;
+
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        @inject(delay(() => Monitor)) private monitor: Monitor,
-        @inject(delay(() => DiscordBot)) private discord: DiscordBot,
+        private eventBus: EventBus,
         @inject(InjectionTokens.fs) private fs: FSAPI,
         @inject(InjectionTokens.rconSocket) private socketFactory: RCONSOCKETFACTORY,
     ) {
@@ -110,11 +112,16 @@ export class RCON extends IStatefulService {
         if (skipServerWait) {
             this.setupConnection();
         } else {
-            this.monitor.registerStateListener('rconInit', (state: ServerState) => {
-                if (this.connection || state !== ServerState.STARTED) return;
-                this.monitor.removeStateListener('rconInit');
-                this.setupConnection();
-            });
+            this.stateListener?.off();
+            this.stateListener = this.eventBus.on(
+                InternalEventTypes.MONITOR_STATE_CHANGE,
+                async (state: ServerState) => {
+                    if (this.connection || state !== ServerState.STARTED) return;
+                    this.stateListener?.off();
+                    this.stateListener = undefined;
+                    this.setupConnection();
+                },
+            );
         }
 
     }
@@ -153,7 +160,10 @@ export class RCON extends IStatefulService {
             }
 
             this.log.log(LogLevel.DEBUG, `message`, message);
-            void this.discord.relayRconMessage(message);
+            this.eventBus.emit(
+                InternalEventTypes.DISCORD_MESSAGE,
+                message,
+            );
         });
 
         this.connection.on('command', (data, resolved, packet) => {
@@ -273,6 +283,9 @@ export class RCON extends IStatefulService {
     }
 
     public async stop(): Promise<void> {
+        this.stateListener?.off();
+        this.stateListener = undefined;
+
         if (this.connection) {
 
             this.connection.removeAllListeners();

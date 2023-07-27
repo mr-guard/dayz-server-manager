@@ -7,7 +7,8 @@ import {
     WindowsProcessFetcher,
 } from '../../src/services/processes';
 import * as childProcess from 'child_process';
-import * as os from "os";
+import * as nodePty from 'node-pty';
+import * as os from 'os';
 import * as sinon from 'sinon';
 import { disableConsole, enableConsole, stubClass } from '../util';
 import { DependencyContainer, container } from 'tsyringe';
@@ -228,6 +229,7 @@ describe('Test class ProcessesSpawner', () => {
         injector = container.createChildContainer();
         injector.register(LoggerFactory, LoggerFactory);
         injector.register(InjectionTokens.childProcess, { useValue: childProcess });
+        injector.register(InjectionTokens.pty, { useValue: nodePty });
     });
 
     it('ProcessesSpawner-spawnForOutput-fail', async () => {
@@ -282,6 +284,35 @@ describe('Test class ProcessesSpawner', () => {
         expect(result.status).to.equal(0);
         expect(result.stdout).to.equal('TestLog\n');
         expect(handlerStdout).to.equal('TestLog\n');
+        expect(handlerStderr).to.equal('');
+    });
+
+    it('ProcessesSpawner-spawnForOutputPty', async () => {
+        const processes = injector.resolve(ProcessSpawner);
+        
+        let handlerStdout = '';
+        let handlerStderr = '';
+        const result = await processes.spawnForOutput(
+            process.platform === 'win32' ? 'node.exe' : 'node',
+            [
+                '-e',
+                'console.log(\'TestLog\')'
+            ],
+            {
+                stdErrHandler: (data) => {
+                    handlerStderr += data;
+                },
+                stdOutHandler: (data) => {
+                    handlerStdout += data;
+                },
+                verbose: true,
+                pty: true,
+            }
+        );
+
+        expect(result.status).to.equal(0);
+        expect(result.stdout).to.contain('TestLog\n');
+        expect(handlerStdout).to.contain('TestLog\n');
         expect(handlerStderr).to.equal('');
     });
 });

@@ -40,7 +40,8 @@ The goal was to break down the initial effort to a minimum while providing confi
     1. [Discord](#security-discord)
     2. [Web](#security-web)
 11. [Known Issues and Limitations](#limitations)
-12. [Disclaimer](#disclaimer)
+12. [Development](#development)
+13. [Disclaimer](#disclaimer)
 
 <br><a name="features"></a>
 ## Features <hr>  
@@ -496,6 +497,38 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 
 * This app has not been tested all to well
   * if you have any issues please report them to get them fixed
+
+<br><a name="development"></a>  
+## Development <hr>
+
+To work on the server manager, the nodejs runtime (v14) must be installed and the node extensions must be compiled locally.  
+To do this, you will need a C++ compiler:
+
+Windows:
+```
+choco install python python2 -y
+choco install visualstudio2019buildtools -y
+choco install visualstudio2019-workload-vctools -y
+```
+
+Linux:
+```
+apt-get install -y make python3 python2 build-essential
+```
+
+When the tools are installed, clone the repository and run `npm ci`.
+
+When everything is installed, you can start the manager by running:
+
+CLI mode:
+```
+npm run start
+```
+
+Packed mode:
+```
+npm run startPacked
+```
 
 <br><a name="disclaimer"></a>  
 ## Disclaimer <hr>

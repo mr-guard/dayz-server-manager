@@ -17,6 +17,8 @@ export const enableConsole = () => {
     Logger.LogLevelFncs = defaults.slice(0);
 };
 
+export const sleep = (time: number) => new Promise((r) => setTimeout(r, time));
+
 export const stub = <T extends object>(object: T): sinon.SinonStubbedInstance<T> & T => {
     const stubObject = Object.assign(<sinon.SinonStubbedInstance<T>> {}, object);
     

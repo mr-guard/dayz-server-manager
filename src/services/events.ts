@@ -8,7 +8,8 @@ import { LoggerFactory } from './loggerfactory';
 import { RCON } from './rcon';
 import { Monitor } from './monitor';
 import { Backups } from './backups';
-import { DiscordBot } from './discord';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -22,7 +23,7 @@ export class Events extends IStatefulService {
         private monitor: Monitor,
         private rcon: RCON,
         private backup: Backups,
-        private discord: DiscordBot,
+        private eventBus: EventBus,
     ) {
         super(logerFactory.createLogger('Events'));
     }
@@ -57,7 +58,10 @@ export class Events extends IStatefulService {
                     switch (event.type) {
                         case 'restart': {
                             void checkAndRun(async () => {
-                                await this.discord.relayRconMessage('Scheduled Restart!');
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    'Scheduled Restart!',
+                                );
                                 await this.monitor.killServer();
                             });
                             break;

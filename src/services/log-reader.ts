@@ -7,10 +7,11 @@ import * as tail from 'tail';
 import { ServerState } from '../types/monitor';
 import { FileDescriptor, LogMessage, LogType, LogTypeEnum } from '../types/log-reader';
 import { reverseIndexSearch } from '../util/reverse-index-search';
-import { delay, inject, injectable, singleton } from 'tsyringe';
+import { inject, injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
-import { Monitor } from './monitor';
 import { FSAPI, InjectionTokens } from '../util/apis';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 export interface LogContainer {
     logFiles?: FileDescriptor[];
@@ -46,14 +47,14 @@ export class LogReader extends IStatefulService {
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        @inject(delay(() => Monitor)) private monitor: Monitor,
+        private eventBus: EventBus,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('LogReader'));
     }
 
     public async start(): Promise<void> {
-        this.monitor.registerStateListener('LogReader', (x) => {
+        this.eventBus.on(InternalEventTypes.MONITOR_STATE_CHANGE, async (x) => {
             if (x === ServerState.STARTED) {
                 setTimeout(() => {
                     void this.registerReaders();

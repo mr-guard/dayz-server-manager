@@ -7,13 +7,24 @@ import { Requirements } from '../services/requirements';
 import { ConfigWatcher } from '../services/config-watcher';
 import { container, injectable, registry, singleton } from 'tsyringe';
 import { LoggerFactory } from '../services/loggerfactory';
-import { ServerDetector } from '../services/monitor';
+import { ServerDetector } from '../services/server-detector';
 import { IngameReport } from '../services/ingame-report';
 import { SteamCMD } from '../services/steamcmd';
 import { InjectionTokens } from '../util/apis';
 import * as fsModule from 'fs';
 import * as httpsModule from 'https';
 import * as childProcessModule from 'child_process';
+import * as ptyModule from 'node-pty';
+import { Monitor } from '../services/monitor';
+import { Events } from '../services/events';
+import { Hooks } from '../services/hooks';
+import { LogReader } from '../services/log-reader';
+import { MissionFiles } from '../services/mission-files';
+import { SystemReporter } from '../services/system-reporter';
+import { DiscordBot } from '../services/discord';
+import { Interface } from '../interface/interface';
+import { DiscordMessageHandler } from '../interface/discord-message-handler';
+import { REST } from '../interface/rest';
 
 @singleton()
 @registry([
@@ -28,6 +39,54 @@ import * as childProcessModule from 'child_process';
     {
         token: InjectionTokens.childProcess,
         useValue: childProcessModule,
+    },
+    {
+        token: InjectionTokens.pty,
+        useValue: ptyModule,
+    },
+
+    // standalone services
+    {
+        token: Monitor,
+        useClass: Monitor,
+    },
+    {
+        token: Events,
+        useClass: Events,
+    },
+    {
+        token: Hooks,
+        useClass: Hooks,
+    },
+    {
+        token: LogReader,
+        useClass: LogReader,
+    },
+    {
+        token: MissionFiles,
+        useClass: MissionFiles,
+    },
+    {
+        token: SystemReporter,
+        useClass: SystemReporter,
+    },
+    {
+        token: DiscordBot,
+        useClass: DiscordBot,
+    },
+
+    // interfaces
+    {
+        token: Interface,
+        useClass: Interface,
+    },
+    {
+        token: DiscordMessageHandler,
+        useClass: DiscordMessageHandler,
+    },
+    {
+        token: REST,
+        useClass: REST,
     },
 ])
 @injectable()
@@ -139,8 +198,6 @@ export class ManagerController {
 
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
-        // TODO is something like this needed??? SERVICES.foreach(x => container.resolve(x))
-
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {
@@ -200,7 +257,7 @@ export class ManagerController {
 
         // Mods
         if (!await this.steamCmd.checkMods() || this.manager.config.updateModsOnStartup) {
-            if (!await this.steamCmd.updateMods()) {
+            if (!await this.steamCmd.updateAllMods()) {
                 throw new Error('Updating Mods failed');
             }
         }

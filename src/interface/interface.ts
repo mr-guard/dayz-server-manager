@@ -1,99 +1,34 @@
 import { injectable, singleton } from 'tsyringe';
-import { UserLevel } from '../config/config';
 import { Manager } from '../control/manager';
 import { Backups } from '../services/backups';
 import { LogReader } from '../services/log-reader';
 import { LoggerFactory } from '../services/loggerfactory';
 import { Metrics } from '../services/metrics';
 import { MissionFiles } from '../services/mission-files';
-import { Monitor, ServerDetector, SystemReporter } from '../services/monitor';
+import { Monitor } from '../services/monitor';
+import { SystemReporter } from '../services/system-reporter';
 import { RCON } from '../services/rcon';
 import { SteamCMD } from '../services/steamcmd';
-import { Request, Response } from '../types/interface';
+import { CommandMap, Request, RequestTemplate, Response } from '../types/interface';
 import { IService } from '../types/service';
 import { LogLevel } from '../util/logger';
-import { merge } from '../util/merge';
 import { makeTable } from '../util/table';
 import { constants as HTTP } from 'http2';
 import { ConfigFileHelper } from '../config/config-file-helper';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
+import { ServerDetector } from '../services/server-detector';
 
-export type RequestHandler = (request: Request) => Promise<Response>;
-export type RequestMethods = 'get' | 'post' | 'put' | 'delete';
-
-export class RequestTemplate {
-
-    /* istanbul ignore next */
-    public action: RequestHandler = async (r) => {
-        return {
-            status: HTTP.HTTP_STATUS_GONE,
-            body: `Unknown Resource: ${r?.resource}`,
-        };
-    };
-
-    public level: UserLevel = 'admin';
-    public method: RequestMethods = 'get';
-    public params: string[] = [];
-    public paramsOptional?: boolean = false;
-
-    public disableDiscord?: boolean = false;
-    public discordPublic?: boolean = false;
-    public disableRest?: boolean = false;
-
-    public static build(optionals: {
-        [Property in keyof RequestTemplate]?: RequestTemplate[Property];
-    }): RequestTemplate {
-        return merge(new RequestTemplate(), optionals);
-    }
-
-}
-
-@singleton()
-@injectable()
-/* istanbul ignore next */
-export class InterfaceDispatcher extends IService {
-
-    private handler: (req: Request) => Promise<Response>;
-
-    private commandHandler: () => Map<string, RequestTemplate>;
-
-    public registerHandler(handler: (req: Request) => Promise<Response>): void {
-        this.handler = handler;
-    }
-
-    public registerCommandHandler(handler: () => Map<string, RequestTemplate>): void {
-        this.commandHandler = handler;
-    }
-
-    /* istanbul ignore next */
-    public async execute(req: Request): Promise<Response> {
-        if (!this.handler) {
-            return new Response(
-                HTTP.HTTP_STATUS_SERVICE_UNAVAILABLE,
-                'Handler not yet registered',
-            );
-        }
-        return this.handler(req);
-    }
-
-    /* istanbul ignore next */
-    public getCommands(): Map<string, RequestTemplate> {
-        if (!this.commandHandler) {
-            return null;
-        }
-        return this.commandHandler();
-    }
-
-}
 
 @singleton()
 @injectable()
 export class Interface extends IService {
 
-    public commandMap!: Map<string, RequestTemplate>;
+    public commandMap!: CommandMap;
 
     public constructor( // NOSONAR
         loggerFactory: LoggerFactory,
-        private dispatcher: InterfaceDispatcher,
+        private eventBus: EventBus,
         private manager: Manager,
         private rcon: RCON,
         private monitor: Monitor,
@@ -107,8 +42,14 @@ export class Interface extends IService {
         private configFileHelper: ConfigFileHelper,
     ) {
         super(loggerFactory.createLogger('Manager'));
-        this.dispatcher.registerHandler(/* istanbul ignore next */ (req) => this.execute(req));
-        this.dispatcher.registerCommandHandler(/* istanbul ignore next */ () => this.commandMap);
+        this.eventBus.on(
+            InternalEventTypes.INTERFACE_REQUEST,
+            /* istanbul ignore next */ (req) => this.execute(req),
+        );
+        this.eventBus.on(
+            InternalEventTypes.INTERFACE_COMMANDS,
+            /* istanbul ignore next */ async () => this.commandMap,
+        );
         this.setupCommandMap();
     }
 
@@ -390,7 +331,7 @@ export class Interface extends IService {
                 action: (req) => this.executeWithResult(
                     req,
                     () => {
-                        return this.steamCmd.updateMods();
+                        return this.steamCmd.updateAllMods();
                     },
                 ),
             })],

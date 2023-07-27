@@ -9,11 +9,54 @@ on:
       - '*'
 
 jobs:
-  build:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+  
+    - name: Install build tools
+      run: |
+        choco install python python2 -y
+        choco install visualstudio2019buildtools -y
+        choco install visualstudio2019-workload-vctools -y
 
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    
+    - name: download mikeros tools
+      uses: arma-actions/mikero-tools@latest
+
+    - name: Install deps
+      run: npm ci
+    - name: Install ui deps
+      run: npm run install:ui
+
+    - name: Build
+      run: npm run build
+
+    - name: Pack (windows)
+      run: npm run pack:windows
+    
+    - name: Zip Artifacts (windows)
+      run: zip -r server-manager.zip build/*
+    
+    - name: Archive build artifacts (windows)
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-manager-windows.zip
+        path: ./server-manager.zip
+    
+  build-linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    - name: Install build tools
+      run: |
+        sudo apt-get install -y make python3 python2 build-essential
+
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
@@ -22,15 +65,38 @@ jobs:
       uses: arma-actions/mikero-tools@latest
     
     - name: Install deps
-      run: npm ci --ignore-scripts
+      run: npm ci
     - name: Install ui deps
-      run: npm run installUi
-    - name: Download prebuilts for tests
-      run: npm run downloadPrebuildLinux
-
+      run: npm run install:ui
+    
     - name: Build
       run: npm run build
 
+    - name: Pack (linux)
+      run: npm run pack:linux
+    - name: Zip Artifacts (linux)
+      run: zip -r server-manager.zip build/*
+    - name: Archive build artifacts (linux)
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-manager-linux.zip
+        path: ./server-manager.zip
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    
+    - name: Install deps
+      run: npm ci --ignore-scripts
+    
+    - name: Install ui deps
+      run: npm run install:ui
+    
     - name: Test
       run: npm test | tee test-output.log ; test ${PIPESTATUS[0]} -eq 0
     
@@ -58,9 +124,19 @@ jobs:
         message: ${{ env.COVERAGE }}
         color: green
         namedLogo: typescript
+  
+  release:
+    runs-on: ubuntu-latest
 
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    needs:
+    - test
+    - build-linux
+    - build-windows
+
+    steps:
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/v')
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -71,48 +147,36 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Pack (windows)
-      run: npm run downloadPrebuildWindows && npm run packWindows
-    - name: Zip Artifacts (windows)
-      run: zip -r server-manager.zip build/*
-    - name: Archive build artifacts (windows)
-      if: "!startsWith(github.ref, 'refs/tags/v')"
-      uses: actions/upload-artifact@v2
+    - name: Download artifacts (windows)
+      uses: actions/download-artifact@v2
       with:
         name: server-manager-windows.zip
-        path: ./server-manager.zip
-    
+        path: ./server-manager-windows.zip
+
     - name: Upload Release Asset (Windows)
-      if: startsWith(github.ref, 'refs/tags/v')
       id: upload-release-asset-windows
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server-manager.zip
+        asset_path: ./server-manager-windows.zip
         asset_name: server-manager-windows.zip
         asset_content_type: application/zip
 
-    - name: Pack (linux)
-      run: npm run downloadPrebuildLinux && npm run packLinux
-    - name: Zip Artifacts (linux)
-      run: zip -r server-manager.zip build/*
-    - name: Archive build artifacts (linux)
-      if: "!startsWith(github.ref, 'refs/tags/v')"
-      uses: actions/upload-artifact@v2
+    - name: Download artifacts (linux)
+      uses: actions/download-artifact@v2
       with:
         name: server-manager-linux.zip
-        path: ./server-manager.zip
+        path: ./server-manager-linux.zip
 
     - name: Upload Release Asset (Linux)
-      if: startsWith(github.ref, 'refs/tags/v')
       id: upload-release-asset-linux
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server-manager.zip
+        asset_path: ./server-manager-linux.zip
         asset_name: server-manager-linux.zip
         asset_content_type: application/zip

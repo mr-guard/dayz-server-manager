@@ -3,12 +3,13 @@ import { ImportMock } from 'ts-mock-imports'
 import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import * as sinon from 'sinon';
 import * as path from 'path';
-import { Metrics, MetricsCollector } from '../../src/services/metrics';
+import { Metrics } from '../../src/services/metrics';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { Database } from '../../src/services/database';
 import { RCON } from '../../src/services/rcon';
-import { SystemReporter } from '../../src/services/monitor';
+import { SystemReporter } from '../../src/services/system-reporter';
+import { MetricsCollector } from '../../src/services/metrics-collector';
 
 describe('Test class Metrics', () => {
 
