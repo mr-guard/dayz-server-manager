@@ -23,7 +23,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
     
     - name: download mikeros tools
       uses: arma-actions/mikero-tools@latest
@@ -60,7 +60,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
     - name: download mikeros tools
       uses: arma-actions/mikero-tools@latest
     
@@ -89,7 +89,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
     
     - name: Install deps
       run: npm ci

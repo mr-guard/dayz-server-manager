@@ -4,11 +4,13 @@ import { REST } from '../../src/interface/rest';
 import { Manager } from '../../src/control/manager';
 import { Application, Router } from 'express';
 import { Interface} from '../../src/interface/interface';
-import { StubInstance, stubClass } from '../util';
+import { StubInstance, sleep, stubClass } from '../util';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import * as sinon from 'sinon';
+import * as websocket from 'websocket';
 import { EventBus } from '../../src/control/event-bus';
 import { InternalEventTypes } from '../../src/types/events';
+import { WebsocketCommand, WebsocketListenerType, WebsocketMessage } from '../../src/types/websocket';
 
 
 describe('Test REST', () => {
@@ -143,6 +145,68 @@ describe('Test REST', () => {
             },
         );
         
+    });
+
+    it('REST-ws', async () => {
+        manager.isUserOfLevel.returns(true);
+        manager.getWebPort.returns(12564);
+        (manager as any).config = {
+            admins: [{
+                userId: 'admin',
+                password: 'admin',
+                userLevel: 'admin',
+            }]
+        };
+
+        Interface.prototype['setupCommandMap'].apply(interfaceService);
+        eventBus.on(
+            InternalEventTypes.INTERFACE_COMMANDS,
+            async () => interfaceService.commandMap,
+        );
+
+        const rest = injector.resolve(REST);
+
+        let ws: websocket.w3cwebsocket;
+        let answer: string;
+        try {
+            await rest.start();
+
+            await sleep(100);
+
+            ws = new websocket.w3cwebsocket(
+                'ws://localhost:12564/websocket',
+                ['auth', encodeURIComponent(Buffer.from(`admin:admin`).toString('base64'))],
+            );
+            ws.onmessage = (msg) => {
+                if (
+                    typeof msg.data !== 'string'
+                    || msg.data.toLowerCase() === 'ping'
+                    || msg.data.toLowerCase() === 'pong'
+                ) return;
+                answer = msg.data;
+            };
+            ws.onopen = () => {
+                ws.send(JSON.stringify({
+                    cmd: WebsocketCommand.REGISTER_LISTENER,
+                    data: WebsocketListenerType.LOGS,
+                } as WebsocketMessage<WebsocketListenerType>));
+
+                setTimeout(
+                    () => eventBus.emit(InternalEventTypes.LOG_ENTRY as any, 'Hello :)'),
+                    10,
+                );
+            };
+
+            await sleep(100);
+        } finally {
+            await rest.stop();
+        }
+
+        await sleep(100);
+        
+        expect(ws.readyState).to.equal(ws.CLOSED);
+        expect(rest.wsClients).to.be.undefined;
+        expect(answer!).to.equal(JSON.stringify('Hello :)'));
     });
 
     it('REST-handleCommand', async () => {

@@ -22,3 +22,8 @@ export interface MetricWrapper<T> {
 export interface AuditEvent extends MetricWrapper<Request> {
     user: string;
 }
+
+export interface MetricEntryEvent {
+    type: MetricType,
+    entry: MetricWrapper<any>,
+}

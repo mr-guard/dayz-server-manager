@@ -20,3 +20,7 @@ export enum LogTypeEnum {
 
 export type LogType = keyof typeof LogTypeEnum;
 
+export interface LogEntryEvent {
+    type: LogType,
+    entry: LogMessage,
+}

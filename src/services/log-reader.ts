@@ -152,10 +152,18 @@ export class LogReader extends IStatefulService {
                 logContainer.tail.on('line', (line) => {
                     if (line) {
                         this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
-                        logContainer.logLines.push({
+                        const logEntry = {
                             timestamp: new Date().valueOf(),
                             message: line,
-                        });
+                        };
+                        logContainer.logLines.push(logEntry);
+                        this.eventBus.emit(
+                            InternalEventTypes.LOG_ENTRY,
+                            {
+                                type: type as LogTypeEnum,
+                                entry: logEntry,
+                            },
+                        );
                     }
                 });
             }

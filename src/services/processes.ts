@@ -176,7 +176,7 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                     cmd,
                     args,
                     {
-                        cwd: opts?.spawnOpts?.cwd,
+                        cwd: opts?.spawnOpts?.cwd as string,
                         useConpty: false,
                     },
                 );

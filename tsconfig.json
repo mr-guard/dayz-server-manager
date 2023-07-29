@@ -8,6 +8,7 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "downlevelIteration": true,
+        "skipLibCheck": true,
         "types": [
             "node",
             "mocha",

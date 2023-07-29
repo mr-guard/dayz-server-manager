@@ -1,4 +1,5 @@
 import * as express from 'express';
+import * as ws from 'ws';
 import * as basicAuth from 'express-basic-auth';
 import * as compression from 'compression';
 import * as path from 'path';
@@ -6,13 +7,15 @@ import { loggerMiddleware } from '../middleware/logger';
 
 import { Manager } from '../control/manager';
 import { Server } from 'http';
-import { Request } from '../types/interface';
+import { CommandMap, Request } from '../types/interface';
 import { LogLevel } from '../util/logger';
 import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
+import { Listener } from 'eventemitter2';
+import { WebsocketCommand, WebsocketListenerType, WebsocketMessage } from '../types/websocket';
 
 @singleton()
 @injectable()
@@ -20,6 +23,9 @@ export class REST extends IService {
 
     public express: express.Application | undefined;
     public server: Server | undefined;
+    public wsServer: ws.Server | undefined;
+    public wsClients: Map<ws, { user: string, listeners: Listener[]}> | undefined;
+    private commandMap: CommandMap;
 
     public host: string | undefined;
     public port: number | undefined;
@@ -71,6 +77,21 @@ export class REST extends IService {
         );
         await this.setupRouter();
 
+        // Set up a headless websocket server that prints any
+        // events that come in.
+        this.wsClients = new Map();
+        this.wsServer = new ws.Server({ noServer: true, path: '/websocket' });
+        this.wsServer.on('connection', (socket) => {
+            socket.on('message', (message) => this.handleWsMessage(socket, message));
+            socket.on('close', () => {
+                const socketData = (this.wsClients?.get(socket)?.listeners || []);
+                this.wsClients?.delete(socket);
+                for (const listener of socketData) {
+                    listener.off();
+                }
+            });
+        });
+
         return new Promise(
             (r) => {
                 this.server = this.express!.listen(
@@ -81,9 +102,95 @@ export class REST extends IService {
                         r();
                     },
                 );
+                this.server.on('upgrade', (request, socket, head) => {
+                    const url = new URL(request.url, `http://${request.headers.host}`);
+
+                    if (url.pathname !== '/websocket') {
+                        socket.write('HTTP/1.1 404 NotFound\r\n\r\n');
+                        socket.destroy();
+                        return;
+                    }
+
+                    const base64Credentials = request.headers['sec-websocket-protocol']?.split(',')[1]?.trim();
+                    const [username, password] = base64Credentials
+                        ? Buffer.from(decodeURIComponent(base64Credentials), 'base64')?.toString('utf-8')?.split(':')
+                        : [];
+
+                    if (!username || !password || !(this.manager.config?.admins ?? []).some((x) => x.userId === username && x.password === password)) {
+                        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                        socket.destroy();
+                        return;
+                    }
+
+                    this.log.log(LogLevel.INFO, `Websocket Connection for ${username}`);
+                    this.wsServer.handleUpgrade(request, socket as any, head, (wsSocket) => {
+                        this.wsClients.set(
+                            wsSocket,
+                            {
+                                user: username,
+                                listeners: this.wsClients.get(wsSocket)?.listeners || [],
+                            },
+                        );
+                        this.wsServer.emit('connection', wsSocket, request);
+                    });
+                });
             },
         );
 
+    }
+
+    private registerWsEventListener(socket: ws, listenerType: WebsocketListenerType): void {
+        const cmd = this.commandMap.get(listenerType);
+        if (!cmd) {
+            this.log.log(LogLevel.INFO, 'Listener type is not mapped to a command', listenerType);
+            return;
+        }
+
+        const user = this.wsClients.get(socket)?.user;
+        if (!user || !this.manager.isUserOfLevel(user, cmd.level)) {
+            this.log.log(LogLevel.INFO, `User "${user}" is not allowed to listen on ${listenerType}. Required level: ${cmd.level}`);
+            return;
+        }
+
+        let eventType: InternalEventTypes;
+        if (listenerType === WebsocketListenerType.LOGS) {
+            eventType = InternalEventTypes.LOG_ENTRY;
+        } else if (listenerType === WebsocketListenerType.METRICS) {
+            eventType = InternalEventTypes.METRIC_ENTRY;
+        } else {
+            this.log.log(LogLevel.INFO, 'Received unknown websocket listener type', listenerType);
+            return;
+        }
+
+        this.log.log(LogLevel.DEBUG, `Registering: ${listenerType} for ${user}`);
+        const listener = this.eventBus.on(
+            eventType as any,
+            async (event) => {
+                socket.send(JSON.stringify(event));
+            },
+        );
+        const socketDetails = this.wsClients.get(socket);
+        if (!socketDetails.listeners) {
+            socketDetails.listeners = [];
+        }
+        socketDetails.listeners.push(listener);
+    }
+
+    private handleWsMessage(socket: ws, message: ws.Data): void {
+        const str = typeof message === 'string' ? message : message?.toString();
+        try {
+            const data = JSON.parse(str) as WebsocketMessage<any>;
+            if (data?.cmd === WebsocketCommand.REGISTER_LISTENER) {
+                this.registerWsEventListener(
+                    socket,
+                    (data as WebsocketMessage<WebsocketListenerType>)?.data,
+                )
+            } else {
+                this.log.log(LogLevel.INFO, 'Received unknown websocket cmd', str);
+            }
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, `Failed to parse/handle websocket message`, e, str);
+        }
     }
 
     private setupExpress(): void {
@@ -137,8 +244,8 @@ export class REST extends IService {
         }
         this.router.use(basicAuth({ users, challenge: false }));
 
-        const commandMap = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS)) || [];
-        for (const [resource, command] of commandMap) {
+        this.commandMap = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS)) || new Map();
+        for (const [resource, command] of this.commandMap) {
 
             if (command.disableRest) continue;
 
@@ -169,7 +276,7 @@ export class REST extends IService {
 
         const base64Credentials = req.headers.authorization?.split(' ')[1];
         const username = base64Credentials
-            ? Buffer.from(base64Credentials, 'base64')?.toString('ascii')?.split(':')[0]
+            ? Buffer.from(base64Credentials, 'base64')?.toString('utf-8')?.split(':')[0]
             : '';
 
         const internalRequest = new Request();
@@ -189,6 +296,13 @@ export class REST extends IService {
             if (!this.server || !this.server.listening) {
                 r();
             }
+
+            const wsClients = [...(this.wsClients?.entries() || [])];
+            for (const client of wsClients) {
+                client[1]?.listeners?.forEach((listener) => listener.off());
+                client[0].close(1001);
+            }
+            this.wsClients = undefined;
 
             this.server?.close((error) => {
                 if (error) {
