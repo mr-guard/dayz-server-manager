@@ -24,6 +24,10 @@ try {
     fs.mkdirSync('build');
 } catch {}
 
+try {
+    fs.mkdirSync('dist/config', {recursive: true});
+} catch {}
+
 const schema = createConfigSchema();
 
 schema.properties.serverCfg.default = new ServerCfg();

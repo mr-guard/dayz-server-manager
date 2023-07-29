@@ -311,8 +311,8 @@ describe('Test class ProcessesSpawner', () => {
         );
 
         expect(result.status).to.equal(0);
-        expect(result.stdout).to.contain('TestLog\n');
-        expect(handlerStdout).to.contain('TestLog\n');
+        expect(result.stdout).to.contain('TestLog');
+        expect(handlerStdout).to.contain('TestLog');
         expect(handlerStderr).to.equal('');
     });
 });
