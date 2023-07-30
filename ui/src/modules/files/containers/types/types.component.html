@@ -11,7 +11,6 @@
                     <ng-template ngbNavContent>
                         <div style="height: 100%; margin-bottom: 20px;">
                             <ag-grid-angular
-                                [frameworkComponents]="frameworkComponents"
                                 [columnDefs]="typesColumnDefs"
                                 [defaultColDef]="defaultColDef"
                                 [rowData]="file.content.types.type"
@@ -30,7 +29,7 @@
         </div>
         <div class="card-body" *ngIf="!loading">
             <ngb-alert  *ngIf="outcomeBadge"
-                        [type]="outcomeBadge?.success ? 'success' : 'danger'"
+                        [type]="outcomeBadge.success ? 'success' : 'danger'"
             >
                 {{ outcomeBadge.message }}
             </ngb-alert>

@@ -5,7 +5,9 @@ import { filter } from 'rxjs/operators';
 
 import { SBRouteData } from '../models';
 
-@Injectable()
+@Injectable({
+    providedIn: 'root',
+})
 export class NavigationService {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention

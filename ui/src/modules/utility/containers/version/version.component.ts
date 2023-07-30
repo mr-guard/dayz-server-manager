@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { UtilityService } from '@modules/utility/services';
+import { UtilityService } from '../../services/utility.service';
 import { take } from 'rxjs/operators';
 
 @Component({

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { AppCommonService } from '@common/services';
-import { MaintenanceService } from '@modules/maintenance/services';
+import { AppCommonService } from '../../../app-common/services/app-common.service';
+import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
-import { ICellRendererParams } from 'ag-grid-community';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
 
 import * as xml from 'xml2js';
 
@@ -117,10 +117,9 @@ export class CategoryRenderer implements ICellRendererAngularComp {
 })
 export class ValueRenderer extends CategoryRenderer implements ICellRendererAngularComp {
 
-    public dropdownList: { name: string; label: string }[] = [];
-
     public constructor() {
         super();
+        this.dropdownList = [];
         for (let i = 1; i <= 15; i++) {
             this.dropdownList.push({
                 name: `Tier${i}`,
@@ -165,10 +164,13 @@ export class UsageRenderer extends CategoryRenderer implements ICellRendererAngu
         'Village',
     ];
 
-    public dropdownList = UsageRenderer.USAGE_LIST.map((x) => ({
-        name: x,
-        label: x,
-    }));
+    public constructor() {
+        super();
+        this.dropdownList = UsageRenderer.USAGE_LIST.map((x) => ({
+            name: x,
+            label: x,
+        }));
+    }
 
 }
 
@@ -247,21 +249,11 @@ export class TypesComponent implements OnInit {
         resizable: true,
     };
 
-    public typesColumnDefs: {
-        headerName: string;
-        valueGetter: (params: { data: TypesXmlEntry }) => any;
-        valueSetter: (params: { data: TypesXmlEntry; newValue: any }) => boolean;
-        minWidth?: number;
-        headerTooltip: string;
-        cellRenderer?: string;
-        editable?: boolean;
-        filter?: boolean;
-        sortable?: boolean;
-    }[] = [
+    public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [
         {
             headerName: 'Name',
             valueGetter: (params) => {
-                return params.data.$.name;
+                return params.data?.$.name;
             },
             valueSetter: (params) => {
                 params.data.$.name = params.newValue;
@@ -273,7 +265,7 @@ export class TypesComponent implements OnInit {
         {
             headerName: 'Categories',
             valueGetter: (params) => {
-                return params.data.category?.map((x) => ({
+                return params.data?.category?.map((x) => ({
                     name: x.$.name,
                 })) ?? [];
             },
@@ -286,7 +278,7 @@ export class TypesComponent implements OnInit {
                 }));
                 return true;
             },
-            cellRenderer: 'categoryRenderer',
+            cellRenderer: CategoryRenderer,
             editable: false,
             filter: false,
             minWidth: 175,
@@ -295,7 +287,7 @@ export class TypesComponent implements OnInit {
         {
             headerName: 'Values',
             valueGetter: (params) => {
-                return params.data.value?.map((x) => ({
+                return params.data?.value?.map((x) => ({
                     name: x.$.name,
                 })) ?? [];
             },
@@ -308,7 +300,7 @@ export class TypesComponent implements OnInit {
                 }));
                 return true;
             },
-            cellRenderer: 'valueRenderer',
+            cellRenderer: ValueRenderer,
             editable: false,
             filter: false,
             minWidth: 175,
@@ -317,7 +309,7 @@ export class TypesComponent implements OnInit {
         {
             headerName: 'Usages',
             valueGetter: (params) => {
-                return params.data.usage?.map((x) => ({
+                return params.data?.usage?.map((x) => ({
                     name: x.$.name,
                 })) ?? [];
             },
@@ -330,7 +322,7 @@ export class TypesComponent implements OnInit {
                 }));
                 return true;
             },
-            cellRenderer: 'usageRenderer',
+            cellRenderer: UsageRenderer,
             editable: false,
             filter: false,
             minWidth: 175,
@@ -338,7 +330,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'Nominal',
-            valueGetter: (params) => Number(params.data.nominal[0]),
+            valueGetter: (params) => Number(params.data?.nominal[0]),
             valueSetter: (params) => {
                 params.data.nominal[0] = String(params.newValue);
 
@@ -355,7 +347,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'LifeTime',
-            valueGetter: (params) => Number(params.data.lifetime[0]),
+            valueGetter: (params) => Number(params.data?.lifetime[0]),
             valueSetter: (params) => {
                 params.data.lifetime[0] = String(params.newValue);
                 return true;
@@ -365,7 +357,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'Restock',
-            valueGetter: (params) => Number(params.data.restock[0]),
+            valueGetter: (params) => Number(params.data?.restock[0]),
             valueSetter: (params) => {
                 params.data.restock[0] = String(params.newValue);
                 return true;
@@ -375,7 +367,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'Min',
-            valueGetter: (params) => Number(params.data.min[0]),
+            valueGetter: (params) => Number(params.data?.min[0]),
             valueSetter: (params) => {
                 params.data.min[0] = String(params.newValue);
 
@@ -392,7 +384,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'QuantMin',
-            valueGetter: (params) => Number(params.data.quantmin[0]),
+            valueGetter: (params) => Number(params.data?.quantmin[0]),
             valueSetter: (params) => {
                 params.data.quantmin[0] = String(params.newValue);
 
@@ -411,7 +403,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'QuantMax',
-            valueGetter: (params) => Number(params.data.quantmax[0]),
+            valueGetter: (params) => Number(params.data?.quantmax[0]),
             valueSetter: (params) => {
                 params.data.quantmax[0] = String(params.newValue);
 
@@ -430,7 +422,7 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'Cost',
-            valueGetter: (params) => Number(params.data.cost[0]),
+            valueGetter: (params) => Number(params.data?.cost[0]),
             valueSetter: (params) => {
                 params.data.cost[0] = String(params.newValue);
                 return true;
@@ -440,74 +432,74 @@ export class TypesComponent implements OnInit {
         },
         {
             headerName: 'Count in Cargo',
-            valueGetter: (params) => params.data.flags[0].$.count_in_cargo === '1',
+            valueGetter: (params) => params.data?.flags[0].$.count_in_cargo === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.count_in_cargo = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether the total amount of this item includes items in crates, containers, vehicles, backpacks etc',
         },
         {
             headerName: 'Count in Hoarder',
-            valueGetter: (params) => params.data.flags[0].$.count_in_hoarder === '1',
+            valueGetter: (params) => params.data?.flags[0].$.count_in_hoarder === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.count_in_hoarder = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether the total amount of this item includes items in stashes, tents, barrels etc',
         },
         {
             headerName: 'Count in Map',
-            valueGetter: (params) => params.data.flags[0].$.count_in_map === '1',
+            valueGetter: (params) => params.data?.flags[0].$.count_in_map === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.count_in_map = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether the total amount of this item includes items in buildings',
         },
         {
             headerName: 'Count in Player',
-            valueGetter: (params) => params.data.flags[0].$.count_in_player === '1',
+            valueGetter: (params) => params.data?.flags[0].$.count_in_player === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.count_in_player = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether the total amount of this item includes items in player inventories',
         },
         {
             headerName: 'crafted',
-            valueGetter: (params) => params.data.flags[0].$.crafted === '1',
+            valueGetter: (params) => params.data?.flags[0].$.crafted === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.crafted = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether this item is made by crafting',
         },
         {
             headerName: 'deloot',
-            valueGetter: (params) => params.data.flags[0].$.deloot === '1',
+            valueGetter: (params) => params.data?.flags[0].$.deloot === '1',
             valueSetter: (params) => {
                 params.data.flags[0].$.deloot = params.newValue ? '1' : '0';
                 return true;
             },
             sortable: false,
             filter: false,
-            cellRenderer: 'checkboxRenderer',
+            cellRenderer: CheckboxRenderer,
             headerTooltip: 'Wether this item is spawned at dynamic events',
         },
     ];
@@ -539,7 +531,7 @@ export class TypesComponent implements OnInit {
                     success: true,
                     message: 'Submitted successfully',
                 };
-            } catch (e) {
+            } catch (e: any) {
                 console.error(e);
                 this.outcomeBadge = {
                     success: false,
@@ -674,7 +666,7 @@ export class TypesComponent implements OnInit {
         /* eslint-disable no-undef */
         // eslint-disable-next-line @typescript-eslint/dot-notation
         if (window.navigator['msSaveOrOpenBlob']) {
-            window.navigator.msSaveBlob(blob, filename);
+            (window.navigator as any).msSaveBlob(blob, filename);
         } else {
             const elem = window.document.createElement('a');
             elem.href = window.URL.createObjectURL(blob);

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { MaintenanceService } from '@modules/maintenance/services';
+import { MaintenanceService } from '../../services/maintenance.service';
 
 @Component({
     selector: 'sb-maintenance',

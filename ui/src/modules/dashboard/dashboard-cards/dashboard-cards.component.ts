@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { MetricType, MetricTypeEnum, MetricWrapper, RconPlayer, ServerState, SystemReport } from '@common/models';
-import { ApiFetcher, AppCommonService } from '@common/services';
+import { MetricType, MetricTypeEnum, MetricWrapper, RconPlayer, ServerState, SystemReport } from '../../app-common/models';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { ApiFetcher, AppCommonService } from '../../app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-dashboard-cards',

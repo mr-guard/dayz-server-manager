@@ -6,8 +6,8 @@ import { Routes, RouterModule } from '@angular/router';
 import { LogsModule } from './logs.module';
 
 /* Containers */
-import * as containers from './containers';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../navigation/models';
+import { LogsComponent } from './containers/logs/logs.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -15,7 +15,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: containers.LogsComponent,
+        component: LogsComponent,
         data: {
             title: 'Logs',
             breadcrumbs: [

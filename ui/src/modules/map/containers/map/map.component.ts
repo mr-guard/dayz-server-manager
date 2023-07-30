@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { ServerInfo } from '@common/models';
-import { AppCommonService } from '@common/services';
+import { ServerInfo } from '../../../app-common/models';
+import { AppCommonService } from '../../../app-common/services/app-common.service';
 import {
     Control,
     control,

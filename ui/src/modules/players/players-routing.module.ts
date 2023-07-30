@@ -4,11 +4,8 @@ import { Routes, RouterModule } from '@angular/router';
 
 /* Module */
 import { PlayersModule } from './players.module';
-
-/* Containers */
-import * as playersContainers from './containers';
-
-import { SBRouteData } from '@modules/navigation/models';
+import { PlayersComponent } from './containers/players/players.component';
+import { SBRouteData } from '../navigation/models';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -16,7 +13,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: playersContainers.PlayersComponent,
+        component: PlayersComponent,
         data: {
             title: 'Players',
             breadcrumbs: [

@@ -4,18 +4,17 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
-/* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-import { SystemModule } from '@modules/system/system.module';
-import { PlayersModule } from '@modules/players/players.module';
-
-/* Components */
-import * as dashboardComponents from './components';
-
-/* Containers */
-import * as dashboardContainers from './containers';
 import { NgxGaugeModule } from 'ngx-gauge';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
+import { SystemModule } from '../system/system.module';
+import { PlayersModule } from '../players/players.module';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { DashboardCardsComponent } from './dashboard-cards/dashboard-cards.component';
+import { DashboardPlayersComponent } from './dashboard-players/dashboard-players.component';
+import { DashboardSystemComponent } from './dashboard-system/dashboard-system.component';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 
 @NgModule({
@@ -29,8 +28,20 @@ import { NgxGaugeModule } from 'ngx-gauge';
         SystemModule,
         PlayersModule,
         NgxGaugeModule,
+        FontAwesomeModule,
+        NgbModule,
     ],
-    declarations: [...dashboardContainers.containers, ...dashboardComponents.components],
-    exports: [...dashboardContainers.containers, ...dashboardComponents.components],
+    declarations: [
+        DashboardComponent,
+        DashboardCardsComponent,
+        DashboardPlayersComponent,
+        DashboardSystemComponent,
+    ],
+    exports: [
+        DashboardComponent,
+        DashboardCardsComponent,
+        DashboardPlayersComponent,
+        DashboardSystemComponent,
+    ],
 })
 export class DashboardModule {}

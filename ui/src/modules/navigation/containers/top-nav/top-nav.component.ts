@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { AppCommonService } from '@common/services';
-import { AuthService } from '@modules/auth/services';
-import { Breadcrumb } from '@modules/navigation/models';
-import { NavigationService } from '@modules/navigation/services';
 import { Subscription } from 'rxjs';
+import { Breadcrumb } from '../../models';
+import { NavigationService } from '../../services/navigation.service';
+import { AuthService } from '../../../auth/services/auth.service';
+import { AppCommonService } from '../../../../modules/app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-top-nav',

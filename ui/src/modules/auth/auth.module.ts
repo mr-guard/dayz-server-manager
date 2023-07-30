@@ -5,13 +5,11 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-
-/* Containers */
-import * as authContainers from './containers';
-import { guards } from './guards';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
+import { AuthGuard, LoginGuard } from './guards/auth.guard';
+import { LoginComponent } from './containers/login/login.component';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 
 @NgModule({
@@ -22,9 +20,10 @@ import { guards } from './guards';
         FormsModule,
         AppCommonModule,
         NavigationModule,
+        NgbModule,
     ],
-    providers: [...guards],
-    declarations: [...authContainers.containers],
-    exports: [...authContainers.containers],
+    providers: [LoginGuard, AuthGuard],
+    declarations: [LoginComponent],
+    exports: [LoginComponent],
 })
 export class AuthModule {}

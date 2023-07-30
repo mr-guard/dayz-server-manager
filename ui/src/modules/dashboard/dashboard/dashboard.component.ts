@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { MetricTypeEnum, MetricWrapper, SystemReport } from '@common/models';
-import { AppCommonService } from '@common/services';
+import { MetricTypeEnum, MetricWrapper, SystemReport } from '../../app-common/models';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { AppCommonService } from '../../app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-dashboard',

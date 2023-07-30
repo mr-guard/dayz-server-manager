@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { LogMessage, LogType, LogTypeEnum } from '@common/models';
-import { ApiFetcher, AppCommonService } from '@common/services';
+import { LogMessage, LogType, LogTypeEnum } from '../../../app-common/models';
+import { ApiFetcher, AppCommonService } from '../../../app-common/services/app-common.service';
 import { Observable } from 'rxjs';
 
 @Component({

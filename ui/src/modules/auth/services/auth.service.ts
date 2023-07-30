@@ -1,8 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { UserLevel } from '@common/models';
-import { environment } from 'environments/environment';
+import { UserLevel } from '../../app-common/models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -54,7 +53,7 @@ export class AuthService {
 
     private async validateLogin(auth: string, remember?: boolean): Promise<void> {
         const resp = await this.httpClient.post(
-            `${environment.host}/api/login`,
+            `/api/login`,
             null,
             {
                 headers: {

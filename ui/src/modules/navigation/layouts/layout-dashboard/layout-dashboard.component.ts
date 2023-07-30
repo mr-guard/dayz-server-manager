@@ -7,9 +7,10 @@ import {
     OnDestroy,
     OnInit,
 } from '@angular/core';
-import { sideNavItems, sideNavSections } from '@modules/navigation/data';
-import { NavigationService } from '@modules/navigation/services';
+import { NavigationService } from '../../services/navigation.service';
 import { Subscription } from 'rxjs';
+import { sideNavItems, sideNavSections } from '../../data/side-nav.data';
+import { SideNavItems } from '../../models';
 
 @Component({
     selector: 'sb-layout-dashboard',

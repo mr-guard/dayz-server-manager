@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DecimalPipe } from '@angular/common';
 import { Injectable, PipeTransform } from '@angular/core';
-import { MetricTypeEnum, MetricWrapper, RconPlayer } from '@common/models';
-import { AppCommonService } from '@common/services';
-import { SortDirection } from '@modules/players/directives';
+import { MetricTypeEnum, MetricWrapper, RconPlayer } from '../../app-common/models';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, switchMap, tap } from 'rxjs/operators';
+import { SortDirection } from '../directives/sortable.directive';
+import { AppCommonService } from 'src/modules/app-common/services/app-common.service';
 
 interface SearchResult {
     players: RconPlayer[];
@@ -171,13 +171,13 @@ export class PlayersService {
 export class AllPlayersService extends PlayersService {
 
     public constructor(
-        protected pipe: DecimalPipe,
-        protected appCommon: AppCommonService,
+        pipe: DecimalPipe,
+        appCommon: AppCommonService,
     ) {
         super(pipe, appCommon);
     }
 
-    protected listenToPlayerChanges(): void {
+    protected override listenToPlayerChanges(): void {
         this.sub = this.appCommon.getApiFetcher<
         MetricTypeEnum.PLAYERS,
         MetricWrapper<RconPlayer[]>

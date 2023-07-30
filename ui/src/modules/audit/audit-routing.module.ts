@@ -5,9 +5,8 @@ import { Routes, RouterModule } from '@angular/router';
 /* Module */
 import { AuditModule } from './audit.module';
 
-/* Containers */
-import * as auditContainers from './containers';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../navigation/models';
+import { AuditComponent } from './containers/audit/audit.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -15,7 +14,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: auditContainers.AuditComponent,
+        component: AuditComponent,
         data: {
             title: 'Audit',
             breadcrumbs: [

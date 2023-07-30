@@ -5,16 +5,12 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-/* Containers */
-import * as maintenanceContainers from './containers';
-
-
-/* Services */
-import * as maintenanceServices from './services';
-import { PlayersModule } from '@modules/players/players.module';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
+import { PlayersModule } from '../players/players.module';
+import { MaintenanceComponent } from './containers/maintenance/maintenance.component';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @NgModule({
     imports: [
@@ -25,16 +21,17 @@ import { PlayersModule } from '@modules/players/players.module';
         AppCommonModule,
         NavigationModule,
         PlayersModule,
+        NgbModule,
+        FontAwesomeModule,
     ],
     providers: [
         DecimalPipe,
-        ...maintenanceServices.services,
     ],
     declarations: [
-        ...maintenanceContainers.containers,
+        MaintenanceComponent,
     ],
     exports: [
-        ...maintenanceContainers.containers,
+        MaintenanceComponent,
     ],
 })
 export class MaintenanceModule {}

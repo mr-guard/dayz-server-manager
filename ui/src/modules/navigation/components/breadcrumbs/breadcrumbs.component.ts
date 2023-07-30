@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { Breadcrumb } from '@modules/navigation/models';
-import { NavigationService } from '@modules/navigation/services';
+import { Breadcrumb } from '../../models';
+import { NavigationService } from '../../services/navigation.service';
 import { Subscription } from 'rxjs';
 
 @Component({

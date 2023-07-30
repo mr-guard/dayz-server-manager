@@ -1,50 +1,42 @@
 {
-    "angularCompilerOptions": {
-        "enableIvy": false,
-        "fullTemplateTypeCheck": true,
-        "preserveWhitespaces": false,
-        "strictInjectionParameters": true,
-        "strictTemplates": true
-    },
     "compileOnSave": false,
     "compilerOptions": {
-      "baseUrl": "src",
-      "declaration": false,
-      "downlevelIteration": true,
-      "esModuleInterop": true,
-      "experimentalDecorators": true,
-      "importHelpers": true,
-      "lib": [
-        "es2018",
-        "dom"
-      ],
-      "module": "esnext",
-      "moduleResolution": "node",
-      "noImplicitAny": false,
-      "outDir": "./dist/out-tsc",
-      "paths": {
-        "@app/*": [
-          "app/*"
+        "baseUrl": "./",
+        "outDir": "./dist/out-tsc",
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "sourceMap": true,
+        "declaration": false,
+        "downlevelIteration": true,
+        "experimentalDecorators": true,
+        "moduleResolution": "node",
+        "importHelpers": true,
+        "esModuleInterop": true,
+        "lib": [
+            "es2022",
+            "dom"
         ],
-        "@common/*": [
-          "modules/app-common/*"
+        "module": "es2022",
+        "noImplicitAny": false,
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true,
+        "target": "ES2022",
+        "typeRoots": [
+            "node_modules/@types",
+            "src/typings"
         ],
-        "@modules/*": [
-          "modules/*"
-        ],
-        "@testing/*": [
-          "testing/*"
-        ]
-      },
-      "resolveJsonModule": true,
-      "allowSyntheticDefaultImports": true,
-      "sourceMap": true,
-      "strict": true,
-      "target": "ES2022",
-      "typeRoots": [
-        "node_modules/@types",
-        "src/typings"
-      ],
-      "useDefineForClassFields": false
-    }
+        "useDefineForClassFields": false
+    },
+    "angularCompilerOptions": {
+        "fullTemplateTypeCheck": true,
+        "preserveWhitespaces": false,
+        "enableI18nLegacyMessageIdFormat": false,
+        "strictInjectionParameters": true,
+        "strictInputAccessModifiers": true,
+        "strictTemplates": true
+    },
 }

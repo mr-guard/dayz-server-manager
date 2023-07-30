@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '@modules/auth/services';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
     selector: 'sb-login',

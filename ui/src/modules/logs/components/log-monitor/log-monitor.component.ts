@@ -1,5 +1,5 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { LogMessage } from '@common/models';
+import { LogMessage } from '../../../app-common/models';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({

@@ -5,20 +5,9 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-/* Components */
-import * as utilityComponents from './components';
-
-/* Containers */
-import * as utilityContainers from './containers';
-
-/* Guards */
-import * as utilityGuards from './guards';
-
-/* Services */
-import * as utilityServices from './services';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
+import { VersionComponent } from './containers/version/version.component';
 
 @NgModule({
     imports: [
@@ -29,8 +18,11 @@ import * as utilityServices from './services';
         AppCommonModule,
         NavigationModule,
     ],
-    providers: [...utilityServices.services, ...utilityGuards.guards],
-    declarations: [...utilityContainers.containers, ...utilityComponents.components],
-    exports: [...utilityContainers.containers, ...utilityComponents.components],
+    declarations: [
+        VersionComponent,
+    ],
+    exports: [
+        VersionComponent,
+    ],
 })
 export class UtilityModule {}

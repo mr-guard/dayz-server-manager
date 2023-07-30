@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { AppCommonService } from '@common/services';
+import { AppCommonService } from '../../app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-dashboard-system',

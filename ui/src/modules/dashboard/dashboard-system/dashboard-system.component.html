@@ -5,7 +5,7 @@
                 <fa-icon class="mr-1" [icon]='["fas", "chart-area"]'></fa-icon>System CPU
             </div>
             <div class="card-body">
-                <sb-charts-area [chartConf]="commonService.chart('system', 'cpu') | async"></sb-charts-area>
+                <sb-charts-area [chartConf]="(commonService.chart('system', 'cpu') | async)!"></sb-charts-area>
             </div>
         </sb-card>
     </div>
@@ -15,7 +15,7 @@
                 <fa-icon class="mr-1" [icon]='["fas", "chart-area"]'></fa-icon>System RAM
             </div>
             <div class="card-body">
-                <sb-charts-area [chartConf]="commonService.chart('system', 'ram') | async"></sb-charts-area>
+                <sb-charts-area [chartConf]="(commonService.chart('system', 'ram') | async)!"></sb-charts-area>
             </div>
         </sb-card>
     </div>

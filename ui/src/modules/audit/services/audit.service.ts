@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DecimalPipe } from '@angular/common';
 import { Injectable, PipeTransform } from '@angular/core';
-import { AuditEvent, MetricTypeEnum } from '@common/models';
-import { AppCommonService } from '@common/services';
-import { SortDirection } from '@modules/players/directives';
+import { AuditEvent, MetricTypeEnum } from '../../app-common/models';
+import { AppCommonService } from '../../app-common/services/app-common.service';
+import { SortDirection } from '../../players/directives/sortable.directive';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, switchMap, tap } from 'rxjs/operators';
 

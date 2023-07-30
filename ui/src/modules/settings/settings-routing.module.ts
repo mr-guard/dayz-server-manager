@@ -5,9 +5,8 @@ import { Routes, RouterModule } from '@angular/router';
 /* Module */
 import { SettingsModule } from './settings.module';
 
-/* Containers */
-import * as containers from './containers';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../navigation/models';
+import { SettingsComponent } from './containers/settings/settings.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -15,7 +14,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: containers.SettingsComponent,
+        component: SettingsComponent,
         data: {
             title: 'Settings',
             breadcrumbs: [

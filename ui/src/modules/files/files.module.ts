@@ -5,18 +5,14 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-/* Containers */
-import { containers, renderers } from './containers';
-
-
-/* Services */
-import * as services from './services';
-import { PlayersModule } from '@modules/players/players.module';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
 import { AgGridModule } from 'ag-grid-angular';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { PlayersModule } from '../players/players.module';
+import { CategoryRenderer, CheckboxRenderer, TypesComponent, UsageRenderer, ValueRenderer } from './containers/types/types.component';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
     imports: [
@@ -27,22 +23,27 @@ import { NgSelectModule } from '@ng-select/ng-select';
         AppCommonModule,
         NavigationModule,
         PlayersModule,
-        AgGridModule.withComponents([
-            ...renderers,
-        ]),
+        AgGridModule,
         NgSelectModule,
+        FontAwesomeModule,
+        NgbModule,
     ],
     providers: [
         DecimalPipe,
-        ...services.services,
     ],
     declarations: [
-        ...containers,
-        ...renderers,
+        CategoryRenderer,
+        ValueRenderer,
+        UsageRenderer,
+        CheckboxRenderer,
+        TypesComponent,
     ],
     exports: [
-        ...containers,
-        ...renderers,
+        CategoryRenderer,
+        ValueRenderer,
+        UsageRenderer,
+        CheckboxRenderer,
+        TypesComponent,
     ],
 })
 export class FilesModule {}

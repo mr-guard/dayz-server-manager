@@ -4,11 +4,8 @@ import { Routes, RouterModule } from '@angular/router';
 
 /* Module */
 import { MapModule } from './map.module';
-
-/* Containers */
-import * as containers from './containers';
-
-import { SBRouteData } from '@modules/navigation/models';
+import { MapComponent } from './containers/map/map.component';
+import { SBRouteData } from '../navigation/models';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -16,7 +13,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: containers.MapComponent,
+        component: MapComponent,
         data: {
             title: 'Map',
             breadcrumbs: [

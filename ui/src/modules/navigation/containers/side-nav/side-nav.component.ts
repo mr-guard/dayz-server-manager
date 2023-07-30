@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { SideNavItems, SideNavSection } from '@modules/navigation/models';
-import { NavigationService } from '@modules/navigation/services';
+import { SideNavItems, SideNavSection } from '../../models';
+import { NavigationService } from '../../services/navigation.service';
 import { Subscription } from 'rxjs';
 
 @Component({

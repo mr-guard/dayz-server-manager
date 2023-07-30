@@ -1,13 +1,12 @@
 /* tslint:disable: ordered-imports*/
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../../modules/navigation/models';
 
 /* Module */
 import { DashboardModule } from './dashboard.module';
+import { DashboardComponent } from './dashboard/dashboard.component';
 
-/* Containers */
-import * as dashboardContainers from './containers';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -24,7 +23,7 @@ export const ROUTES: Routes = [
             ],
         } as SBRouteData,
         canActivate: [],
-        component: dashboardContainers.DashboardComponent,
+        component: DashboardComponent,
     },
     // {
     //     path: 'static',

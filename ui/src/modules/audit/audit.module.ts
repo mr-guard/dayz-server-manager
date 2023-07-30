@@ -5,17 +5,14 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
 
-/* Containers */
-import * as auditContainers from './containers';
-
-
-/* Services */
-import * as auditServices from './services';
-import { PlayersModule } from '@modules/players/players.module';
 import { AuditTableComponent } from './components/audit-table/audit-table.component';
+import { AuditComponent } from './containers/audit/audit.component';
+import { PlayersModule } from '../players/players.module';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @NgModule({
     imports: [
@@ -26,17 +23,18 @@ import { AuditTableComponent } from './components/audit-table/audit-table.compon
         AppCommonModule,
         NavigationModule,
         PlayersModule,
+        NgbModule,
+        FontAwesomeModule,
     ],
     providers: [
         DecimalPipe,
-        ...auditServices.services,
     ],
     declarations: [
-        ...auditContainers.containers,
+        AuditComponent,
         AuditTableComponent,
     ],
     exports: [
-        ...auditContainers.containers,
+        AuditComponent,
         AuditTableComponent,
     ],
 })
