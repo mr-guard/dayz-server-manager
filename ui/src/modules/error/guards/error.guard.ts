@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { CanActivate } from '@angular/router';
+
 import { Observable, of } from 'rxjs';
 
 @Injectable()
-export class ErrorGuard implements CanActivate {
+export class ErrorGuard  {
 
     public canActivate(): Observable<boolean> {
         return of(true);
