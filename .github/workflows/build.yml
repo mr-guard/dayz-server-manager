@@ -40,7 +40,7 @@ jobs:
       run: npm run pack:windows
     
     - name: Zip Artifacts (windows)
-      run: zip -r server-manager.zip build/*
+      run: powershell Compress-Archive -Path 'build/*' -DestinationPath 'server-manager.zip'
     
     - name: Archive build artifacts (windows)
       uses: actions/upload-artifact@v2
