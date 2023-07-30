@@ -95,10 +95,8 @@ const routes: Routes = [
         RouterModule.forRoot(
             routes,
             {
-                relativeLinkResolution: 'legacy',
-                onSameUrlNavigation: 'reload',
-                // enableTracing: true,
-            },
+    onSameUrlNavigation: 'reload'
+},
         ),
         AuthModule,
     ],
