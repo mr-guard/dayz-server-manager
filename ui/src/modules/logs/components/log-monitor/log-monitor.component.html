@@ -5,9 +5,9 @@
     <fa-icon [icon]='["fas", lockToEnd ? "lock" : "lock-open"]'></fa-icon>
   </button>
 </div>
-<cdk-virtual-scroll-viewport [itemSize]="1" [minBufferPx]="10" [maxBufferPx]="10" class="shrinked dark-theme"
-  style="overflow-y: scroll;" #scrollView>
-  <div *cdkVirtualFor="let log of messages; let i = index;" style="display: flex; flex-direction: column;">
+<cdk-virtual-scroll-viewport [itemSize]="itemSize" [minBufferPx]="10" [maxBufferPx]="10" class="dark-theme flex-grow"
+  style="overflow: scroll;" #scrollView>
+  <div *cdkVirtualFor="let log of messages; let i = index;" style="white-space: nowrap">
     {{log.message}}
   </div>
 </cdk-virtual-scroll-viewport>

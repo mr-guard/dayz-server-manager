@@ -17,17 +17,11 @@ $dark-title-bar: #1f1f1f;
 
 $dark-light: #3c3c3c;
 
-
-.container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  overflow-y: auto;
-  font-family: "Lucida Console", Monaco,  monospace, sans-serif;
+:host {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
-
 
 .title-bar{
   padding: 5px;
@@ -60,9 +54,4 @@ $dark-light: #3c3c3c;
   .msg-warn {
     color: $orange-light;
   }
-}
-
-.shrinked {
-  width: 100%;
-  height: 90%;
 }

@@ -1,7 +1,5 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { LogMessage, LogType, LogTypeEnum } from '../../../app-common/models';
-import { ApiFetcher, AppCommonService } from '../../../app-common/services/app-common.service';
-import { Observable } from 'rxjs';
+import { LogMessage} from '../../../app-common/models';
 
 @Component({
     selector: 'sb-logs',
@@ -22,30 +20,6 @@ export class LogsComponent implements OnInit {
 
     public set activeTab(tab: number) {
         this.activeTab$ = tab;
-    }
-
-    public constructor(
-        private appCommon: AppCommonService,
-    ) {
-        this.rptLogs = this.getFetcher(LogTypeEnum.RPT).snapshot;
-        this.admLogs = this.getFetcher(LogTypeEnum.ADM).snapshot;
-        this.scriptLogs = this.getFetcher(LogTypeEnum.SCRIPT).snapshot;
-    }
-
-    public get rptStream(): Observable<LogMessage> {
-        return this.getFetcher(LogTypeEnum.RPT).dataInserted;
-    }
-
-    public get admStream(): Observable<LogMessage> {
-        return this.getFetcher(LogTypeEnum.ADM).dataInserted;
-    }
-
-    public get scriptStream(): Observable<LogMessage> {
-        return this.getFetcher(LogTypeEnum.SCRIPT).dataInserted;
-    }
-
-    private getFetcher(type: LogType): ApiFetcher<LogType, LogMessage> {
-        return this.appCommon.getApiFetcher<LogType, LogMessage>(type);
     }
 
     public ngOnInit(): void {

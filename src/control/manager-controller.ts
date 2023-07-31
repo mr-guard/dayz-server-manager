@@ -5,7 +5,7 @@ import { Logger, LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
 import { Requirements } from '../services/requirements';
 import { ConfigWatcher } from '../services/config-watcher';
-import { container, injectable, registry, singleton } from 'tsyringe';
+import { container, injectable, Lifecycle, registry, singleton } from 'tsyringe';
 import { LoggerFactory } from '../services/loggerfactory';
 import { ServerDetector } from '../services/server-detector';
 import { IngameReport } from '../services/ingame-report';
@@ -49,44 +49,54 @@ import { REST } from '../interface/rest';
     {
     token: Monitor,
     useClass: Monitor,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: Events,
     useClass: Events,
-    },
-    {
-    token: Hooks,
-    useClass: Hooks,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: LogReader,
     useClass: LogReader,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: Hooks,
+    useClass: Hooks,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: MissionFiles,
     useClass: MissionFiles,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: SystemReporter,
     useClass: SystemReporter,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: DiscordBot,
     useClass: DiscordBot,
+    options: { lifecycle: Lifecycle.Singleton },
     },
 
     // interfaces
     {
     token: Interface,
     useClass: Interface,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: DiscordMessageHandler,
     useClass: DiscordMessageHandler,
+    options: { lifecycle: Lifecycle.Singleton },
     },
     {
     token: REST,
     useClass: REST,
+    options: { lifecycle: Lifecycle.Singleton },
     },
 ]) // eslint-disable-line @typescript-eslint/indent
 @injectable()
