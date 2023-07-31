@@ -32,6 +32,10 @@ jobs:
       run: npm ci
     - name: Install ui deps
       run: npm run install:ui
+    
+    - name: Set version
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: npm version ${{ github.ref_name }}
 
     - name: Build
       run: npm run build
@@ -69,6 +73,10 @@ jobs:
     - name: Install ui deps
       run: npm run install:ui
     
+    - name: Set version
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: npm version ${{ github.ref_name }}
+
     - name: Build
       run: npm run build
 

@@ -5,8 +5,7 @@ import { Request } from '../types/interface';
 import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
-import { EventBus } from '../control/event-bus';
-import { InternalEventTypes } from '../types/events';
+import { Interface } from './interface';
 
 @singleton()
 @injectable()
@@ -17,7 +16,7 @@ export class DiscordMessageHandler extends IService {
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
-        private eventBus: EventBus,
+        private eventInterface: Interface,
     ) {
         super(loggerFactory.createLogger('DiscordMsgHandler'));
     }
@@ -61,7 +60,7 @@ export class DiscordMessageHandler extends IService {
         //     return;
         // }
 
-        const handler = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS))?.get(command);
+        const handler = this.eventInterface.commandMap?.get(command);
         if (!handler || handler.disableDiscord) {
             await message.reply('Command not found.');
             return;
@@ -91,7 +90,7 @@ export class DiscordMessageHandler extends IService {
             });
         }
 
-        const res = await this.eventBus.request(InternalEventTypes.INTERFACE_REQUEST, req);
+        const res = await this.eventInterface.execute(req);
 
         if (res.status >= 200 && res.status < 300) {
             // eslint-disable-next-line @typescript-eslint/no-base-to-string

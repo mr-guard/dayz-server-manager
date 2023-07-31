@@ -72,6 +72,10 @@ body {
   height: 80%;
 }
 
+.flex-grow {
+    flex-grow: 1;
+}
+
 .ag-cell-label-container {
   /* Necessary to allow for text to grow vertically */
   // height: 100%;

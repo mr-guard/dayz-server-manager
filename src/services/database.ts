@@ -12,7 +12,7 @@ export class Sqlite3Wrapper {
         file: string,
         opts: sqlite3.Options,
     ): sqlite3.Database {
-        return new sqlite3(file, opts);
+        return new (sqlite3 as any)(file, opts);
     }
 
     private db: sqlite3.Database;

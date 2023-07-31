@@ -1,7 +1,7 @@
 {
   "name": "dayz-server-manager",
   "description": "A server installer and watch-dog for dayz with built-in Discord and RCon bot",
-  "version": "1.0.0",
+  "version": "DEV",
   "repository": {
     "url": "https://github.com/mr-guard/dayz-server-manager"
   },
@@ -20,14 +20,17 @@
     "build": "del-cli dist/* && npm run generator && npm run build:tsc && npm run build:ui && npm-run-all build:pbo:*",
     "generator": "ts-node scripts/extract-template.ts",
     "build:tsc": "tsc",
+    "build-backend-only": "del-cli dist/**/* !dist/{ui,mods} && npm run generator && npm run build:tsc",
     "build:ui": "del-cli dist/ui && cd ui && npm run build",
     "build:pbo:main": "node scripts/mkdir.js dist/mods/@DayZServerManager/addons && bash -c 'makepbo -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts dist/mods/@DayZServerManager/addons/Scripts.pbo'",
     "build:pbo:exp": "node scripts/mkdir.js dist/mods/@DayZServerManagerExpansion/addons && bash -c 'makepbo -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts dist/mods/@DayZServerManagerExpansion/addons/Scripts.pbo'",
-    "pack:windows": "del-cli build/dayz-server-manager* && cp VERSION dist/VERSION && pkg --out-path build -t node16-win-x64 .",
-    "pack:linux": "del-cli build/dayz-server-manager* && cp VERSION dist/VERSION && pkg --out-path build -t node16-linux-x64 .",
+    "pack:windows": "del-cli build/dayz-server-manager* && pkg --out-path build -t node16-win-x64 .",
+    "pack:linux": "del-cli build/dayz-server-manager* && pkg --out-path build -t node16-linux-x64 .",
     "mkdir:exec": "node scripts/mkdir.js exec",
     "start": "npm run build && npm run mkdir:exec && cd exec && node ../dist/index.js",
+    "start:fast": "npm run build-backend-only && npm run mkdir:exec && cd exec && node ../dist/index.js",
     "start:packed:windows": "npm run build && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
+    "start:packed:windows:fast": "npm run build-backend-only && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
     "lint": "eslint src --ext .ts",
     "test": "npm run generator && nyc --check-coverage --lines 85 --functions 100 mocha",
     "test:watch": "mocha -w --reporter min"
@@ -55,7 +58,8 @@
     "targets": [
       "node16-linux-x64",
       "node16-win-x64"
-    ]
+    ],
+    "compress": "gz"
   },
   "nyc": {
     "include": [

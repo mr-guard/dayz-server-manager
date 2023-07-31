@@ -11,7 +11,7 @@ import { FSAPI, InjectionTokens } from '../util/apis';
 @injectable()
 export class Manager {
 
-    public readonly APP_VERSION!: string;
+    public readonly APP_VERSION: string = 'UNKNOWN';
 
     private log: Logger;
 
@@ -29,8 +29,6 @@ export class Manager {
         const versionFilePath = path.join(__dirname, '../VERSION');
         if (this.fs.existsSync(versionFilePath)) {
             this.APP_VERSION = this.fs.readFileSync(versionFilePath).toString();
-        } else {
-            this.APP_VERSION = 'UNKNOWN';
         }
         this.log.log(LogLevel.IMPORTANT, `Starting DZSM Version: ${this.APP_VERSION}`);
     }

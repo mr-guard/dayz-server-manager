@@ -29,66 +29,66 @@ import { REST } from '../interface/rest';
 @singleton()
 @registry([
     {
-        token: InjectionTokens.fs,
-        useValue: fsModule,
+    token: InjectionTokens.fs,
+    useValue: fsModule,
     },
     {
-        token: InjectionTokens.https,
-        useValue: httpsModule,
+    token: InjectionTokens.https,
+    useValue: httpsModule,
     },
     {
-        token: InjectionTokens.childProcess,
-        useValue: childProcessModule,
+    token: InjectionTokens.childProcess,
+    useValue: childProcessModule,
     },
     {
-        token: InjectionTokens.pty,
-        useValue: ptyModule,
+    token: InjectionTokens.pty,
+    useValue: ptyModule,
     },
 
     // standalone services
     {
-        token: Monitor,
-        useClass: Monitor,
+    token: Monitor,
+    useClass: Monitor,
     },
     {
-        token: Events,
-        useClass: Events,
+    token: Events,
+    useClass: Events,
     },
     {
-        token: Hooks,
-        useClass: Hooks,
+    token: Hooks,
+    useClass: Hooks,
     },
     {
-        token: LogReader,
-        useClass: LogReader,
+    token: LogReader,
+    useClass: LogReader,
     },
     {
-        token: MissionFiles,
-        useClass: MissionFiles,
+    token: MissionFiles,
+    useClass: MissionFiles,
     },
     {
-        token: SystemReporter,
-        useClass: SystemReporter,
+    token: SystemReporter,
+    useClass: SystemReporter,
     },
     {
-        token: DiscordBot,
-        useClass: DiscordBot,
+    token: DiscordBot,
+    useClass: DiscordBot,
     },
 
     // interfaces
     {
-        token: Interface,
-        useClass: Interface,
+    token: Interface,
+    useClass: Interface,
     },
     {
-        token: DiscordMessageHandler,
-        useClass: DiscordMessageHandler,
+    token: DiscordMessageHandler,
+    useClass: DiscordMessageHandler,
     },
     {
-        token: REST,
-        useClass: REST,
+    token: REST,
+    useClass: REST,
     },
-])
+]) // eslint-disable-line @typescript-eslint/indent
 @injectable()
 export class ManagerController {
 

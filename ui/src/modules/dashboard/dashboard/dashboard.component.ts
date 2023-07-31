@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MetricTypeEnum, MetricWrapper, SystemReport } from '../../app-common/models';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -6,7 +6,6 @@ import { AppCommonService } from '../../app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-dashboard',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './dashboard.component.html',
     styleUrls: ['dashboard.component.scss'],
 })

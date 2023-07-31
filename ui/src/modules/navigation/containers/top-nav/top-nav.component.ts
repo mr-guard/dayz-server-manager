@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { Breadcrumb } from '../../models';
 import { NavigationService } from '../../services/navigation.service';
@@ -7,7 +7,6 @@ import { AppCommonService } from '../../../../modules/app-common/services/app-co
 
 @Component({
     selector: 'sb-top-nav',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './top-nav.component.html',
     styleUrls: ['top-nav.component.scss'],
 })

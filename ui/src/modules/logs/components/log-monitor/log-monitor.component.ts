@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, Input, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { LogMessage } from '../../../app-common/models';
 import { Observable, Subscription } from 'rxjs';
 
@@ -6,7 +6,6 @@ import { Observable, Subscription } from 'rxjs';
     selector: 'sb-log-monitor',
     templateUrl: './log-monitor.component.html',
     styleUrls: ['./log-monitor.component.scss'],
-    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LogMonitorComponent implements OnInit, OnDestroy, AfterViewInit {
 
@@ -49,7 +48,6 @@ export class LogMonitorComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private scrollToBottom(force?: boolean): void {
         if (!this.container?.elementRef?.nativeElement || (!this.lockToEnd && !force)) return;
-        console.log('auto-scroll');
         const { scrollHeight } = this.container.elementRef.nativeElement;
         this.container.elementRef.nativeElement.scrollTop = scrollHeight;
         this.zone.run(() => {

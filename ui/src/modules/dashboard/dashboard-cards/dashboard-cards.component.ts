@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MetricType, MetricTypeEnum, MetricWrapper, RconPlayer, ServerState, SystemReport } from '../../app-common/models';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -6,7 +6,6 @@ import { ApiFetcher, AppCommonService } from '../../app-common/services/app-comm
 
 @Component({
     selector: 'sb-dashboard-cards',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './dashboard-cards.component.html',
     styleUrls: ['dashboard-cards.component.scss'],
 })
@@ -26,7 +25,7 @@ export class DashboardCardsComponent implements OnInit {
                 return 'bg-success';
             }
             case ServerState.STARTING: {
-                return 'bg-warn';
+                return 'bg-warning';
             }
             default: {
                 return 'bg-danger';

@@ -24,6 +24,11 @@
                             "zone.js",
                             "src/polyfills.ts"
                         ],
+                        "allowedCommonJsDependencies": [
+                            "xml2js",
+                            "leaflet",
+                            "chart.js"
+                        ],
                         "tsConfig": "tsconfig.app.json",
                         "assets": [
                             "src/favicon.png",

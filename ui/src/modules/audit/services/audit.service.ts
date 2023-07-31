@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import { DecimalPipe } from '@angular/common';
-import { Injectable, PipeTransform } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { AuditEvent, MetricTypeEnum } from '../../app-common/models';
 import { AppCommonService } from '../../app-common/services/app-common.service';
 import { SortDirection } from '../../players/directives/sortable.directive';
@@ -34,8 +32,7 @@ const sort = (audits: AuditEvent[], column: 'timestamp', direction: string): Aud
     });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const matches = (audit: AuditEvent, term: string, pipe: PipeTransform): boolean => {
+const matches = (audit: AuditEvent, term: string): boolean => {
     return (
         audit.user?.toLowerCase()?.includes(term.toLowerCase())
         || audit.value?.resource?.toLowerCase()?.includes(term.toLowerCase())
@@ -62,7 +59,6 @@ export class AuditService {
     protected sub!: Subscription;
 
     public constructor(
-        protected pipe: DecimalPipe,
         protected appCommon: AppCommonService,
     ) {
 
@@ -156,7 +152,7 @@ export class AuditService {
         let audits = sort(this.currentAudits, sortColumn, sortDirection);
 
         // 2. filter
-        audits = audits.filter((country) => matches(country, searchTerm, this.pipe));
+        audits = audits.filter((country) => matches(country, searchTerm));
         const total = audits.length;
 
         // 3. paginate

@@ -286,6 +286,7 @@ export class Interface extends IService {
                 action: (req) => this.executeWithResult(
                     req,
                     async () => {
+                        console.log(req)
                         const userLevel = this.manager.getUserLevel(req.user);
                         if (userLevel) {
                             this.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);

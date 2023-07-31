@@ -12,6 +12,7 @@ export const loggerMiddleware = (req: Request, resp: Response, next: any): void 
         req.path,
         req.query,
         typeof req.body === 'object' ? JSON.stringify(req.body) : req.body,
+        req.headers,
     );
     next();
 };

@@ -14,7 +14,7 @@ export type ConfigCallback = (config: Config) => any;
 @registry([{
     token: InjectionTokens.chokidar,
     useValue: chokidarModule,
-}])
+}]) // eslint-disable-line @typescript-eslint/indent
 @injectable()
 export class ConfigWatcher extends IService {
 

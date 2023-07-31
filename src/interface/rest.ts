@@ -9,23 +9,23 @@ import { Manager } from '../control/manager';
 import { Server } from 'http';
 import { CommandMap, Request } from '../types/interface';
 import { LogLevel } from '../util/logger';
-import { IService } from '../types/service';
+import { IStatefulService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
 import { Listener } from 'eventemitter2';
 import { WebsocketCommand, WebsocketListenerType, WebsocketMessage } from '../types/websocket';
+import { Interface } from './interface';
 
 @singleton()
 @injectable()
-export class REST extends IService {
+export class REST extends IStatefulService {
 
     public express: express.Application | undefined;
     public server: Server | undefined;
     public wsServer: ws.Server | undefined;
     public wsClients: Map<ws, { user: string, listeners: Listener[]}> | undefined;
-    private commandMap: CommandMap;
 
     public host: string | undefined;
     public port: number | undefined;
@@ -39,13 +39,14 @@ export class REST extends IService {
         loggerFactory: LoggerFactory,
         private manager: Manager,
         private eventBus: EventBus,
+        private eventInterface: Interface,
     ) {
         super(loggerFactory.createLogger('REST'));
     }
 
     /* istanbul ignore next function for easier tests */
     public createExpress(): express.Application {
-        return express();
+        return (express as any)();
     }
 
     public async start(): Promise<void> {
@@ -55,7 +56,7 @@ export class REST extends IService {
         this.host = this.manager.config.publishWebServer ? '0.0.0.0' : '127.0.0.1';
 
         // middlewares
-        this.express.use(compression());
+        this.express.use((compression as any)());
         this.express.use(express.json({ limit: '50mb' }));
         this.express.use(express.urlencoded({ extended: true }));
         this.express.use(loggerMiddleware);
@@ -81,7 +82,7 @@ export class REST extends IService {
         // events that come in.
         this.wsClients = new Map();
         this.wsServer = new ws.Server({ noServer: true, path: '/websocket' });
-        this.wsServer.on('connection', (socket) => {
+        this.wsServer.on('connection', (socket: any) => {
             socket.on('message', (message) => this.handleWsMessage(socket, message));
             socket.on('close', () => {
                 const socketData = (this.wsClients?.get(socket)?.listeners || []);
@@ -123,7 +124,7 @@ export class REST extends IService {
                     }
 
                     this.log.log(LogLevel.INFO, `Websocket Connection for ${username}`);
-                    this.wsServer.handleUpgrade(request, socket as any, head, (wsSocket) => {
+                    this.wsServer.handleUpgrade(request, socket as any, head, (wsSocket: any) => {
                         this.wsClients.set(
                             wsSocket,
                             {
@@ -140,7 +141,7 @@ export class REST extends IService {
     }
 
     private registerWsEventListener(socket: ws, listenerType: WebsocketListenerType): void {
-        const cmd = this.commandMap.get(listenerType);
+        const cmd = this.eventInterface.commandMap.get(listenerType);
         if (!cmd) {
             this.log.log(LogLevel.INFO, 'Listener type is not mapped to a command', listenerType);
             return;
@@ -242,10 +243,11 @@ export class REST extends IService {
         for (const user of (this.manager.config?.admins ?? [])) {
             users[user.userId] = user.password;
         }
-        this.router.use(basicAuth({ users, challenge: false }));
+        console.log(users);
+        this.router.use((basicAuth as any)({ users, challenge: false }));
 
-        this.commandMap = (await this.eventBus.request(InternalEventTypes.INTERFACE_COMMANDS)) || new Map();
-        for (const [resource, command] of this.commandMap) {
+        const commandMap = this.eventInterface.commandMap || new Map();
+        for (const [resource, command] of commandMap) {
 
             if (command.disableRest) continue;
 
@@ -286,7 +288,7 @@ export class REST extends IService {
         internalRequest.resource = resource;
         internalRequest.user = username;
 
-        const internalResponse = await this.eventBus.request(InternalEventTypes.INTERFACE_REQUEST, internalRequest);
+        const internalResponse = await this.eventInterface.execute(internalRequest);
 
         res.status(internalResponse.status).send(internalResponse.body);
     }

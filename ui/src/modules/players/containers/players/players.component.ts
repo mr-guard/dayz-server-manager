@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 @Component({
     selector: 'sb-players',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './players.component.html',
     styleUrls: ['players.component.scss'],
 })

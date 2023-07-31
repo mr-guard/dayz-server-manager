@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
@@ -208,7 +208,6 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
 
 @Component({
     selector: 'sb-types',
-    changeDetection: ChangeDetectionStrategy.Default,
     templateUrl: './types.component.html',
     styleUrls: ['types.component.scss'],
     encapsulation: ViewEncapsulation.None,
@@ -560,7 +559,7 @@ export class TypesComponent implements OnInit {
         try {
             const core = await this.appCommon.fetchMissionFile('cfgEconomyCore.xml').toPromise();
             this.coreXml = await xml.parseStringPromise(core);
-            const ceEntries = this.coreXml.economycore.ce;
+            const ceEntries = this.coreXml.economycore.ce || [];
             const typesFiles: string[] = ['db/types.xml'];
             for (const ceEntry of ceEntries) {
                 const folder = ceEntry.$.folder as string;

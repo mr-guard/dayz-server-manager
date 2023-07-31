@@ -1,13 +1,21 @@
 <div class="row">
 
     <div class="col-xl-3 col-md-6">
-        <sb-card-view-details link="/dashboard/system" [background]="serverStateToStyle((systemStream | async)?.value?.serverState)">
+        <sb-card-view-details
+            class="d-flex h-100"
+            link="/dashboard/system"
+            [background]="'flex-grow ' + serverStateToStyle((systemStream | async)?.value?.serverState)"
+        >
             <div class="card-body">Server State:<br/> {{ (systemStream | async)?.value?.serverState | defaultValue:'Unknown' }}</div>
         </sb-card-view-details>
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <sb-card-view-details link="/dashboard/system" background="bg-primary">
+        <sb-card-view-details
+            class="d-flex h-100"
+            link="/dashboard/system"
+            background="flex-grow bg-primary"
+        >
             <div class="card-body">
                 Sytem CPU:
                 <div class="row">
@@ -23,7 +31,11 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <sb-card-view-details link="/dashboard/system" background="bg-primary">
+        <sb-card-view-details
+            class="d-flex h-100"
+            link="/dashboard/system"
+            background="flex-grow bg-primary"
+        >
             <div class="card-body">
                 Sytem RAM: ~{{ (systemStream | async)?.value?.system?.mem | defaultValue:'Unknown' }} MB / {{ (systemStream | async)?.value?.system?.memTotal | defaultValue:'Unknown' }} MB
                 <div class="row">
@@ -39,7 +51,11 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <sb-card-view-details link="/dashboard/players" background="bg-primary">
+        <sb-card-view-details
+            class="d-flex h-100"
+            link="/dashboard/players"
+            background="flex-grow bg-primary"
+        >
             <div class="card-body">Online Players:<br/> {{ (playerStream | async)?.value?.length | defaultValue:'Unknown' }}</div>
         </sb-card-view-details>
     </div>

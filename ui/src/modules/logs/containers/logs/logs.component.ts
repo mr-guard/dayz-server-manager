@@ -1,11 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { LogMessage, LogType, LogTypeEnum } from '../../../app-common/models';
 import { ApiFetcher, AppCommonService } from '../../../app-common/services/app-common.service';
 import { Observable } from 'rxjs';
 
 @Component({
     selector: 'sb-logs',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './logs.component.html',
     styleUrls: ['logs.component.scss'],
     encapsulation: ViewEncapsulation.None,
@@ -22,7 +21,6 @@ export class LogsComponent implements OnInit {
     }
 
     public set activeTab(tab: number) {
-        console.log(tab);
         this.activeTab$ = tab;
     }
 

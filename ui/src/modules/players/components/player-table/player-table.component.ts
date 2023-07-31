@@ -1,5 +1,4 @@
 import {
-    ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
     Input,
@@ -14,7 +13,6 @@ import { Observable } from 'rxjs';
 
 @Component({
     selector: 'sb-player-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './player-table.component.html',
     styleUrls: ['player-table.component.scss'],
 })
@@ -56,7 +54,6 @@ export class PlayerTableComponent implements OnInit {
 
 @Component({
     selector: 'sb-all-player-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './player-table.component.html',
     styleUrls: ['player-table.component.scss'],
 })

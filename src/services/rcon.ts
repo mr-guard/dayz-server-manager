@@ -26,12 +26,10 @@ export class BattleyeConf {
 }
 
 @singleton()
-@registry([
-    {
-        token: InjectionTokens.rconSocket,
-        useFactory: /* istanbul ignore next */ () => /* istanbul ignore next */ () => new Socket(),
-    },
-])
+@registry([{
+    token: InjectionTokens.rconSocket,
+    useFactory: /* istanbul ignore next */ () => /* istanbul ignore next */ () => new Socket(),
+}]) // eslint-disable-line @typescript-eslint/indent
 @injectable()
 export class RCON extends IStatefulService {
 
@@ -196,7 +194,17 @@ export class RCON extends IStatefulService {
                 // }
 
             } else {
-                this.log.log(LogLevel.ERROR, `connection error`, err);
+                let logged: any = err;
+                if (
+                    err instanceof Error
+                    && (
+                        err?.message?.includes('Packet Error: Cleanup')
+                        || err?.message?.includes('PacketCleanupError')
+                    )
+                ) {
+                    logged = err.message;
+                }
+                this.log.log(LogLevel.ERROR, `connection error`, logged);
             }
         });
 

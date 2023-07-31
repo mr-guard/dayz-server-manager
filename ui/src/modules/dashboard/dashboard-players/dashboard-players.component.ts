@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 @Component({
     selector: 'sb-dashboard-players',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './dashboard-players.component.html',
     styleUrls: ['dashboard-players.component.scss'],
 })

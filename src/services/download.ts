@@ -41,7 +41,7 @@ export class Downloader {
 
     /* istanbul ignore next */
     public extractZip(zip: string, toDir: string): Promise<void> {
-        return extract(zip, { dir: toDir });
+        return (extract as any)(zip, { dir: toDir });
     }
 
     /* istanbul ignore next */

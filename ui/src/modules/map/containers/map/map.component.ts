@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ServerInfo } from '../../../app-common/models';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import {
@@ -89,7 +89,6 @@ interface IngameEntity {
 
 @Component({
     selector: 'sb-map',
-    changeDetection: ChangeDetectionStrategy.Default,
     templateUrl: './map.component.html',
     styleUrls: ['map.component.scss'],
 })

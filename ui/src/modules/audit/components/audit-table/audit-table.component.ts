@@ -1,5 +1,4 @@
 import {
-    ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
     Input,
@@ -14,7 +13,6 @@ import { Observable } from 'rxjs';
 
 @Component({
     selector: 'sb-audit-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './audit-table.component.html',
     styleUrls: ['audit-table.component.scss'],
 })
