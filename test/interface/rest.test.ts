@@ -19,7 +19,6 @@ describe('Test REST', () => {
 
     let manager: StubInstance<Manager>;
     let eventBus: EventBus;
-    let interfaceServiceExecute: sinon.SinonStub;
     let interfaceService: StubInstance<Interface>;
 
     beforeEach(() => {
@@ -52,10 +51,6 @@ describe('Test REST', () => {
         };
 
         Interface.prototype['setupCommandMap'].apply(interfaceService);
-        eventBus.on(
-            InternalEventTypes.INTERFACE_COMMANDS,
-            async () => interfaceService.commandMap,
-        );
 
         const rest = injector.resolve(REST);
 
@@ -159,10 +154,6 @@ describe('Test REST', () => {
         };
 
         Interface.prototype['setupCommandMap'].apply(interfaceService);
-        eventBus.on(
-            InternalEventTypes.INTERFACE_COMMANDS,
-            async () => interfaceService.commandMap,
-        );
 
         const rest = injector.resolve(REST);
 
@@ -211,14 +202,11 @@ describe('Test REST', () => {
 
     it('REST-handleCommand', async () => {
 
-        const requestStub = sinon.stub()
-            .resolves({
-                status: 200,
-                body: 'ok',
-            });
-        eventBus.on(InternalEventTypes.INTERFACE_REQUEST, requestStub);
-
         manager.initDone = false;
+        interfaceService.execute.resolves({
+            status: 200,
+            body: 'ok',
+        });
 
         const rest = injector.resolve(REST);
         
@@ -254,10 +242,10 @@ describe('Test REST', () => {
         expect(resResponseCode).to.equal(200);
         expect(resBody).to.be.not.undefined;
 
-        expect(requestStub.called).to.be.true;
-        expect(requestStub.firstCall.lastArg.body).to.equal(req.body);
-        expect(requestStub.firstCall.lastArg.resource).to.equal('testResource');
-        expect(requestStub.firstCall.lastArg.user).to.equal('admin');
+        expect(interfaceService.execute.called).to.be.true;
+        expect(interfaceService.execute.firstCall.lastArg.body).to.equal(req.body);
+        expect(interfaceService.execute.firstCall.lastArg.resource).to.equal('testResource');
+        expect(interfaceService.execute.firstCall.lastArg.user).to.equal('admin');
         
     });
 

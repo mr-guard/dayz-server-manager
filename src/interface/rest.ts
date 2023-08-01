@@ -7,7 +7,7 @@ import { loggerMiddleware } from '../middleware/logger';
 
 import { Manager } from '../control/manager';
 import { Server } from 'http';
-import { CommandMap, Request } from '../types/interface';
+import { Request } from '../types/interface';
 import { LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';

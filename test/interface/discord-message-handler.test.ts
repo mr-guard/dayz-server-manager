@@ -4,9 +4,8 @@ import { DiscordMessageHandler } from '../../src/interface/discord-message-handl
 import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
-import { EventBus } from '../../src/control/event-bus';
-import { InternalEventTypes } from '../../src/types/events';
 import * as sinon from 'sinon';
+import { Interface } from '../../src/interface/interface';
 
 class TestMessage {
 
@@ -30,8 +29,7 @@ describe('Test Discord Message handler', () => {
     let injector: DependencyContainer;
 
     let manager: StubInstance<Manager>;
-    let eventBus: EventBus;
-    let interfaceServiceExecute: sinon.SinonStub;
+    let interfaceService: StubInstance<Interface>;
 
     before(() => {
         disableConsole();
@@ -49,7 +47,7 @@ describe('Test Discord Message handler', () => {
         injector = container.createChildContainer();
 
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
-        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
+        injector.register(Interface, stubClass(Interface), { lifecycle: Lifecycle.Singleton });
         
         manager = injector.resolve(Manager) as any;
         manager.initDone = true;
@@ -62,28 +60,20 @@ describe('Test Discord Message handler', () => {
             ]
         };
 
-        eventBus = injector.resolve(EventBus) as any;
-        eventBus.on(
-            InternalEventTypes.INTERFACE_COMMANDS,
-            () => new Map([
-                ['test', {
-                    disableDiscord: false,
-                    params: ['arg1', 'arg2']
+        interfaceService = injector.resolve(Interface) as any;
+        interfaceService.commandMap = new Map([
+            ['test', {
+                disableDiscord: false,
+                params: ['arg1', 'arg2']
 
-                }],
-                ['testDisabled', { disableDiscord: true }]
-            ]) as any,
-        );
-        interfaceServiceExecute = sinon.stub()
+            }],
+            ['testDisabled', { disableDiscord: true }]
+        ]) as any;
+        interfaceService.execute
             .resolves({
                 status: 200,
                 body: 'test success',
             });
-        
-        eventBus.on(
-            InternalEventTypes.INTERFACE_REQUEST,
-            interfaceServiceExecute,
-        )
     });
 
     it('handleMessage-before init', async () => {
@@ -95,7 +85,7 @@ describe('Test Discord Message handler', () => {
         await handler.handleCommandMessage(message as any);
 
         expect(message.replyMsg).to.be.undefined;
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage-no command', async () => {
@@ -106,7 +96,7 @@ describe('Test Discord Message handler', () => {
         await handler.handleCommandMessage(message as any);
 
         expect(message.replyMsg).to.include('not found');
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage-discord disabled command', async () => {
@@ -117,7 +107,7 @@ describe('Test Discord Message handler', () => {
         await handler.handleCommandMessage(message as any);
 
         expect(message.replyMsg).to.include('not found');
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage-invalid user', async () => {
@@ -127,7 +117,7 @@ describe('Test Discord Message handler', () => {
         message.author.tag = 'asdf';
         await handler.handleCommandMessage(message as any);
         expect(message.replyMsg).to.be.undefined;
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage-wrong channel', async () => {
@@ -137,7 +127,7 @@ describe('Test Discord Message handler', () => {
         message.channel.name = 'asdf';
         await handler.handleCommandMessage(message as any);
         expect(message.replyMsg).to.include('not allowed');
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage-wrong param count', async () => {
@@ -147,7 +137,7 @@ describe('Test Discord Message handler', () => {
         message.content = '!test val1';
         await handler.handleCommandMessage(message as any);
         expect(message.replyMsg).to.include('Wrong param count');
-        expect(interfaceServiceExecute.called).to.be.false;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     it('handleMessage', async () => {
@@ -156,7 +146,7 @@ describe('Test Discord Message handler', () => {
         const message = new TestMessage();
         await handler.handleCommandMessage(message as any);
         expect(message.replyMsg).to.include('test success');
-        expect(interfaceServiceExecute.called).to.be.true;
+        expect(interfaceService.execute.called).to.be.true;
     });
 
     // it('handleMessage-help', async () => {

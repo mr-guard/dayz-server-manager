@@ -135,6 +135,7 @@ describe('Test class IngameReport', () => {
         
         const ingameReport = injector.resolve(IngameReport);
         
+        manager.config = {} as any;
         manager.getModIdList.returns([]);
         const mods = ingameReport.getServerMods();
         expect(mods.length).to.equal(1);

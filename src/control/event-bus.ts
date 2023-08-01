@@ -21,12 +21,12 @@ export class EventBus extends IService {
         super(loggerfactory.createLogger('EventBus'));
     }
 
-    public request(name: InternalEventTypes.INTERFACE_COMMANDS, data?: any): Promise<CommandMap>;
-    public request(name: InternalEventTypes.INTERFACE_REQUEST, request: Request): Promise<Response>;
+    /*
     public async request(name: InternalEventTypes, data?: any): Promise<any> {
         const response = await this.EVENT_EMITTER.emitAsync(name, data);
         return response ? response[0] : undefined;
     }
+    */
 
     public emit(name: InternalEventTypes.DISCORD_MESSAGE, message: string): void;
     public emit(name: InternalEventTypes.MONITOR_STATE_CHANGE, newState: ServerState, previousState: ServerState): void;
@@ -36,8 +36,6 @@ export class EventBus extends IService {
         this.EVENT_EMITTER.emit(name, data);
     }
 
-    public on(name: InternalEventTypes.INTERFACE_COMMANDS, listener: () => Promise<CommandMap>): Listener;
-    public on(name: InternalEventTypes.INTERFACE_REQUEST, listener: (request: Request) => Promise<Response>): Listener;
     public on(name: InternalEventTypes.DISCORD_MESSAGE, listener: (message: string) => Promise<any>): Listener;
     public on(name: InternalEventTypes.MONITOR_STATE_CHANGE, listener: (newState: ServerState, previousState: ServerState) => Promise<any>): Listener;
     public on(name: InternalEventTypes.METRIC_ENTRY, listener: (metricEntryEvent: MetricEntryEvent) => Promise<any>): Listener;

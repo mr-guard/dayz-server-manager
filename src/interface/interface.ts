@@ -15,8 +15,6 @@ import { LogLevel } from '../util/logger';
 import { makeTable } from '../util/table';
 import { constants as HTTP } from 'http2';
 import { ConfigFileHelper } from '../config/config-file-helper';
-import { EventBus } from '../control/event-bus';
-import { InternalEventTypes } from '../types/events';
 import { ServerDetector } from '../services/server-detector';
 
 
@@ -28,7 +26,6 @@ export class Interface extends IService {
 
     public constructor( // NOSONAR
         loggerFactory: LoggerFactory,
-        private eventBus: EventBus,
         private manager: Manager,
         private rcon: RCON,
         private monitor: Monitor,
@@ -42,14 +39,6 @@ export class Interface extends IService {
         private configFileHelper: ConfigFileHelper,
     ) {
         super(loggerFactory.createLogger('Manager'));
-        this.eventBus.on(
-            InternalEventTypes.INTERFACE_REQUEST,
-            /* istanbul ignore next */ (req) => this.execute(req),
-        );
-        this.eventBus.on(
-            InternalEventTypes.INTERFACE_COMMANDS,
-            /* istanbul ignore next */ async () => this.commandMap,
-        );
         this.setupCommandMap();
     }
 
