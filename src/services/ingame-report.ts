@@ -109,6 +109,11 @@ export class IngameReport extends IStatefulService {
     }
 
     public async installMod(): Promise<void> {
+
+        if (this.manager.config.ingameReportEnabled === false) {
+            return;
+        }
+
         const serverPath = this.manager.getServerPath();
 
         const modsPath = path.join(__dirname, '../mods');
@@ -129,9 +134,15 @@ export class IngameReport extends IStatefulService {
     }
 
     public getServerMods(): string[] {
+
+        if (this.manager.config.ingameReportEnabled === false) {
+            return [];
+        }
+
         const mods = [this.MOD_NAME];
         if (
             this.manager.getModIdList().includes(this.EXPANSION_VEHICLES_MOD_ID)
+            && this.manager.config.ingameReportExpansionCompat !== false
         ) {
             mods.push(this.MOD_NAME_EXPANSION);
         }

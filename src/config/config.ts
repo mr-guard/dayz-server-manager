@@ -873,6 +873,21 @@ export class Config {
      */
     public hooks: Hook[] = [];
 
+    // /////////////////////////// IngameReport ///////////////////////////////////////
+    /**
+     * Whether the ingame report is enabled or not
+     *
+     * Can be disabled if no additional mods should be installed or the mod breaks.
+     */
+    public ingameReportEnabled: boolean = true;
+
+    /**
+     * Enable ingame report expansion compatibility
+     *
+     * Can be disabled if no additional mods should be installed or the mod breaks.
+     */
+    public ingameReportExpansionCompat: boolean = true;
+
     // /////////////////////////// ServerCfg ///////////////////////////////////////
     /**
      * serverCfg

@@ -12,6 +12,7 @@ export const generateConfigTemplate = (schema: any, values?: Config): string => 
         ['events', 'Events'],
         ['metricPollIntervall', 'Metrics'],
         ['hooks', 'Hooks'],
+        ['ingameReportEnabled', 'IngameReport'],
         ['backupPath', 'Backups'],
         ['serverCfg', 'ServerCfg'],
     ];
