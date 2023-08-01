@@ -1,6 +1,6 @@
 {
   "name": "server-manager-ui",
-  "version": "1.3.0",
+  "version": "0.0.1-DEV",
   "scripts": {
     "build": "ng build",
     "bundle-report": "webpack-bundle-analyzer ../dist/ui/stats-es2015.json",
