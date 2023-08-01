@@ -13,13 +13,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
-  
-    - name: Install build tools
-      run: |
-        choco install python python2 -y
-        choco install visualstudio2019buildtools -y
-        choco install visualstudio2019-workload-vctools -y
-
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
