@@ -1,13 +1,19 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import * as sinon from 'sinon';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as discordModule from 'discord.js';
 import { DiscordBot } from '../../src/services/discord';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { DiscordMessageHandler } from '../../src/interface/discord-message-handler';
 
 describe('Test class Discord', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let messageHandler: StubInstance<DiscordMessageHandler>
 
     before(() => {
         disableConsole();
@@ -20,21 +26,29 @@ describe('Test class Discord', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(DiscordMessageHandler, stubClass(DiscordMessageHandler), { lifecycle: Lifecycle.Singleton });
+
+        manager = injector.resolve(Manager) as any;
+        messageHandler = injector.resolve(DiscordMessageHandler) as any;
+        (messageHandler as any).PREFIX = '!';
     });
 
     it('Discord-noToken', async () => {
 
-        const manager = {
-            config: {
-                discordBotToken: '',
-            },
-        };
+        manager.config = {
+            discordBotToken: '',
+        } as any;
 
-        const discord = new DiscordBot(manager as any);
+        const discord = injector.resolve(DiscordBot);
 
         await discord.start();
 
-        expect(discord['client']).to.be.undefined;
+        expect(discord.client).to.be.undefined;
     });
 
     it('Discord', async () => {
@@ -61,19 +75,17 @@ describe('Test class Discord', () => {
 
         const destroyStub = sinon.stub();
         discordClientMock.set('destroy', destroyStub);
-        const manager = {
-            config: {
-                discordBotToken: '1234',
-            },
-        };
+        
+        manager.config = {
+            discordBotToken: '1234',
+        } as any;
 
-        const discord = new DiscordBot(manager as any);
-        discord['debug'] = true;
-        const messageHandlerStub = sinon.stub(discord['messageHandler'], 'handleCommandMessage');
-
+        const discord = injector.resolve(DiscordBot);
+        discord.debug = true;
+        
         await discord.start();
 
-        expect(discord['client']).to.be.not.undefined;
+        expect(discord.client).to.be.not.undefined;
         expect(loginStub.callCount).to.equal(1);
 
         expect(onMessageCb).to.be.not.undefined;
@@ -98,11 +110,11 @@ describe('Test class Discord', () => {
             },
             content: '!test'
         });
-        expect(messageHandlerStub.callCount).to.equal(1);
+        expect(messageHandler.handleCommandMessage.callCount).to.equal(1);
 
         await discord.stop();
         expect(destroyStub.callCount).to.equal(1);
-        expect(discord['client']).to.be.undefined;
+        expect(discord.client).to.be.undefined;
 
     });
 
@@ -131,25 +143,24 @@ describe('Test class Discord', () => {
         };
         discordClientMock.set('guilds', guilds as any);
 
-        const manager = {
-            config: {
-                discordBotToken: '1234',
-                discordChannels: [{
-                    mode: 'rcon',
-                    channel: 'channel1',
-                },{
-                    mode: 'admin',
-                    channel: 'channel2',
-                }]
-            },
-        };
+        manager.config = {
+            discordBotToken: '1234',
+            discordChannels: [{
+                mode: 'rcon',
+                channel: 'channel1',
+            },{
+                mode: 'admin',
+                channel: 'channel2',
+            }]
+        } as any;
 
-        const discord = new DiscordBot(manager as any);
+        const discord = injector.resolve(DiscordBot);
+        discord['ready'] = true;
         
         // should return instantly
         await discord.relayRconMessage('test');
         
-        discord['client'] = discordClientMock.getMockInstance();
+        discord.client = discordClientMock.getMockInstance();
         await discord.relayRconMessage('test');
 
         expect(channel1.send.callCount).to.equal(1);

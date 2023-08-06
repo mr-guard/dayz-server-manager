@@ -1,17 +1,15 @@
 /* tslint:disable: ordered-imports*/
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { SBRouteData } from '@modules/navigation/models';
-
-/* Containers */
-import * as authContainers from './containers';
+import { SBRouteData } from '../navigation/models';
+import { LoginComponent } from './containers/login/login.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const ROUTES: Routes = [
     {
         path: '',
-        component: authContainers.LoginComponent,
+        component: LoginComponent,
         data: {
             title: 'Login',
         } as SBRouteData,

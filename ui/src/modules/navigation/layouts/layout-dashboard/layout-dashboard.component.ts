@@ -1,5 +1,4 @@
 import {
-    ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
     HostBinding,
@@ -7,13 +6,12 @@ import {
     OnDestroy,
     OnInit,
 } from '@angular/core';
-import { sideNavItems, sideNavSections } from '@modules/navigation/data';
-import { NavigationService } from '@modules/navigation/services';
+import { NavigationService } from '../../services/navigation.service';
 import { Subscription } from 'rxjs';
+import { sideNavItems, sideNavSections } from '../../data/side-nav.data';
 
 @Component({
     selector: 'sb-layout-dashboard',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './layout-dashboard.component.html',
     styleUrls: ['layout-dashboard.component.scss'],
 })

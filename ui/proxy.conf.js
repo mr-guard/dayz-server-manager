@@ -3,10 +3,19 @@
 const PROXY_CONFIG = [
     {
         context: [
-            '/api',
+            '/api/**',
         ],
         target: process.env.DZSM_HOST ? process.env.DZSM_HOST : 'http://localhost:2313',
         secure: false,
+        changeOrigin: true,
+    },
+    {
+        context: [
+            '/version',
+        ],
+        target: process.env.DZSM_HOST ? process.env.DZSM_HOST : 'http://localhost:2313',
+        secure: false,
+        changeOrigin: true,
     },
 ];
 

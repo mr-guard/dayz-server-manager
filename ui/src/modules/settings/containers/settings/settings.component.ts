@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { Config } from '@common/models';
-import { AppCommonService } from '@common/services';
+import { Component, OnInit } from '@angular/core';
+import { Config } from '../../../app-common/models';
+import { AppCommonService } from '../../../app-common/services/app-common.service';
 
 import configschema from '../../../../../../src/config/config.schema.json';
 
@@ -16,7 +16,6 @@ interface Property {
 
 @Component({
     selector: 'sb-settings',
-    changeDetection: ChangeDetectionStrategy.Default,
     templateUrl: './settings.component.html',
     styleUrls: ['settings.component.scss'],
 })

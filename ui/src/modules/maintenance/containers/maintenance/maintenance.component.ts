@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { MaintenanceService } from '@modules/maintenance/services';
+import { Component, OnInit } from '@angular/core';
+import { MaintenanceService } from '../../services/maintenance.service';
 
 @Component({
     selector: 'sb-maintenance',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './maintenance.component.html',
     styleUrls: ['maintenance.component.scss'],
 })

@@ -2,277 +2,281 @@ import 'reflect-metadata';
 
 import { Manager } from './manager';
 import { Logger, LogLevel } from '../util/logger';
-import { IStatefulService, ServiceConfig } from '../types/service';
-import * as chokidar from 'chokidar';
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as childProcess from 'child_process';
+import { IStatefulService } from '../types/service';
+import { Requirements } from '../services/requirements';
+import { ConfigWatcher } from '../services/config-watcher';
+import { container, injectable, Lifecycle, registry, singleton } from 'tsyringe';
+import { LoggerFactory } from '../services/loggerfactory';
+import { ServerDetector } from '../services/server-detector';
+import { IngameReport } from '../services/ingame-report';
+import { SteamCMD } from '../services/steamcmd';
+import { InjectionTokens } from '../util/apis';
+import * as fsModule from 'fs';
+import * as httpsModule from 'https';
+import * as childProcessModule from 'child_process';
+import * as ptyModule from 'node-pty';
+import { Monitor } from '../services/monitor';
+import { Events } from '../services/events';
+import { Hooks } from '../services/hooks';
+import { LogReader } from '../services/log-reader';
+import { MissionFiles } from '../services/mission-files';
+import { SystemReporter } from '../services/system-reporter';
+import { DiscordBot } from '../services/discord';
+import { Interface } from '../interface/interface';
+import { DiscordMessageHandler } from '../interface/discord-message-handler';
+import { REST } from '../interface/rest';
 
-export const isRunFromWindowsGUI = (): boolean => {
-    if (process.platform !== 'win32') {
-        return false;
-    }
+@singleton()
+@registry([
+    {
+    token: InjectionTokens.fs,
+    useValue: fsModule,
+    },
+    {
+    token: InjectionTokens.https,
+    useValue: httpsModule,
+    },
+    {
+    token: InjectionTokens.childProcess,
+    useValue: childProcessModule,
+    },
+    {
+    token: InjectionTokens.pty,
+    useValue: ptyModule,
+    },
 
-    // eslint-disable-next-line prefer-template
-    const stdout = (childProcess.spawnSync(
-        'cmd',
-        [
-            '/c',
-            [
-                'wmic',
-                'process',
-                'get',
-                'Name,ProcessId',
-                '/VALUE',
-            ].join(' '),
-        ],
-    ).stdout + '')
-        .replace(/\r/g, '')
-        .split('\n\n')
-        .filter((x) => !!x)
-        .map(
-            (x) => x
-                .split('\n')
-                .filter((y) => !!y)
-                .map((y) => {
-                    const equalIdx = y.indexOf('=');
-                    return [y.slice(0, equalIdx).trim(), y.slice(equalIdx + 1).trim()];
-                }),
-        )
-        .filter((x) => x[1][1] === `${process.ppid}`);
+    // standalone services
+    {
+    token: Monitor,
+    useClass: Monitor,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: Events,
+    useClass: Events,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: LogReader,
+    useClass: LogReader,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: Hooks,
+    useClass: Hooks,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: MissionFiles,
+    useClass: MissionFiles,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: SystemReporter,
+    useClass: SystemReporter,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: DiscordBot,
+    useClass: DiscordBot,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
 
-    if (!stdout?.length) {
-        return false;
-    }
-
-    const parentName = stdout[0]?.[0]?.[1]?.toLowerCase();
-    return (
-        parentName === 'ApplicationFrameHost.exe'.toLowerCase()
-        || parentName === 'explorer.exe'
-    );
-};
-
+    // interfaces
+    {
+    token: Interface,
+    useClass: Interface,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: DiscordMessageHandler,
+    useClass: DiscordMessageHandler,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: REST,
+    useClass: REST,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+]) // eslint-disable-line @typescript-eslint/indent
+@injectable()
 export class ManagerController {
 
-    public static readonly INSTANCE = new ManagerController();
-
-    private log = new Logger('Manager');
-
-    private manager: Manager | undefined;
-
-    private configFileWatcher: chokidar.FSWatcher | undefined;
-    private configFileHash: string | undefined;
-
+    private working = false;
+    private started = false;
     private skipInitialCheck: boolean = false;
 
-    public constructor() {
-        process.on('unhandledRejection', (reason) => {
-            console.error(
-                'Unhandled Rejection:',
-                reason,
-            );
+    private log: Logger;
 
-            // TODO save and report
-        });
+    public constructor(
+        loggerFactory: LoggerFactory,
+        private configWatcher: ConfigWatcher,
+        private manager: Manager,
+        private serverDetector: ServerDetector,
+        private steamCmd: SteamCMD,
+        private ingameReport: IngameReport,
+        private requirements: Requirements,
+    ) {
+        this.log = loggerFactory.createLogger('Bootstrap');
+    }
 
-        process.on('exit', () => {
-            // prevent imidiate exit if run in GUI
-            if (isRunFromWindowsGUI()) {
-                childProcess.spawnSync(
-                    'pause',
-                    {
-                        shell: true,
-                        stdio: [0, 1, 2],
-                    },
-                );
+    private getServiceName(service: IStatefulService): string {
+        return service.constructor?.name || Object.getPrototypeOf(service)?.name;
+    }
+
+    private getStatefulServices(): IStatefulService[] {
+        this.log.log(
+            LogLevel.DEBUG,
+            'Currently Registered Services',
+            ([...((container as any)._registry).entries()].map((x) => x[0]?.name || x[0])),
+        );
+        const statefulServices = [];
+        for (const [token] of ((container as any)._registry).entries()) {
+            const protos = [];
+            let proto = Object.getPrototypeOf(token);
+            while (proto) {
+                if (proto.name) protos.push(proto.name);
+                proto = Object.getPrototypeOf(proto);
             }
-        });
-    }
 
-    private async forEachManagerServices(
-        cb: (
-            manager: Manager,
-            serviceKey: string,
-            meta: ServiceConfig,
-        ) => any,
-    ): Promise<void> {
-        const services = Reflect.getMetadata('services', this.manager);
-        for (const service of services) {
-            const meta = Reflect.getMetadata('service', this.manager, service);
-            if (meta) {
-                await cb(this.manager, service, meta);
+            if (protos.includes(IStatefulService.name)) {
+                statefulServices.push(token);
             }
         }
+        return statefulServices.map((x) => container.resolve(x));
     }
 
-    public async stop(): Promise<void> {
-        if (this.configFileWatcher) {
-            await this.configFileWatcher.close();
-            this.configFileWatcher = undefined;
+    public async stop(force?: boolean): Promise<void> {
+        if (!this.started) {
+            this.log.log(LogLevel.DEBUG, `Stop called while stopped`);
+            return;
         }
-        if (this.manager) {
-            this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
-            await this.forEachManagerServices(async (manager, service, config) => {
-                if (config.stateful) {
-                    this.log.log(LogLevel.DEBUG, `Stopping ${service}..`);
-                    await (manager[service] as IStatefulService)?.stop();
-                }
-            });
-            this.log.log(LogLevel.DEBUG, 'All running services stopped..');
-            this.manager = undefined;
+        if (this.working && !force) {
+            this.log.log(LogLevel.DEBUG, `Stop called while ${this.started ? 'stopping' : 'starting'}`);
+            return;
         }
-    }
+        this.working = true;
 
-    private async startCurrent(): Promise<void> {
-        if (this.manager) {
-            await this.forEachManagerServices(async (manager, service, config) => {
-                if (config.stateful) {
-                    this.log.log(LogLevel.DEBUG, `Starting ${service}..`);
-                    await (manager[service] as IStatefulService)?.start();
-                }
-            });
+        try {
+            await this.configWatcher.stopWatching();
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, `Failed to unwatch config`, e);
         }
+        this.log.log(LogLevel.DEBUG, 'Stopping all running services..');
+        for (const service of this.getStatefulServices()) {
+            this.log.log(LogLevel.DEBUG, `Stopping ${this.getServiceName(service)}..`);
+            try {
+                await service.stop();
+            } catch (e) {
+                this.log.log(LogLevel.ERROR, `Failed to stop service: ${this.getServiceName(service)}`, e);
+            }
+        }
+        this.log.log(LogLevel.DEBUG, 'Stopping completed..');
+        this.working = false;
+        this.started = false;
+        this.manager.initDone = false;
     }
 
     public async start(): Promise<void> {
 
-        const manager = new Manager();
-        const config = manager.configHelper.readConfig();
-        if (!config) {
-            throw new Error(`Config missing or invalid`);
+        if (this.working) {
+            this.log.log(LogLevel.DEBUG, `Start called while ${this.started ? 'stopping' : 'starting'}`);
+            return;
         }
+        this.working = true;
 
-        this.configFileHash = crypto.createHash('md5')
-            .update(JSON.stringify(config))
-            .digest('hex');
+        await this.stop(true);
 
-        await this.stop();
-        this.manager = manager;
-        manager.applyConfig(config);
+        const config = this.configWatcher.watch(
+            /* istanbul ignore next */
+            () => this.reloadConfig(),
+        );
 
+        this.manager.config = config;
+
+        // apply initial log level
         const { loglevel } = config;
         if (typeof loglevel === 'number' && loglevel >= LogLevel.DEBUG && loglevel <= LogLevel.ERROR) {
-            Logger.defaultLogLevel = this.manager.config.loglevel;
+            Logger.defaultLogLevel = loglevel;
         }
+
+        // set the process title
         process.title = `Server-Manager ${this.manager.getServerExePath()}`;
 
-        this.log.log(LogLevel.DEBUG, 'Setting up services..');
+        // check any requirements before even starting
+        await this.requirements.check();
 
-        await this.forEachManagerServices(async (m, service, serviceConfig) => {
-            if (serviceConfig.type) {
-                this.log.log(LogLevel.DEBUG, `Setting up service: ${service}`);
-                m[service] = new serviceConfig.type(m);
-            }
-        });
+        this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
         // init
         this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {
 
-            // check firewall, but let the server boot if its not there (could be manually set to ports)
-            await this.manager.requirements.checkFirewall();
-
-            // check runtime libs
-            const vcRedistOk = await this.manager.requirements.checkVcRedist();
-            const directXOk = await this.manager.requirements.checkDirectX();
-            if (!vcRedistOk || !directXOk) {
-                this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
-                process.exit(0);
-            }
-
-            // check error reporting
-            await this.manager.requirements.checkWinErrorReporting();
-
-            // eslint-disable-next-line no-negated-condition
-            if (!this.skipInitialCheck && !await this.manager.monitor.isServerRunning()) {
-                this.log.log(LogLevel.IMPORTANT, 'Initially checking SteamCMD, Server Installation and Mods. Please wait. This may take some minutes...');
-                const steamCmdOk = await this.manager.steamCmd.checkSteamCmd();
-                if (!steamCmdOk) {
-                    throw new Error('SteamCMD init failed');
-                }
-
-                // ingame report mod
-                await this.manager.ingameReport.installMod();
-                // Server
-                if (!await this.manager.steamCmd.checkServer() || this.manager.config.updateServerOnStartup) {
-                    if (!await this.manager.steamCmd.updateServer()) {
-                        throw new Error('Server installation failed');
-                    }
-                }
-                if (!await this.manager.steamCmd.checkServer()) {
-                    throw new Error('Server installation failed');
-                }
-
-
-                // Mods
-                if (!await this.manager.steamCmd.checkMods() || this.manager.config.updateModsOnStartup) {
-                    if (!await this.manager.steamCmd.updateMods()) {
-                        throw new Error('Updating Mods failed');
-                    }
-                }
-                if (!await this.manager.steamCmd.installMods()) {
-                    throw new Error('Installing Mods failed');
-                }
-                if (!await this.manager.steamCmd.checkMods()) {
-                    throw new Error('Mod installation failed');
-                }
-            } else {
-                this.log.log(LogLevel.IMPORTANT, 'Skipping initial SteamCMD check because the server is already running');
-            }
+            await this.initialSetup();
 
             this.log.log(LogLevel.DEBUG, 'Initial Check done. Starting Init..');
-            await this.startCurrent();
-
-            this.manager.initDone = true;
-            this.log.log(LogLevel.IMPORTANT, 'Server Manager initialized successfully');
-            this.log.log(LogLevel.IMPORTANT, 'Waiting for first server monitor tick..');
-
-            this.watchConfig();
-
+            for (const service of this.getStatefulServices()) {
+                this.log.log(LogLevel.DEBUG, `Starting ${this.getServiceName(service)}..`);
+                await service.start();
+            }
         } catch (e) {
             this.log.log(LogLevel.ERROR, e?.message, e);
             process.exit(1);
         }
+
+        this.working = false;
+        this.started = true;
+        this.manager.initDone = true;
+        this.log.log(LogLevel.IMPORTANT, 'Server Manager initialized successfully');
+        this.log.log(LogLevel.IMPORTANT, 'Waiting for first server monitor tick..');
     }
 
-    private watchConfig(): void {
-        const cfgPath = this.manager.configHelper.getConfigFilePath();
-        this.configFileWatcher = chokidar.watch(
-            cfgPath,
-        ).on(
-            'change',
-            async () => {
+    /* istanbul ignore next */
+    private reloadConfig(): void {
+        if (!this.manager?.initDone) {
+            return;
+        }
+        this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
+        void this.start();
+    }
 
-                // usually file "headers" are saved before content is done
-                // waiting a small amount of time prevents reading RBW errors
-                await new Promise((r) => setTimeout(r, 1000));
+    private async initialSetup(): Promise<void> {
 
-                this.log.log(LogLevel.INFO, 'Detected config file change...');
+        if (this.skipInitialCheck || await this.serverDetector.isServerRunning()) {
+            this.log.log(LogLevel.IMPORTANT, 'Skipping initial SteamCMD check because the server is already running');
+            return;
+        }
 
-                if (!fs.existsSync(cfgPath)) {
-                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config file does not exist');
-                    return;
-                }
+        this.log.log(LogLevel.IMPORTANT, 'Initially checking SteamCMD, Server Installation and Mods. Please wait. This may take some minutes...');
+        const steamCmdOk = await this.steamCmd.checkSteamCmd();
+        if (!steamCmdOk) {
+            throw new Error('SteamCMD init failed');
+        }
 
-                const config = this.manager.configHelper.readConfig();
-                if (!config) {
-                    this.log.log(LogLevel.ERROR, 'Cannot reload config because config contains errors');
-                    return;
-                }
+        // ingame report mod
+        await this.ingameReport.installMod();
+        // Server
+        if (!await this.steamCmd.checkServer() || this.manager.config.updateServerOnStartup) {
+            if (!await this.steamCmd.updateServer()) {
+                throw new Error('Server installation failed');
+            }
+        }
+        if (!await this.steamCmd.checkServer()) {
+            throw new Error('Server installation failed');
+        }
 
-                const newHash = crypto.createHash('md5')
-                    .update(JSON.stringify(config))
-                    .digest('hex');
-
-                if (newHash === this.configFileHash) {
-                    this.log.log(LogLevel.WARN, 'Skipping config reload because no changes were found');
-                    return;
-                }
-
-                this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
-                void this.start();
-            },
-        );
+        // Mods
+        if (!await this.steamCmd.checkMods() || this.manager.config.updateModsOnStartup) {
+            if (!await this.steamCmd.updateAllMods()) {
+                throw new Error('Updating Mods failed');
+            }
+        }
+        if (!await this.steamCmd.installMods()) {
+            throw new Error('Installing Mods failed');
+        }
+        if (!await this.steamCmd.checkMods()) {
+            throw new Error('Mod installation failed');
+        }
     }
 
 }

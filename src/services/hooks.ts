@@ -1,19 +1,25 @@
 import { Hook, HookType, HookTypeEnum } from '../config/config';
 import { Manager } from '../control/manager';
 import { IService } from '../types/service';
-import { Logger, LogLevel } from '../util/logger';
-import { Processes } from '../util/processes';
+import { LogLevel } from '../util/logger';
+import { Processes } from '../services/processes';
+import { LoggerFactory } from './loggerfactory';
+import { injectable, singleton } from 'tsyringe';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
-
-export class Hooks implements IService {
-
-    private log = new Logger('Hooks');
-
-    private processes = new Processes();
+@singleton()
+@injectable()
+export class Hooks extends IService {
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private processes: Processes,
+        private eventBus: EventBus,
+    ) {
+        super(loggerFactory.createLogger('Hooks'));
+    }
 
     public getHooks(type: HookType): Hook[] {
         return (this.manager.config.hooks ?? []).filter((x) => x.type === type);
@@ -37,7 +43,10 @@ export class Hooks implements IService {
                     const msg = `beforeStart Hook (${hook.program} ${(hook.params ?? []).join(' ')}) failed`;
                     this.log.log(LogLevel.ERROR, msg, hookOut);
 
-                    void this.manager.discord?.relayRconMessage(msg);
+                    this.eventBus.emit(
+                        InternalEventTypes.DISCORD_MESSAGE,
+                        msg,
+                    );
                 }
             }
         }

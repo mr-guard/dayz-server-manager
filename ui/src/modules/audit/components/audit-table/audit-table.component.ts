@@ -1,5 +1,4 @@
 import {
-    ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
     Input,
@@ -7,14 +6,13 @@ import {
     QueryList,
     ViewChildren,
 } from '@angular/core';
-import { AuditEvent } from '@common/models';
-import { AuditService } from '@modules/audit/services';
-import { SBSortableHeaderDirective, SortEvent } from '@modules/players/directives';
+import { AuditEvent } from '../../../app-common/models';
+import { AuditService } from '../../services/audit.service';
+import { SBSortableHeaderDirective, SortEvent } from '../../../players/directives/sortable.directive';
 import { Observable } from 'rxjs';
 
 @Component({
     selector: 'sb-audit-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './audit-table.component.html',
     styleUrls: ['audit-table.component.scss'],
 })
@@ -42,7 +40,7 @@ export class AuditTableComponent implements OnInit {
         this.total$ = this.auditService.total$;
     }
 
-    public onSort({ column, direction }: SortEvent): void {
+    public onSort({ column, direction }: any): void {
         if (column === 'timestamp') {
             this.sortedColumn = column;
             this.sortedDirection = direction;
@@ -52,7 +50,7 @@ export class AuditTableComponent implements OnInit {
         }
     }
 
-    public mapTrigger(accept: string): string {
+    public mapTrigger(accept?: string): string {
         if (accept?.includes('json')) {
             return 'API/Web';
         } else if (accept?.includes('text')) {

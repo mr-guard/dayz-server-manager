@@ -1,15 +1,18 @@
 import * as sqlite3 from 'better-sqlite3';
 import { Manager } from '../control/manager';
 import { IStatefulService } from '../types/service';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
+import { injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
 
+/* istanbul ignore next */
 export class Sqlite3Wrapper {
 
     private static createDb(
         file: string,
         opts: sqlite3.Options,
     ): sqlite3.Database {
-        return new sqlite3(file, opts);
+        return new (sqlite3 as any)(file, opts);
     }
 
     private db: sqlite3.Database;
@@ -64,9 +67,9 @@ interface DbConfig {
     opts: sqlite3.Options;
 }
 
-export class Database implements IStatefulService {
-
-    private log = new Logger('Database');
+@singleton()
+@injectable()
+export class Database extends IStatefulService {
 
     private databases = new Map<DatabaseTypes, Sqlite3Wrapper>();
     private dbConfigs = new Map<DatabaseTypes, DbConfig>([
@@ -82,8 +85,10 @@ export class Database implements IStatefulService {
     ]);
 
     public constructor(
+        loggerFactory: LoggerFactory,
         public manager: Manager,
     ) {
+        super(loggerFactory.createLogger('Database'));
         this.log.log(LogLevel.INFO, `Database Setup: node ${process.versions.node} : v${process.versions.modules}-${process.platform}-${process.arch}`);
     }
 

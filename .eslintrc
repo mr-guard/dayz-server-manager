@@ -1,7 +1,6 @@
 {
     "root": true,
     "parser": "@typescript-eslint/parser",
-    "extends": "eslint-config-bamboo",
     "parserOptions": {
         "ecmaVersion": 2020,
         "sourceType": "module",
@@ -10,18 +9,18 @@
     "plugins": [
         "@typescript-eslint"
     ],
-    "ignorePatterns": ["scripts", "test"],
+    "ignorePatterns": ["scripts", "test", "node_modules"],
     "rules": {
-        "indent": [
+        "indent": "off",
+        "@typescript-eslint/indent": [
             "error",
             4,
             {
-                "SwitchCase": 1
+                "SwitchCase": 1,
+                "ignoredNodes": [
+                    "CallExpression"
+                ]
             }
-        ],
-        "@typescript-eslint/indent": [
-            "error",
-            4
         ],
         "no-throw-literal": 0,
         "@typescript-eslint/no-throw-literal": 0,

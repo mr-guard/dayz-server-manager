@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
-import { SBRouteData, SideNavItem } from '@modules/navigation/models';
+import { Component, Input, OnInit } from '@angular/core';
+import { SBRouteData, SideNavItem } from '../../models';
 
 @Component({
     selector: 'sb-side-nav-item',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './side-nav-item.component.html',
     styleUrls: ['side-nav-item.component.scss'],
 })

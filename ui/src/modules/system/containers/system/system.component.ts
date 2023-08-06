@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
-import { MetricType, MetricWrapper, MetricTypeEnum } from '@common/models';
-import { ApiFetcher, AppCommonService } from '@common/services';
+import { MetricType, MetricWrapper, MetricTypeEnum } from '../../../app-common/models';
+import { ApiFetcher, AppCommonService } from '../../../app-common/services/app-common.service';
 
 @Component({
     selector: 'sb-system',

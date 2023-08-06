@@ -2,12 +2,17 @@ import { Manager } from '../control/manager';
 import { IngameReportContainer } from '../types/ingame-report';
 import { MetricTypeEnum } from '../types/metrics';
 import * as path from 'path';
-import * as fs from 'fs';
-import { Paths } from '../util/paths';
-import { Logger, LogLevel } from '../util/logger';
+import { Paths } from '../services/paths';
+import { LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
+import { inject, injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { Metrics } from './metrics';
+import { FSAPI, InjectionTokens } from '../util/apis';
 
-export class IngameReport implements IStatefulService {
+@singleton()
+@injectable()
+export class IngameReport extends IStatefulService {
 
     public readonly MOD_NAME = '@DayZServerManager';
     public readonly MOD_NAME_EXPANSION = '@DayZServerManagerExpansion';
@@ -15,24 +20,26 @@ export class IngameReport implements IStatefulService {
 
     public readonly EXPANSION_VEHICLES_MOD_ID = '2291785437';
 
-    private log = new Logger('IngameReport');
-
-    private paths = new Paths();
-
     private interval: any;
-    private intervalTimeout: number = 1000;
-    private readTimeout: number = 1000;
+    public intervalTimeout: number = 1000;
+    public readTimeout: number = 1000;
     private lastTickTimestamp: number = 0;
     private tickFilePath: string;
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private metrics: Metrics,
+        private paths: Paths,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('IngameReport'));
+    }
 
     public async start(): Promise<void> {
 
         const baseDir = this.manager.getServerPath();
-        const profiles = this.manager.config?.profilesPath;
+        const profiles = this.manager.config.profilesPath;
         if (profiles) {
             if (path.isAbsolute(profiles)) {
                 this.tickFilePath = path.join(profiles, this.TICK_FILE);
@@ -55,19 +62,24 @@ export class IngameReport implements IStatefulService {
 
     private async scanTick(): Promise<void> {
         try {
-            if (fs.existsSync(this.tickFilePath)) {
-                const stat = fs.statSync(this.tickFilePath);
+            if (this.fs.existsSync(this.tickFilePath)) {
+                const stat = this.fs.statSync(this.tickFilePath);
                 const modified = stat.mtime.getTime();
 
+                // eslint-disable-next-line no-negated-condition
                 if (modified !== this.lastTickTimestamp) {
                     this.lastTickTimestamp = modified;
                     await new Promise((r) => setTimeout(r, this.readTimeout));
 
-                    const content = `${fs.readFileSync(this.tickFilePath)}`;
+                    const content = `${this.fs.readFileSync(this.tickFilePath)}`;
                     const parsed = JSON.parse(content);
 
                     await this.processIngameReport(parsed);
+                } else {
+                    this.log.log(LogLevel.DEBUG, `Ingame report file not modified`);
                 }
+            } else {
+                this.log.log(LogLevel.DEBUG, `Ingame report file not found`);
             }
         } catch (e) {
             this.log.log(LogLevel.ERROR, `Error trying to scan for ingame report file`, e);
@@ -79,7 +91,7 @@ export class IngameReport implements IStatefulService {
 
         this.log.log(LogLevel.INFO, `Server sent ingame report: ${report?.players?.length ?? 0} players, ${report?.vehicles?.length ?? 0} vehicles`);
 
-        void this.manager.metrics.pushMetricValue(
+        void this.metrics.pushMetricValue(
             MetricTypeEnum.INGAME_PLAYERS,
             {
                 timestamp,
@@ -87,7 +99,7 @@ export class IngameReport implements IStatefulService {
             },
         );
 
-        void this.manager.metrics.pushMetricValue(
+        void this.metrics.pushMetricValue(
             MetricTypeEnum.INGAME_VEHICLES,
             {
                 timestamp,
@@ -97,14 +109,19 @@ export class IngameReport implements IStatefulService {
     }
 
     public async installMod(): Promise<void> {
+
+        if (this.manager.config.ingameReportEnabled === false) {
+            return;
+        }
+
         const serverPath = this.manager.getServerPath();
 
         const modsPath = path.join(__dirname, '../mods');
-        const mods = fs.readdirSync(modsPath);
+        const mods = this.fs.readdirSync(modsPath);
 
         for (const mod of mods) {
             const serverModPath = path.join(serverPath, mod);
-            if (fs.existsSync(serverModPath)) {
+            if (this.fs.existsSync(serverModPath)) {
                 if (!this.paths.removeLink(serverModPath)) {
                     this.log.log(LogLevel.ERROR, `Could not remove mod ${mod} before copying new files`);
                     return;
@@ -117,9 +134,15 @@ export class IngameReport implements IStatefulService {
     }
 
     public getServerMods(): string[] {
+
+        if (this.manager.config.ingameReportEnabled === false) {
+            return [];
+        }
+
         const mods = [this.MOD_NAME];
         if (
             this.manager.getModIdList().includes(this.EXPANSION_VEHICLES_MOD_ID)
+            && this.manager.config.ingameReportExpansionCompat !== false
         ) {
             mods.push(this.MOD_NAME_EXPANSION);
         }

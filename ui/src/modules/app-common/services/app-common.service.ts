@@ -1,9 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, ServerInfo, SystemReport, isSameServerInfo } from '@common/models';
-import { AuthService } from '@modules/auth/services';
+import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, ServerInfo, SystemReport, isSameServerInfo } from '../models';
+import { AuthService } from '../../auth/services/auth.service';
 import Chart from 'chart.js';
-import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable, of, Subject, Subscription, timer } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
@@ -36,9 +35,9 @@ export class ApiFetcher<K extends ApiFetcherTypes, T extends Timestamped> {
         private dataType: K,
     ) {
         if (Object.keys(LogTypeEnum).includes(dataType)) {
-            this.apiPath = `${environment.host}/api/logs`;
+            this.apiPath = `/api/logs`;
         } else if (Object.keys(MetricTypeEnum).includes(dataType)) {
-            this.apiPath = `${environment.host}/api/metrics`;
+            this.apiPath = `/api/metrics`;
         } else {
             throw new Error('Unknown data type');
         }
@@ -215,7 +214,7 @@ export class AppCommonService {
 
     public fetchManagerConfig(): Observable<Config> {
         return this.httpClient.get<Config>(
-            `${environment.host}/api/config`,
+            `/api/config`,
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
@@ -227,7 +226,7 @@ export class AppCommonService {
 
     public updateManagerConfig(config: Config): Observable<any> {
         return this.httpClient.post<any>(
-            `${environment.host}/api/updateconfig`,
+            `/api/updateconfig`,
             {
                 config,
             },
@@ -344,7 +343,7 @@ export class AppCommonService {
 
     public fetchServerInfo(): Observable<ServerInfo> {
         return this.httpClient.get<ServerInfo>(
-            `${environment.host}/api/serverinfo`,
+            `/api/serverinfo`,
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
@@ -361,7 +360,7 @@ export class AppCommonService {
 
     public fetchMissionFile(file: string): Observable<string> {
         return this.httpClient.get(
-            `${environment.host}/api/readmissionfile`,
+            `/api/readmissionfile`,
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
@@ -375,7 +374,7 @@ export class AppCommonService {
 
     public fetchMissionDir(dir: string): Observable<string[]> {
         return this.httpClient.get<string[]>(
-            `${environment.host}/api/readmissiondir`,
+            `/api/readmissiondir`,
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
@@ -388,7 +387,7 @@ export class AppCommonService {
 
     public updateMissionFile(file: string, content: string, withBackup?: boolean): Observable<any> {
         return this.httpClient.post(
-            `${environment.host}/api/writemissionfile`,
+            `/api/writemissionfile`,
             {
                 file,
                 content,

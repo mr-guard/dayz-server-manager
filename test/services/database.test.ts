@@ -1,22 +1,23 @@
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import * as sinon from 'sinon';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as sqlite from 'better-sqlite3';
 import { Database, DatabaseTypes, Sqlite3Wrapper } from '../../src/services/database';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
 
 describe('Test class Database', () => {
 
     let origCreate;
-    let createCalled = false;
+    let createCalled = 0;
+
+    let injector: DependencyContainer;
+    let manager: StubInstance<Manager>
 
     before(() => {
         disableConsole();
         origCreate = Sqlite3Wrapper['createDb'];
         Sqlite3Wrapper['createDb'] = () => {
-            createCalled = true;
+            createCalled++;
             return {
                 prepare: (sql) => ({
                     all: sinon.stub(),
@@ -34,22 +35,24 @@ describe('Test class Database', () => {
     });
 
     beforeEach(() => {
-        // restore mocks
-        ImportMock.restore();
-        createCalled = false;
+        createCalled = 0;
+
+        container.reset();
+        injector = container.createChildContainer();
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+
+        manager = injector.resolve(Manager) as any;
     });
 
     it('Database', async () => {
         
-        const manager = {};
-
-        const db = new Database(manager as any);
+        const db = injector.resolve(Database);
 
         await db.start();
-        expect(createCalled).to.be.false;
+        expect(createCalled).to.equal(0);
 
         const metricsdb = db.getDatabase(DatabaseTypes.METRICS);
-        expect(createCalled).to.be.true;
+        expect(createCalled).to.be.greaterThan(0);
         expect(metricsdb).to.be.not.undefined;
 
         await db.stop();

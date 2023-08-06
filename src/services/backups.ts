@@ -1,29 +1,33 @@
 import { Manager } from '../control/manager';
-import { Logger, LogLevel } from '../util/logger';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
+import { LogLevel } from '../util/logger';
 import * as path from 'path';
-import { Paths } from '../util/paths';
+import { Paths } from '../services/paths';
 import { FileDescriptor } from '../types/log-reader';
 import { IService } from '../types/service';
+import { LoggerFactory } from './loggerfactory';
+import { FSAPI, InjectionTokens } from '../util/apis';
+import { inject, injectable, singleton } from 'tsyringe';
 
-export class Backups implements IService {
-
-    private log = new Logger('Backups');
-
-    private paths = new Paths();
+@singleton()
+@injectable()
+export class Backups extends IService {
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private paths: Paths,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('Backups'));
+    }
 
     public async createBackup(): Promise<void> {
         const backups = this.getBackupDir();
 
-        await fse.ensureDir(backups);
+        await this.fs.promises.mkdir(backups, { recursive: true });
 
-        const mpmissions = path.resolve(path.join(this.manager.getServerPath(), 'mpmissions'));
-        if (!fs.existsSync(mpmissions)) {
+        const mpmissions = path.join(this.manager.getServerPath(), 'mpmissions');
+        if (!this.fs.existsSync(mpmissions)) {
             this.log.log(LogLevel.WARN, 'Skipping backup because mpmissions folder does not exist');
             return;
         }
@@ -34,26 +38,25 @@ export class Backups implements IService {
         this.log.log(LogLevel.IMPORTANT, `Creating backup ${curMarker}`);
 
         const curBackup = path.join(backups, curMarker);
-        await fse.ensureDir(curBackup);
-        await fse.copy(mpmissions, curBackup);
+        await this.paths.copyDirFromTo(mpmissions, curBackup);
 
         void this.cleanup();
     }
 
     private getBackupDir(): string {
-        if (path.isAbsolute(this.manager.config.backupPath)) {
+        if (this.paths.isAbsolute(this.manager.config.backupPath)) {
             return this.manager.config.backupPath;
         }
-        return path.resolve(path.join(this.paths.cwd(), this.manager.config.backupPath));
+        return path.join(this.paths.cwd(), this.manager.config.backupPath);
     }
 
     public async getBackups(): Promise<FileDescriptor[]> {
         const backups = this.getBackupDir();
-        const files = await fs.promises.readdir(backups);
+        const files = await this.fs.promises.readdir(backups);
         const foundBackups: FileDescriptor[] = [];
         for (const file of files) {
             const fullPath = path.join(backups, file);
-            const stats = await fs.promises.stat(fullPath);
+            const stats = await this.fs.promises.stat(fullPath);
             if (file.startsWith('mpmissions_') && stats.isDirectory()) {
                 foundBackups.push({
                     file,
@@ -64,7 +67,7 @@ export class Backups implements IService {
         return foundBackups;
     }
 
-    private async cleanup(): Promise<void> {
+    public async cleanup(): Promise<void> {
         const now = new Date().valueOf();
         const backups = await this.getBackups();
         for (const backup of backups) {

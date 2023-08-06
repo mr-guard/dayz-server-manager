@@ -1,11 +1,10 @@
-import { ChangeDetectionStrategy, Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { SideNavItems, SideNavSection } from '@modules/navigation/models';
-import { NavigationService } from '@modules/navigation/services';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { SideNavItems, SideNavSection } from '../../models';
+import { NavigationService } from '../../services/navigation.service';
 import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'sb-side-nav',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './side-nav.component.html',
     styleUrls: ['side-nav.component.scss'],
 })

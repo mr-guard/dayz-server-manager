@@ -5,15 +5,11 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-/* Components */
-import * as systemComponents from './components';
-
-/* Containers */
-import * as systemContainers from './containers';
-
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
+import { SystemComponent } from './containers/system/system.component';
+import { ChartsAreaComponent } from './components/charts-area/charts-area.component';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @NgModule({
     imports: [
@@ -23,8 +19,15 @@ import * as systemContainers from './containers';
         FormsModule,
         AppCommonModule,
         NavigationModule,
+        FontAwesomeModule,
     ],
-    declarations: [...systemContainers.containers, ...systemComponents.components],
-    exports: [...systemContainers.containers, ...systemComponents.components],
+    declarations: [
+        SystemComponent,
+        ChartsAreaComponent,
+    ],
+    exports: [
+        SystemComponent,
+        ChartsAreaComponent,
+    ],
 })
 export class SystemModule {}

@@ -1,7 +1,5 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import * as fs from 'fs';
-import * as folderHash from 'folder-hash';
 
 import { reverseIndexSearch } from '../../src/util/reverse-index-search';
 

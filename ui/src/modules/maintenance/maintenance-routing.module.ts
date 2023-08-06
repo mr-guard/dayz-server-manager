@@ -4,10 +4,8 @@ import { Routes, RouterModule } from '@angular/router';
 
 /* Module */
 import { MaintenanceModule } from './maintenance.module';
-
-/* Containers */
-import * as auditContainers from './containers';
-import { SBRouteData } from '@modules/navigation/models';
+import { MaintenanceComponent } from './containers/maintenance/maintenance.component';
+import { SBRouteData } from '../navigation/models';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -15,7 +13,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: auditContainers.MaintenanceComponent,
+        component: MaintenanceComponent,
         data: {
             title: 'Maintenance',
             breadcrumbs: [

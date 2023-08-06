@@ -5,27 +5,32 @@ import { RouterModule } from '@angular/router';
 
 /* Third Party */
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { IconsModule } from '@modules/icons/icons.module';
+import { IconsModule } from '../icons/icons.module';
 
-const thirdParty = [IconsModule, NgbModule];
-
-/* Containers */
-import * as appCommonContainers from './containers';
-
-/* Components */
-import * as appCommonComponents from './components';
-
-/* Guards */
-import * as appCommonGuards from './guards';
-
+import { CardComponent } from './components/card/card.component';
+import { CardViewDetailsComponent } from './components/card-view-details/card-view-details.component';
 import { DefaultValuePipe } from './pipes/default-value.pipe';
 
 import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
-    imports: [CommonModule, RouterModule, HttpClientModule, ...thirdParty],
-    providers: [...appCommonGuards.guards],
-    declarations: [...appCommonContainers.containers, ...appCommonComponents.components, DefaultValuePipe],
-    exports: [...appCommonContainers.containers, ...appCommonComponents.components, ...thirdParty, DefaultValuePipe],
+    imports: [
+        CommonModule,
+        RouterModule,
+        HttpClientModule,
+        IconsModule,
+        NgbModule,
+    ],
+    providers: [],
+    declarations: [
+        DefaultValuePipe,
+        CardComponent,
+        CardViewDetailsComponent,
+    ],
+    exports: [
+        DefaultValuePipe,
+        CardComponent,
+        CardViewDetailsComponent,
+    ],
 })
 export class AppCommonModule {}

@@ -9,32 +9,134 @@ on:
       - '*'
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  build-windows:
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
+    
     - name: download mikeros tools
       uses: arma-actions/mikero-tools@latest
+
     - name: Install deps
-      run: npm i
+      run: npm ci
+    - name: Install ui deps
+      run: npm run install:ui
+    
+    - name: Set version
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: npm version ${{ github.ref_name }}
+
     - name: Build
-      run: npm run buildAndPack
-    - name: Zip Artifacts
-      run: zip -r server-manager.zip build/*
-    - name: Archive build artifacts
-      if: "!startsWith(github.ref, 'refs/tags/v')"
+      run: npm run build
+
+    - name: Pack (windows)
+      run: npm run pack:windows
+    
+    - name: Zip Artifacts (windows)
+      run: powershell Compress-Archive -Path 'build/*' -DestinationPath 'server-manager.zip'
+    
+    - name: Archive build artifacts (windows)
       uses: actions/upload-artifact@v2
       with:
-        name: server-manager.zip
+        name: server-manager-windows.zip
         path: ./server-manager.zip
-    - name: Create Release
+    
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install build tools
+      run: |
+        sudo apt-get install -y make python3 python2 build-essential
+
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '16.x'
+    - name: download mikeros tools
+      uses: arma-actions/mikero-tools@latest
+    
+    - name: Install deps
+      run: npm ci
+    - name: Install ui deps
+      run: npm run install:ui
+    
+    - name: Set version
       if: startsWith(github.ref, 'refs/tags/v')
+      run: npm version ${{ github.ref_name }}
+
+    - name: Build
+      run: npm run build
+
+    - name: Pack (linux)
+      run: npm run pack:linux
+    - name: Zip Artifacts (linux)
+      run: zip -r server-manager.zip build/*
+    - name: Archive build artifacts (linux)
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-manager-linux.zip
+        path: ./server-manager.zip
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '16.x'
+    
+    - name: Install deps
+      run: npm ci
+    - name: Install ui deps
+      run: npm run install:ui
+    
+    - name: Test
+      run: npm test | tee test-output.log ; test ${PIPESTATUS[0]} -eq 0
+    
+    - name: Prepare coverage badge
+      if: contains('refs/heads/master refs/heads/experimental', github.ref)
+      run: |
+        SUMMARY="$(cat test-output.log | tail -3 | head -1)"
+        TOKENS=($SUMMARY)
+        echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
+        REF=${{ github.ref }}
+        echo "github.ref: $REF"
+        IFS='/' read -ra PATHS <<< "$REF"
+        BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+        echo $BRANCH_NAME
+        echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+    
+    - name: Create the Badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      if: contains('refs/heads/master refs/heads/experimental', github.ref)
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 442a5cdea03dd79a87b34339a7a16a2c
+        filename: dayz-server-manager__${{ env.BRANCH }}.json
+        label: Test Coverage
+        message: ${{ env.COVERAGE }}
+        color: green
+        namedLogo: typescript
+  
+  release:
+    runs-on: ubuntu-latest
+
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    needs:
+    - test
+    - build-linux
+    - build-windows
+
+    steps:
+    - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -44,14 +146,37 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: false
         prerelease: false
-    - name: Upload Release Asset
-      if: startsWith(github.ref, 'refs/tags/v')
-      id: upload-release-asset 
+
+    - name: Download artifacts (windows)
+      uses: actions/download-artifact@v2
+      with:
+        name: server-manager-windows.zip
+        path: ./server-manager-windows.zip
+
+    - name: Upload Release Asset (Windows)
+      id: upload-release-asset-windows
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server-manager.zip
-        asset_name: server-manager.zip
+        asset_path: ./server-manager-windows.zip
+        asset_name: server-manager-windows.zip
+        asset_content_type: application/zip
+
+    - name: Download artifacts (linux)
+      uses: actions/download-artifact@v2
+      with:
+        name: server-manager-linux.zip
+        path: ./server-manager-linux.zip
+
+    - name: Upload Release Asset (Linux)
+      id: upload-release-asset-linux
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server-manager-linux.zip
+        asset_name: server-manager-linux.zip
         asset_content_type: application/zip

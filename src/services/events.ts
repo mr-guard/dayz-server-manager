@@ -1,18 +1,32 @@
 import { IStatefulService } from '../types/service';
 import { Manager } from '../control/manager';
 import * as cron from 'node-schedule';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { ServerState } from '../types/monitor';
+import { injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { RCON } from './rcon';
+import { Monitor } from './monitor';
+import { Backups } from './backups';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
-export class Events implements IStatefulService {
-
-    private log = new Logger('Events');
+@singleton()
+@injectable()
+export class Events extends IStatefulService {
 
     private tasks: cron.Job[] = [];
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        logerFactory: LoggerFactory,
+        private manager: Manager,
+        private monitor: Monitor,
+        private rcon: RCON,
+        private backup: Backups,
+        private eventBus: EventBus,
+    ) {
+        super(logerFactory.createLogger('Events'));
+    }
 
     public async start(): Promise<void> {
         for (const event of (this.manager.config.events ?? [])) {
@@ -22,13 +36,13 @@ export class Events implements IStatefulService {
                     ?.then(() => {
                         this.log.log(LogLevel.DEBUG, `Successfully executed task '${event.name}'`);
                     })
-                    ?.catch(() => {
+                    ?.catch(/* istanbul ignore next */ () => {
                         this.log.log(LogLevel.WARN, `Failed to execute task '${event.name}'`);
                     });
             };
 
             const checkAndRun = async (task: () => Promise<any>): Promise<void> => {
-                if (this.manager?.monitor?.serverState !== ServerState.STARTED) {
+                if (this.monitor.serverState !== ServerState.STARTED) {
                     this.log.log(LogLevel.WARN, `Skipping '${event.name}' because server is not in STARTED state`);
                     return;
                 }
@@ -44,29 +58,32 @@ export class Events implements IStatefulService {
                     switch (event.type) {
                         case 'restart': {
                             void checkAndRun(async () => {
-                                await this.manager.discord.relayRconMessage('Scheduled Restart!');
-                                await this.manager.monitor.killServer();
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    'Scheduled Restart!',
+                                );
+                                await this.monitor.killServer();
                             });
                             break;
                         }
                         case 'message': {
-                            void checkAndRun(() => this.manager.rcon.global(event.params[0]));
+                            void checkAndRun(() => this.rcon.global(event.params[0]));
                             break;
                         }
                         case 'kickAll': {
-                            void checkAndRun(() => void this.manager.rcon.kickAll());
+                            void checkAndRun(() => void this.rcon.kickAll());
                             break;
                         }
                         case 'lock': {
-                            void checkAndRun(() => void this.manager.rcon.lock());
+                            void checkAndRun(() => void this.rcon.lock());
                             break;
                         }
                         case 'unlock': {
-                            void checkAndRun(() => void this.manager.rcon.unlock());
+                            void checkAndRun(() => void this.rcon.unlock());
                             break;
                         }
                         case 'backup': {
-                            void runTask(() => this.manager.backup.createBackup());
+                            void runTask(() => this.backup.createBackup());
                             break;
                         }
                         default: {

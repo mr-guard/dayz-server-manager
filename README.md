@@ -2,11 +2,12 @@
 
 [![Pricing](https://img.shields.io/badge/Pricing-FREE-green.svg)](https://github.com/mr-guard/dayz-server-manager/)
 [![license](https://img.shields.io/github/license/mr-guard/dayz-server-manager.svg)](https://github.com/mr-guard/dayz-server-manager/blob/master/LICENSE)
-![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)  
-
-[![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)
+[![GitHub Workflow Status](https://github.com/mr-guard/dayz-server-manager/actions/workflows/build.yml/badge.svg)](https://github.com/mr-guard/dayz-server-manager)
+[![CodeCoverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/mr-guard/442a5cdea03dd79a87b34339a7a16a2c/raw/dayz-server-manager__heads_master.json)](https://github.com/mr-guard/dayz-server-manager)
 [![GitHub commits](https://img.shields.io/github/commits-since/mr-guard/dayz-server-manager/latest.svg)](https://GitHub.com/mr-guard/dayz-server-manager/commit/)
+[![GitHub release](https://img.shields.io/github/release/mr-guard/dayz-server-manager.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/latest)
 [![Github all releases](https://img.shields.io/github/downloads/mr-guard/dayz-server-manager/total.svg)](https://GitHub.com/mr-guard/dayz-server-manager/releases/)  
+[![Discord](https://img.shields.io/discord/970272136688205874)](https://discord.gg/pKwJcXutBa)
 
 
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
@@ -30,6 +31,7 @@ The goal was to break down the initial effort to a minimum while providing confi
     7. [Change Server Name / Password / Admin Password](#guide-change-server-name-password)
     8. [Change the server port](#guide-change-server-port)
     9. [Add scheduled events](#guide-add-events)
+    10. [Add Hooks](#guide-add-hooks)
 6. [Steam CMD](#steam-cmd)
 7. [TODOs](#todo)
 8. [Default folder layout](#folder-layout)
@@ -38,7 +40,8 @@ The goal was to break down the initial effort to a minimum while providing confi
     1. [Discord](#security-discord)
     2. [Web](#security-web)
 11. [Known Issues and Limitations](#limitations)
-12. [Disclaimer](#disclaimer)
+12. [Development](#development)
+13. [Disclaimer](#disclaimer)
 
 <br><a name="features"></a>
 ## Features <hr>  
@@ -353,6 +356,30 @@ Example:<br>
 ...
 ```
 
+<br><a name="guide-add-hooks"></a>
+### Adding hooks <hr>  
+
+Hooks can be used to trigger external scripts or programs on certain events.  
+This can be useful to so manual configuration or other custom stuff.
+
+Possible hook types are:
+
+* beforeStart - triggered right before server start
+* missionChanged - triggered after the mission files were changed (i.e. types editor save)
+
+In the server manager config add a hook object to the hooks array like so:  
+
+```json
+...
+"hooks": [
+  {
+    "type": "beforeStart",
+    "program": "path/to/your/script.bat"
+  }
+],
+...
+```
+
 <br><a name="steam-cmd"></a>
 ## SteamCMD <hr>  
 
@@ -470,6 +497,38 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 
 * This app has not been tested all to well
   * if you have any issues please report them to get them fixed
+
+<br><a name="development"></a>  
+## Development <hr>
+
+To work on the server manager, the nodejs runtime (v14) must be installed and the node extensions must be compiled locally.  
+To do this, you will need a C++ compiler:
+
+Windows:
+```
+choco install python python2 -y
+choco install visualstudio2019buildtools -y
+choco install visualstudio2019-workload-vctools -y
+```
+
+Linux:
+```
+apt-get install -y make python3 python2 build-essential
+```
+
+When the tools are installed, clone the repository and run `npm ci`.
+
+When everything is installed, you can start the manager by running:
+
+CLI mode:
+```
+npm run start
+```
+
+Packed mode:
+```
+npm run startPacked
+```
 
 <br><a name="disclaimer"></a>  
 ## Disclaimer <hr>

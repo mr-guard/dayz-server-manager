@@ -1,13 +1,17 @@
 
 import { Manager } from '../control/manager';
 import { IStatefulService } from '../types/service';
-import { Logger, LogLevel } from '../util/logger';
-import * as fs from 'fs';
+import { LogLevel } from '../util/logger';
 import * as path from 'path';
 import * as tail from 'tail';
 import { ServerState } from '../types/monitor';
 import { FileDescriptor, LogMessage, LogType, LogTypeEnum } from '../types/log-reader';
 import { reverseIndexSearch } from '../util/reverse-index-search';
+import { inject, injectable, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { FSAPI, InjectionTokens } from '../util/apis';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 export interface LogContainer {
     logFiles?: FileDescriptor[];
@@ -20,9 +24,9 @@ export type LogMap = {
     [Property in LogType]?: LogContainer;
 };
 
-export class LogReader implements IStatefulService {
-
-    private log = new Logger('LogReader');
+@singleton()
+@injectable()
+export class LogReader extends IStatefulService {
 
     /* eslint-disable @typescript-eslint/naming-convention */
     private logMap: LogMap = {
@@ -38,14 +42,19 @@ export class LogReader implements IStatefulService {
     };
     /* eslint-enable @typescript-eslint/naming-convention */
 
-    private initDelay = 5000;
+    public initDelay = 5000;
 
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private eventBus: EventBus,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+    ) {
+        super(loggerFactory.createLogger('LogReader'));
+    }
 
     public async start(): Promise<void> {
-        this.manager.monitor.registerStateListener('LogReader', (x) => {
+        this.eventBus.on(InternalEventTypes.MONITOR_STATE_CHANGE, async (x) => {
             if (x === ServerState.STARTED) {
                 setTimeout(() => {
                     void this.registerReaders();
@@ -69,11 +78,9 @@ export class LogReader implements IStatefulService {
     private getProfilesDir(): string {
         const profiles = this.manager.config.profilesPath;
         if (!path.isAbsolute(profiles)) {
-            return path.resolve(
-                path.join(
-                    this.manager.getServerPath(),
-                    profiles,
-                ),
+            return path.join(
+                this.manager.getServerPath(),
+                profiles,
             );
         }
         return profiles;
@@ -81,13 +88,13 @@ export class LogReader implements IStatefulService {
 
     private async findLatestFiles(): Promise<void> {
         const profiles = this.getProfilesDir();
-        const files = await fs.promises.readdir(profiles);
+        const files = await this.fs.promises.readdir(profiles);
 
         const makeFileDescriptor = async (file: string): Promise<FileDescriptor> => {
             const fullPath = path.join(profiles, file);
             return {
                 file: fullPath,
-                mtime: (await fs.promises.stat(fullPath)).mtime.getTime(),
+                mtime: (await this.fs.promises.stat(fullPath)).mtime.getTime(),
             };
         };
 
@@ -106,7 +113,7 @@ export class LogReader implements IStatefulService {
 
         for (const type of Object.keys(LogTypeEnum)) {
             this.logMap[type as LogType].logFiles = this.logMap[type as LogType].logFiles
-                .sort((a, b) => {
+                .sort(/* istanbul ignore next */ (a, b) => {
                     return b.mtime - a.mtime;
                 });
         }
@@ -126,12 +133,18 @@ export class LogReader implements IStatefulService {
                         flushAtEOF: true,
                     },
                 );
-                logContainer.tail.on('error', (e) => {
+                logContainer.tail.on('error', /* istanbul ignore next */ (e) => {
                     this.log.log(LogLevel.WARN, `Error reading ${type}`, e);
                     logContainer.tail.unwatch();
                     if (!retry || retry < 1) {
                         setTimeout(
-                            () => createTail(type, logContainer, (retry ?? 0) + 1),
+                            () => {
+                                try {
+                                    createTail(type, logContainer, (retry ?? 0) + 1);
+                                } catch (createTailError) {
+                                    this.log.log(LogLevel.WARN, `Error creating file reader ${type}`, createTailError);
+                                }
+                            },
                             10000,
                         );
                     }
@@ -139,10 +152,18 @@ export class LogReader implements IStatefulService {
                 logContainer.tail.on('line', (line) => {
                     if (line) {
                         this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
-                        logContainer.logLines.push({
+                        const logEntry = {
                             timestamp: new Date().valueOf(),
                             message: line,
-                        });
+                        };
+                        logContainer.logLines.push(logEntry);
+                        this.eventBus.emit(
+                            InternalEventTypes.LOG_ENTRY,
+                            {
+                                type: type as LogTypeEnum,
+                                entry: logEntry,
+                            },
+                        );
                     }
                 });
             }
@@ -150,7 +171,11 @@ export class LogReader implements IStatefulService {
 
         for (const type of Object.keys(LogTypeEnum)) {
             const logContainer = this.logMap[type as LogType];
-            createTail(type, logContainer);
+            try {
+                createTail(type, logContainer);
+            } catch (createTailError) {
+                this.log.log(LogLevel.WARN, `Error creating file reader ${type}`, createTailError);
+            }
         }
     }
 

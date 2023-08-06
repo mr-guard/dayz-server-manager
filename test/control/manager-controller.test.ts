@@ -1,12 +1,20 @@
 import 'reflect-metadata';
-import * as Sinon from 'sinon';
-import * as fs from 'fs';
+
+import * as sinon from 'sinon';
 import { ImportMock } from 'ts-mock-imports';
 import { ManagerController } from '../../src/control/manager-controller';
 import { VALID_CONFIG } from '../config/config-validate.test';
-import { disableConsole, enableConsole } from '../util';
+import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import { Manager } from '../../src/control/manager';
 import { expect } from '../expect';
+import { DependencyContainer, Lifecycle, container, injectable, singleton } from 'tsyringe';
+import { ConfigWatcher } from '../../src/services/config-watcher';
+import { ServerDetector } from '../../src/services/server-detector';
+import { SteamCMD } from '../../src/services/steamcmd';
+import { IngameReport } from '../../src/services/ingame-report';
+import { Requirements } from '../../src/services/requirements';
+import { IStatefulService } from '../../src/types/service';
+import { Config } from '../../src/config/config';
 
 class TestMonitor {
     public startCalled = false;
@@ -68,16 +76,26 @@ class TestSteamCmd {
 
 }
 
-class TestIngameReport {
-    public constructor(public manager: Manager) {}
+export class TestStateful extends IStatefulService {
+    public start = sinon.stub();
+    public stop = sinon.stub();
     
-    public async installMod(): Promise<boolean> {
-        return true;
-    }    
+    public constructor() {
+        super(undefined!);
+    }
 }
 
 
 describe('Test class ManagerController', () => {
+
+    let injector: DependencyContainer;
+
+    let configWatcher: StubInstance<ConfigWatcher>;
+    let manager: StubInstance<Manager>;
+    let serverDetector: StubInstance<ServerDetector>;
+    let steamCmd: StubInstance<SteamCMD>;
+    let ingameReport: StubInstance<IngameReport>;
+    let requirements: StubInstance<Requirements>;
 
     before(() => {
         disableConsole();
@@ -90,42 +108,52 @@ describe('Test class ManagerController', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(ConfigWatcher, stubClass(ConfigWatcher), { lifecycle: Lifecycle.Singleton });
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(ServerDetector, stubClass(ServerDetector), { lifecycle: Lifecycle.Singleton });
+        injector.register(SteamCMD, stubClass(SteamCMD), { lifecycle: Lifecycle.Singleton });
+        injector.register(IngameReport, stubClass(IngameReport), { lifecycle: Lifecycle.Singleton });
+        injector.register(Requirements, stubClass(Requirements), { lifecycle: Lifecycle.Singleton });
+        
+        configWatcher = injector.resolve(ConfigWatcher) as any;
+        manager = injector.resolve(Manager) as any;
+        serverDetector = injector.resolve(ServerDetector) as any;
+        steamCmd = injector.resolve(SteamCMD) as any;
+        ingameReport = injector.resolve(IngameReport) as any;
+        requirements = injector.resolve(Requirements) as any;
     });
 
     it('ManagerController', async () => {
-        ImportMock.mockFunction(fs, 'existsSync', true);
-        ImportMock.mockFunction(fs, 'readFileSync', VALID_CONFIG);
-        const reflectMock = ImportMock.mockFunction(Reflect, 'getMetadata');
-        reflectMock.withArgs('services', Sinon.match.any).returns([
-            'steamCmd',
-            'monitor',
-            'requirements',
-            'ingameReport',
-        ]);
-        reflectMock.withArgs('service', Sinon.match.any, 'steamCmd').returns({
-            type: TestSteamCmd,
-            stateful: false,
-        });
-        reflectMock.withArgs('service', Sinon.match.any, 'monitor').returns({
-            type: TestMonitor,
-            stateful: true,
-        });
-        reflectMock.withArgs('service', Sinon.match.any, 'requirements').returns({
-            type: TestRequirements,
-            stateful: false,
-        });
-        reflectMock.withArgs('service', Sinon.match.any, 'ingameReport').returns({
-            type: TestIngameReport,
-            stateful: false,
-        });
 
+        container.register(TestStateful, TestStateful, { lifecycle: Lifecycle.Singleton });
+        const testStateful = container.resolve(TestStateful);
 
-        await ManagerController.INSTANCE.start();
-        const testMonitor = (ManagerController.INSTANCE['manager'].monitor as any as TestMonitor);
-        expect(testMonitor.startCalled).to.be.true;
+        configWatcher.watch.resolves(new Config());
 
-        await ManagerController.INSTANCE.stop();
-        expect(testMonitor.stopCalled).to.be.true;
+        steamCmd.checkSteamCmd.resolves(true);
+        steamCmd.checkServer.resolves(true);
+        steamCmd.checkMods.resolves(true);
+        steamCmd.installMods.resolves(true);
 
+        const controller = injector.resolve(ManagerController);
+        await controller.start();
+        
+        expect(testStateful.start.called).to.be.true;
+        expect(manager.initDone).to.be.true;
+
+        expect(steamCmd.checkSteamCmd.called).to.be.true;
+        expect(steamCmd.checkServer.called).to.be.true;
+        expect(steamCmd.checkMods.called).to.be.true;
+        expect(steamCmd.installMods.called).to.be.true;
+        
+        await controller.stop();
+
+        expect(testStateful.stop.called).to.be.true;
+        expect(manager.initDone).to.be.false;
+        
     });
 });

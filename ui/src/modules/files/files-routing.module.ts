@@ -6,8 +6,8 @@ import { Routes, RouterModule } from '@angular/router';
 import { FilesModule } from './files.module';
 
 /* Containers */
-import * as containers from './containers';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../navigation/models';
+import { TypesComponent } from './containers/types/types.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -20,7 +20,7 @@ export const ROUTES: Routes = [
     {
         path: 'types',
         canActivate: [],
-        component: containers.TypesComponent,
+        component: TypesComponent,
         data: {
             title: 'Files',
             breadcrumbs: [

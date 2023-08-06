@@ -1,9 +1,5 @@
 import { expect } from '../expect';
-import { ImportMock } from 'ts-mock-imports'
-import * as path from 'path';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
-import * as child_process from 'child_process';
+import { ImportMock } from 'ts-mock-imports';
 import { ConfigParser } from '../../src/util/config-parser';
 import { disableConsole, enableConsole } from '../util';
 
@@ -14,6 +10,7 @@ passwordAdmin = "";         // Password to become a server admin
 
 motd[] = { "line1","line2" }; // motd
 motd2[] = {};               // motd2
+motd3[] = { 1,2,3 };          // motd3
 
 enableWhitelist = 0;        // Enable/disable whitelist (value 0-1)
  

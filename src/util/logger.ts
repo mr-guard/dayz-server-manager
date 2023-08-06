@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 
 // eslint-disable-next-line no-shadow
 export enum LogLevel {
@@ -20,18 +21,47 @@ const LogLevelNames = [
 export class Logger {
 
     public static readonly LOG_LEVELS: { [context: string]: LogLevel } = {};
+
     public static defaultLogLevel: LogLevel = LogLevel.INFO;
+    public static defaultLogFile: string = 'server-manager.log';
+
+    private static lastWrite: Promise<any> = Promise.resolve();
+
+    public static wrapWithFileLogger(fnc: any): any {
+        /* istanbul ignore next */
+        return (msg: string, data: any[]) => {
+            if (data?.length) {
+                fnc(msg, data);
+            } else {
+                fnc(msg);
+            }
+
+            // sync to the last write
+            this.lastWrite = this.lastWrite
+                .then(/* istanbul ignore next */ () => {
+                    return fs.promises.appendFile(
+                        Logger.defaultLogFile,
+                        `${msg} - ${JSON.stringify(data)}\n`,
+                    ).then(
+                        () => { /* ignore */ },
+                        /* istanbul ignore next */
+                        () => { /* ignore */ },
+                    );
+                });
+        };
+
+    }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     public static LogLevelFncs = [
-        console.log,
-        console.log,
-        console.log,
-        console.warn,
-        console.error,
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.log),
+        Logger.wrapWithFileLogger(console.warn),
+        Logger.wrapWithFileLogger(console.error),
     ];
 
-    public readonly MAX_CONTEXT_LENGTH = 10;
+    public readonly MAX_CONTEXT_LENGTH = 12;
 
     public constructor(
         private context: string,
@@ -57,11 +87,7 @@ export class Logger {
                 : new Date().toISOString();
             const fmt = `@${date} | ${LogLevelNames[level]} | ${this.formatContext(this.context)} | ${msg}`;
 
-            if (data?.length) {
-                Logger.LogLevelFncs[level](fmt, data);
-            } else {
-                Logger.LogLevelFncs[level](fmt);
-            }
+            Logger.LogLevelFncs[level](fmt, data);
         }
 
     }

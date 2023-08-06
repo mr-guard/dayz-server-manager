@@ -1,3 +1,5 @@
+import { IconName } from "@fortawesome/fontawesome-svg-core";
+
 export interface Breadcrumb {
     text: string;
     link?: string;
@@ -16,7 +18,7 @@ export interface SideNavItems {
 }
 
 export interface SideNavItem {
-    icon?: string;
+    icon?: IconName;
     text: string;
     link?: string;
     submenu?: SideNavItem[];

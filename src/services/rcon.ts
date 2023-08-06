@@ -1,14 +1,18 @@
 import { Connection, IPacketResponse, Socket } from '@senfo/battleye';
 import { Manager } from '../control/manager';
 import * as dgram from 'dgram';
-import * as fs from 'fs';
-import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Logger, LogLevel } from '../util/logger';
+import { LogLevel } from '../util/logger';
 import { RconBan, RconPlayer } from '../types/rcon';
 import { IStatefulService } from '../types/service';
 import { ServerState } from '../types/monitor';
 import { matchRegex } from '../util/match-regex';
+import { inject, injectable, registry, singleton } from 'tsyringe';
+import { LoggerFactory } from './loggerfactory';
+import { FSAPI, InjectionTokens, RCONSOCKETFACTORY } from '../util/apis';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
+import { Listener } from 'eventemitter2';
 
 export class BattleyeConf {
 
@@ -21,11 +25,15 @@ export class BattleyeConf {
 
 }
 
-export class RCON implements IStatefulService {
+@singleton()
+@registry([{
+    token: InjectionTokens.rconSocket,
+    useFactory: /* istanbul ignore next */ () => /* istanbul ignore next */ () => new Socket(),
+}]) // eslint-disable-line @typescript-eslint/indent
+@injectable()
+export class RCON extends IStatefulService {
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
-
-    private log = new Logger('RCON');
 
     private socket: Socket | undefined;
     private connection: Connection | undefined;
@@ -37,18 +45,24 @@ export class RCON implements IStatefulService {
     private duplicateMessageCache: string[] = [];
     private duplicateMessageCacheSize: number = 3;
 
+    private stateListener?: Listener;
+
     public constructor(
-        public manager: Manager,
-    ) {}
+        loggerFactory: LoggerFactory,
+        private manager: Manager,
+        private eventBus: EventBus,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
+        @inject(InjectionTokens.rconSocket) private socketFactory: RCONSOCKETFACTORY,
+    ) {
+        super(loggerFactory.createLogger('RCON'));
+    }
 
     public isConnected(): boolean {
         return this.connected;
     }
 
-    private createSocket(port: number): Socket {
-        return new Socket({
-            port,
-        });
+    private createSocket(): Socket {
+        return this.socketFactory();
     }
 
     public async start(skipServerWait?: boolean): Promise<void> {
@@ -74,7 +88,7 @@ export class RCON implements IStatefulService {
         }
 
         // create socket
-        this.socket = this.createSocket(openListeningPort);
+        this.socket = this.createSocket();
 
         this.socket.on('listening', (socket) => {
             const addr = socket.address();
@@ -96,11 +110,16 @@ export class RCON implements IStatefulService {
         if (skipServerWait) {
             this.setupConnection();
         } else {
-            this.manager.monitor.registerStateListener('rconInit', (state: ServerState) => {
-                if (this.connection || state !== ServerState.STARTED) return;
-                this.manager.monitor.removeStateListener('rconInit');
-                this.setupConnection();
-            });
+            this.stateListener?.off();
+            this.stateListener = this.eventBus.on(
+                InternalEventTypes.MONITOR_STATE_CHANGE,
+                async (state: ServerState) => {
+                    if (this.connection || state !== ServerState.STARTED) return;
+                    this.stateListener?.off();
+                    this.stateListener = undefined;
+                    this.setupConnection();
+                },
+            );
         }
 
     }
@@ -139,7 +158,10 @@ export class RCON implements IStatefulService {
             }
 
             this.log.log(LogLevel.DEBUG, `message`, message);
-            void this.manager.discord?.relayRconMessage(message);
+            this.eventBus.emit(
+                InternalEventTypes.DISCORD_MESSAGE,
+                message,
+            );
         });
 
         this.connection.on('command', (data, resolved, packet) => {
@@ -172,7 +194,17 @@ export class RCON implements IStatefulService {
                 // }
 
             } else {
-                this.log.log(LogLevel.ERROR, `connection error`, err);
+                let logged: any = err;
+                if (
+                    err instanceof Error
+                    && (
+                        err?.message?.includes('Packet Error: Cleanup')
+                        || err?.message?.includes('PacketCleanupError')
+                    )
+                ) {
+                    logged = err.message;
+                }
+                this.log.log(LogLevel.ERROR, `connection error`, logged);
             }
         });
 
@@ -221,16 +253,16 @@ export class RCON implements IStatefulService {
         const rConPassword = this.getRconPassword();
         const rConPort = this.getRconPort();
 
-        fse.ensureDirSync(battleyePath);
+        this.fs.mkdirSync(battleyePath, { recursive: true });
         try {
-            fs.readdirSync(battleyePath).forEach((x) => {
+            this.fs.readdirSync(battleyePath).forEach((x) => {
                 const lower = x.toLowerCase();
                 if (lower.includes('beserver') && lower.endsWith('.cfg')) {
-                    fs.unlinkSync(path.join(battleyePath, x));
+                    this.fs.unlinkSync(path.join(battleyePath, x));
                 }
             });
         } catch {}
-        fs.writeFileSync(
+        this.fs.writeFileSync(
             battleyeConfPath,
             `RConPassword ${rConPassword}\nRestrictRCon 0\nRConPort ${rConPort}`,
         );
@@ -259,11 +291,17 @@ export class RCON implements IStatefulService {
     }
 
     public async stop(): Promise<void> {
+        this.stateListener?.off();
+        this.stateListener = undefined;
+
         if (this.connection) {
 
             this.connection.removeAllListeners();
             if (this.connection.connected) {
-                this.connection.once('error', () => { /* ignore */ });
+                this.connection.on(
+                    'error',
+                    /* istanbul ignore next */ () => { /* ignore */ },
+                );
                 this.connection.kill(new Error('Reload'));
                 this.connection = undefined;
                 this.connected = false;

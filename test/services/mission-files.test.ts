@@ -1,12 +1,22 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { disableConsole, enableConsole } from '../util';
-import * as sinon from 'sinon';
-import * as fse from 'fs-extra';
-import * as path from 'path';
+import { StubInstance, disableConsole, enableConsole, memfs, stubClass } from '../util';
 import { MissionFiles } from '../../src/services/mission-files';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import { Manager } from '../../src/control/manager';
+import { Backups } from '../../src/services/backups';
+import { Hooks } from '../../src/services/hooks';
+import { FSAPI } from '../../src/util/apis';
+import { HookTypeEnum } from '../../src/config/config';
 
 describe('Test class MissionFiles', () => {
+
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let backups: StubInstance<Backups>;
+    let hooks: StubInstance<Hooks>;
+    let fs: FSAPI;
 
     before(() => {
         disableConsole();
@@ -19,36 +29,49 @@ describe('Test class MissionFiles', () => {
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(Backups, stubClass(Backups), { lifecycle: Lifecycle.Singleton });
+        injector.register(Hooks, stubClass(Hooks), { lifecycle: Lifecycle.Singleton });
+        
+        fs = memfs({}, '/', injector);
+
+        manager = injector.resolve(Manager) as any;
+        backups = injector.resolve(Backups) as any;
+        hooks = injector.resolve(Hooks) as any;
     });
 
     it('MissionFiles-read', async () => {
 
-        const readMock = ImportMock.mockFunction(fse, 'readFile');
-        readMock.withArgs(
-            path.resolve(
-                path.join(
-                    'testserver',
-                    'mpmissions',
-                    'dayz.chernarusplus',
-                    'test.txt',
-                )
-            )
-        ).returns('test');
-
-        const manager = {
-            getServerPath: () => 'testserver',
-            config: {
-                serverCfg: {
-                    Missions: {
-                        DayZ: {
-                            template: 'dayz.chernarusplus',
+        fs = memfs(
+            {
+                'testserver': {
+                    'mpmissions': {
+                        'dayz.chernarusplus': {
+                            'test.txt': 'test',
                         },
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+
+        manager.getServerPath.returns('/testserver');
+        manager.config = {
+            serverCfg: {
+                Missions: {
+                    DayZ: {
+                        template: 'dayz.chernarusplus',
                     },
                 },
             },
         } as any;
 
-        const files = new MissionFiles(manager);
+        const files = injector.resolve(MissionFiles);
 
         const content = await files.readMissionFile('test.txt');
 
@@ -58,38 +81,33 @@ describe('Test class MissionFiles', () => {
 
     it('MissionFiles-readDir', async () => {
 
-        const readMock = ImportMock.mockFunction(fse, 'readdir');
-        readMock.withArgs(
-            path.resolve(
-                path.join(
-                    'testserver',
-                    'mpmissions',
-                    'dayz.chernarusplus',
-                    '/'
-                )
-            )
-        ).returns([{
-            name: 'test',
-            isDirectory: () => true,
-        },{
-            name: 'testfile',
-            isDirectory: () => false,
-        }]);
-
-        const manager = {
-            getServerPath: () => 'testserver',
-            config: {
-                serverCfg: {
-                    Missions: {
-                        DayZ: {
-                            template: 'dayz.chernarusplus',
+        fs = memfs(
+            {
+                'testserver': {
+                    'mpmissions': {
+                        'dayz.chernarusplus': {
+                            'test': {},
+                            'testfile': 'testcontent',
                         },
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+
+        manager.getServerPath.returns('/testserver');
+        manager.config = {
+            serverCfg: {
+                Missions: {
+                    DayZ: {
+                        template: 'dayz.chernarusplus',
                     },
                 },
             },
         } as any;
 
-        const files = new MissionFiles(manager);
+        const files = injector.resolve(MissionFiles);
 
         const content = await files.readMissionDir('/');
 
@@ -101,29 +119,27 @@ describe('Test class MissionFiles', () => {
 
     it('MissionFiles-write', async () => {
 
-        const writeMock = ImportMock.mockFunction(fse, 'writeFile');
-        
-        const manager = {
-            getServerPath: () => 'testserver',
-            config: {
-                serverCfg: {
-                    Missions: {
-                        DayZ: {
-                            template: 'dayz.chernarusplus',
-                        },
+        manager.getServerPath.returns('/testserver');
+        manager.config = {
+            serverCfg: {
+                Missions: {
+                    DayZ: {
+                        template: 'dayz.chernarusplus',
                     },
                 },
             },
-            hooks: {
-                executeHooks: () => {},
-            },
         } as any;
 
-        const files = new MissionFiles(manager);
+        const files = injector.resolve(MissionFiles);
 
         await files.writeMissionFile('test.txt', 'test');
 
-        expect(writeMock.callCount).to.equal(1);
+        const expectedPath = '/testserver/mpmissions/dayz.chernarusplus/test.txt';
+        expect(fs.existsSync(expectedPath)).to.be.true;
+        expect(fs.readFileSync(expectedPath) + '').to.equal('test');
+
+        expect(hooks.executeHooks.callCount).to.equal(1);
+        expect(hooks.executeHooks.firstCall.args[0]).to.equal(HookTypeEnum.missionChanged);
 
     });
 

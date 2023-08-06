@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, CanActivateChild, Router } from '@angular/router';
-import { AuthService } from '../services';
+import { Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Injectable()
-export class AuthGuard implements CanActivate, CanActivateChild {
+export class AuthGuard  {
 
     public constructor(
         private auth: AuthService,
@@ -27,7 +27,7 @@ export class AuthGuard implements CanActivate, CanActivateChild {
 }
 
 @Injectable()
-export class LoginGuard implements CanActivate, CanActivateChild {
+export class LoginGuard  {
 
     public constructor(
         private auth: AuthService,

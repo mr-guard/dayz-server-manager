@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 
 @Component({
     selector: 'sb-card-view-details',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './card-view-details.component.html',
     styleUrls: ['card-view-details.component.scss'],
 })

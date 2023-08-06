@@ -6,7 +6,7 @@
         </div>
         <div class="card-body" *ngIf="!loading">
             <ngb-alert  *ngIf="outcomeBadge"
-                        [type]="outcomeBadge?.success ? 'success' : 'danger'"
+                        [type]="outcomeBadge.success ? 'success' : 'danger'"
             >
                 {{ outcomeBadge.message }}
             </ngb-alert>

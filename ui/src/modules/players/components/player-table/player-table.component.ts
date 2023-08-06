@@ -1,5 +1,4 @@
 import {
-    ChangeDetectionStrategy,
     ChangeDetectorRef,
     Component,
     Input,
@@ -7,14 +6,13 @@ import {
     QueryList,
     ViewChildren,
 } from '@angular/core';
-import { RconPlayer } from '@common/models';
-import { SBSortableHeaderDirective, SortEvent } from '@modules/players/directives';
-import { AllPlayersService, PlayersService } from '@modules/players/services';
+import { RconPlayer } from '../../../app-common/models';
+import { SBSortableHeaderDirective, SortEvent } from '../../directives/sortable.directive';
+import { AllPlayersService, PlayersService } from '../..//services/players.service';
 import { Observable } from 'rxjs';
 
 @Component({
     selector: 'sb-player-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './player-table.component.html',
     styleUrls: ['player-table.component.scss'],
 })
@@ -56,7 +54,6 @@ export class PlayerTableComponent implements OnInit {
 
 @Component({
     selector: 'sb-all-player-table',
-    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './player-table.component.html',
     styleUrls: ['player-table.component.scss'],
 })

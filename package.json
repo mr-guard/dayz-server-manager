@@ -1,27 +1,38 @@
 {
   "name": "dayz-server-manager",
   "description": "A server installer and watch-dog for dayz with built-in Discord and RCon bot",
-  "version": "1.0.0",
+  "version": "0.0.1-DEV",
+  "repository": {
+    "url": "https://github.com/mr-guard/dayz-server-manager"
+  },
   "main": "dist/index.js",
   "scripts": {
-    "postinstall": "npm run installSqlite && npm run installUi",
-    "installSqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v14.0.0 --arch x64 --platform win32",
-    "installUi": "cd ui && npm i",
-    "pack": "del-cli build/*.exe && cp VERSION dist/VERSION && pkg --out-path build .",
-    "buildUi": "del-cli dist/ui && cd ui && npm run build",
-    "mkdirExec": "node scripts/mkdir.js exec",
-    "buildUiIfAbsent": "node scripts/exists.js dist/ui || npm run buildUi",
-    "generators": "ts-node scripts/extract-template.ts",
-    "build": "del-cli dist/* !dist/ui && tsc && npm run generators && npm run buildUiIfAbsent && npm run buildPbos",
-    "start": "npm run build && npm run mkdirExec && cd exec && node ../dist/index.js",
-    "buildAndPack": "npm run build && npm run pack",
-    "startPacked": "npm run buildAndPack && npm run runPacked",
-    "runPacked": "npm run mkdirExec && cd exec && bash -c './../build/dayz-server-manager.exe'",
+    "postinstall": "npm run install:ui",
+    "prebuilt:windows": "npm-run-all prebuilt:windows:*",
+    "prebuilt:linux": "npm-run-all prebuilt:linux:*",
+    "prebuilt:windows:sqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform win32 --force",
+    "prebuilt:linux:sqlite": "cd node_modules/better-sqlite3 && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform linux",
+    "prebuilt:windows:pty": "cd node_modules/@senfo/node-pty && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform win32 --force",
+    "prebuilt:linux:pty": "cd node_modules/@senfo/node-pty && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform linux",
+    "prebuilt:windows:processlist": "cd node_modules/@senfo/process-list && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform win32 --force",
+    "prebuilt:linux:processlist": "cd node_modules/@senfo/process-list && npx prebuild-install -d -r node -t v16.0.0 --arch x64 --platform linux",
+    "install:ui": "cd ui && npm ci",
+    "build": "del-cli dist/* && npm run generator && npm run build:tsc && npm run build:ui && npm-run-all build:pbo:*",
+    "generator": "ts-node scripts/extract-template.ts",
+    "build:tsc": "tsc",
+    "build-backend-only": "del-cli dist/**/* !dist/{ui,mods} && npm run generator && npm run build:tsc",
+    "build:ui": "del-cli dist/ui && cd ui && npm run build",
+    "build:pbo:main": "node scripts/mkdir.js dist/mods/@DayZServerManager/addons && bash -c 'makepbo -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts dist/mods/@DayZServerManager/addons/Scripts.pbo'",
+    "build:pbo:exp": "node scripts/mkdir.js dist/mods/@DayZServerManagerExpansion/addons && bash -c 'makepbo -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts dist/mods/@DayZServerManagerExpansion/addons/Scripts.pbo'",
+    "pack:windows": "del-cli build/dayz-server-manager* && pkg --out-path build -t node16-win-x64 .",
+    "pack:linux": "del-cli build/dayz-server-manager* && pkg --out-path build -t node16-linux-x64 .",
+    "mkdir:exec": "node scripts/mkdir.js exec",
+    "start": "npm run build && npm run mkdir:exec && cd exec && node ../dist/index.js",
+    "start:fast": "npm run build-backend-only && npm run mkdir:exec && cd exec && node ../dist/index.js",
+    "start:packed:windows": "npm run build && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
+    "start:packed:windows:fast": "npm run build-backend-only && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
     "lint": "eslint src --ext .ts",
-    "buildMainPbo": "node scripts/mkdir.js dist/mods/@DayZServerManager/addons && bash -c 'makepbo -P -@=DayZServerManager/Scripts watcher_mod/DayZServerManager/Scripts dist/mods/@DayZServerManager/addons/Scripts.pbo'",
-    "buildExpPbo": "node scripts/mkdir.js dist/mods/@DayZServerManagerExpansion/addons && bash -c 'makepbo -P -@=DayZServerManagerExpansion/Scripts watcher_mod/DayZServerManagerExpansion/Scripts dist/mods/@DayZServerManagerExpansion/addons/Scripts.pbo'",
-    "buildPbos": "npm run buildMainPbo && npm run buildExpPbo",
-    "test": "nyc --check-coverage --lines 90 mocha",
+    "test": "npm run generator && nyc --check-coverage --lines 85 --functions 100 mocha",
     "test:watch": "mocha -w --reporter min"
   },
   "author": "",
@@ -30,6 +41,12 @@
   "pkg": {
     "assets": [
       "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+      "node_modules/@senfo/process-list/build/Release/processlist.node",
+      "node_modules/node-pty/build/Release/conpty_console_list.node",
+      "node_modules/node-pty/build/Release/conpty.node",
+      "node_modules/node-pty/build/Release/pty.node",
+      "node_modules/node-pty/build/Release/winpty-agent.exe",
+      "node_modules/node-pty/build/Release/winpty.dll",
       "dist/ui/**/*",
       "!dist/ui/stats.json",
       "dist/mods/**/*",
@@ -38,10 +55,11 @@
       "dist/VERSION",
       "dist/config/config.shema.json"
     ],
-    "__comment": "node14-linux-x64",
     "targets": [
-      "node14-win-x64"
-    ]
+      "node16-linux-x64",
+      "node16-win-x64"
+    ],
+    "compress": "gz"
   },
   "nyc": {
     "include": [
@@ -70,14 +88,18 @@
       "ts"
     ],
     "spec": [
-      "test/**/*.test.ts"
+      "test/config/*",
+      "test/types/*",
+      "test/util/*",
+      "test/services/*",
+      "test/interface/*",
+      "test/control/*"
     ],
     "require": [
       "ts-node/register"
     ]
   },
   "devDependencies": {
-    "@angular/cli": "^11.2.7",
     "@types/better-sqlite3": "^5.4.1",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
@@ -86,7 +108,7 @@
     "@types/folder-hash": "^4.0.0",
     "@types/fs-extra": "^9.0.11",
     "@types/mocha": "^8.2.2",
-    "@types/node": "^14.14.44",
+    "@types/node": "^16.9.2",
     "@types/node-schedule": "1.3.1",
     "@types/proxyquire": "^1.3.28",
     "@types/ps-node": "^0.1.0",
@@ -94,6 +116,8 @@
     "@types/sinon-chai": "^3.2.5",
     "@types/table": "^6.0.0",
     "@types/tail": "2.0.0",
+    "@types/tar": "^6.1.5",
+    "@types/websocket": "^1.0.5",
     "@types/ws": "^7.4.0",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
     "@typescript-eslint/parser": "^4.18.0",
@@ -101,31 +125,42 @@
     "chai-as-promised": "^7.1.1",
     "del-cli": "3.0.1",
     "eslint": "^7.22.0",
-    "eslint-config-bamboo": "^5.1.0",
-    "mocha": "^8.4.0",
+    "memfs": "^3.5.3",
+    "mocha": "^10.2.0",
+    "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
-    "pkg": "5.2.0",
+    "pkg": "^5.8.1",
     "sinon": "^10.0.0",
     "sinon-chai": "^3.6.0",
     "ts-mock-imports": "^1.3.4",
-    "ts-node": "^9.1.1",
-    "typescript": "^4.2.3",
-    "typescript-json-schema": "^0.50.0"
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5",
+    "typescript-json-schema": "^0.59.0",
+    "websocket": "^1.0.34"
   },
   "dependencies": {
-    "@senfo/battleye": "2.0.3",
+    "@senfo/battleye": "^2.2.2",
+    "@senfo/process-list": "^2.0.6",
     "better-sqlite3": "^7.4.0",
     "chokidar": "^3.5.2",
     "compression": "^1.7.4",
     "cron-parser": "3.3.0",
     "discord.js": "^11.6.4",
-    "express": "^4.17.1",
+    "eventemitter2": "^6.4.9",
+    "express": "^4.18.2",
     "express-basic-auth": "^1.2.0",
     "extract-zip": "2.0.1",
     "folder-hash": "^4.0.1",
     "fs-extra": "^9.1.0",
+    "gamedig": "^3.0.9",
+    "jsonschema": "^1.4.0",
+    "node-pty": "^0.10.1",
     "node-schedule": "2.0.0",
     "reflect-metadata": "0.1.13",
-    "tail": "2.2.2"
+    "sudo-prompt": "^9.2.1",
+    "swagger-ui-express": "^4.3.0",
+    "tail": "2.2.2",
+    "tar": "^6.1.11",
+    "tsyringe": "^4.8.0"
   }
 }

@@ -1,13 +1,11 @@
 /* tslint:disable: ordered-imports*/
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { SBRouteData } from '@modules/navigation/models';
+import { SBRouteData } from '../navigation/models';
 
 /* Module */
 import { SystemModule } from './system.module';
-
-/* Containers */
-import * as systemContainers from './containers';
+import { SystemComponent } from './containers/system/system.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -15,7 +13,7 @@ export const ROUTES: Routes = [
     {
         path: '',
         canActivate: [],
-        component: systemContainers.SystemComponent,
+        component: SystemComponent,
         data: {
             title: 'System',
             breadcrumbs: [

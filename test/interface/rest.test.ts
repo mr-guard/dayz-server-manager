@@ -3,30 +3,56 @@ import { ImportMock } from 'ts-mock-imports'
 import { REST } from '../../src/interface/rest';
 import { Manager } from '../../src/control/manager';
 import { Application, Router } from 'express';
-import { Interface } from '../../src/interface/interface';
+import { Interface} from '../../src/interface/interface';
+import { StubInstance, sleep, stubClass } from '../util';
+import { DependencyContainer, Lifecycle, container } from 'tsyringe';
+import * as sinon from 'sinon';
+import * as websocket from 'websocket';
+import { EventBus } from '../../src/control/event-bus';
+import { InternalEventTypes } from '../../src/types/events';
+import { WebsocketCommand, WebsocketListenerType, WebsocketMessage } from '../../src/types/websocket';
 
 
 describe('Test REST', () => {
 
+    let injector: DependencyContainer;
+
+    let manager: StubInstance<Manager>;
+    let eventBus: EventBus;
+    let interfaceService: StubInstance<Interface>;
+
     beforeEach(() => {
         // restore mocks
         ImportMock.restore();
+
+        container.reset();
+        injector = container.createChildContainer();
+
+        injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
+        injector.register(Interface, stubClass(Interface), { lifecycle: Lifecycle.Singleton });
+        
+        manager = injector.resolve(Manager) as any;
+        manager.initDone = true;
+
+        eventBus = injector.resolve(EventBus) as any;
+        interfaceService = injector.resolve(Interface) as any;
     });
 
     it('REST', async () => {
 
-        const testManager = {
-            getWebPort: () => 1234,
-            config: {
-                admins: [{
-                    userId: 'admin',
-                    password: 'admin',
-                    userLevel: 'admin',
-                }]
-            },
-            interface: new Interface(null),
-        } as Manager;
-        const rest = new REST(testManager);
+        manager.getWebPort.returns(1234);
+        (manager as any).config = {
+            admins: [{
+                userId: 'admin',
+                password: 'admin',
+                userLevel: 'admin',
+            }]
+        };
+
+        Interface.prototype['setupCommandMap'].apply(interfaceService);
+
+        const rest = injector.resolve(REST);
 
         const registeredPaths = new Map<string, string[]>([
             ['use', []],
@@ -39,20 +65,20 @@ describe('Test REST', () => {
         const appMock = {
             use: (smt, handler) => {
                 if (handler) {
-                    registeredPaths.get('use').push(smt);
+                    registeredPaths.get('use')!.push(smt);
                 }
                 return appMock;
             },
             get: (path, handler) => {
-                registeredPaths.get('get').push(path);
+                registeredPaths.get('get')!.push(path);
                 return appMock;
             },
             post: (path, handler) => {
-                registeredPaths.get('post').push(path);
+                registeredPaths.get('post')!.push(path);
                 return appMock;
             },
             all: (path, handler) => {
-                registeredPaths.get('all').push(path);
+                registeredPaths.get('all')!.push(path);
                 return appMock;
             },
             listen: (port, host, handler) => {
@@ -66,14 +92,12 @@ describe('Test REST', () => {
                 handler();
             }
         } as any as Application;
-        rest['createExpress'] = () => {
-            return appMock;
-        };
+        sinon.stub(rest, 'createExpress').returns(appMock);
 
         const registeredRouterPaths = new Map<string, string[]>();
         const ensureArray = (key: string, value: string) => {
             registeredRouterPaths.set(key, registeredRouterPaths.get(key) ?? []);
-            registeredRouterPaths.get(key).push(value);
+            registeredRouterPaths.get(key)!.push(value);
         };
         rest.router = {
             get: (path, handler) => {
@@ -106,7 +130,7 @@ describe('Test REST', () => {
         expect(registeredPaths.get('get')).to.include(`/login`);
         expect(registeredPaths.get('get')).to.include(`/dashboard`);
 
-        testManager.interface.commandMap.forEach(
+        interfaceService.commandMap.forEach(
             (template, key) => {
                 if (!template.disableRest) {
                     expect(
@@ -118,22 +142,73 @@ describe('Test REST', () => {
         
     });
 
+    it('REST-ws', async () => {
+        manager.isUserOfLevel.returns(true);
+        manager.getWebPort.returns(12564);
+        (manager as any).config = {
+            admins: [{
+                userId: 'admin',
+                password: 'admin',
+                userLevel: 'admin',
+            }]
+        };
+
+        Interface.prototype['setupCommandMap'].apply(interfaceService);
+
+        const rest = injector.resolve(REST);
+
+        let ws: websocket.w3cwebsocket;
+        let answer: string;
+        try {
+            await rest.start();
+
+            await sleep(100);
+
+            ws = new websocket.w3cwebsocket(
+                'ws://localhost:12564/websocket',
+                ['auth', encodeURIComponent(Buffer.from(`admin:admin`).toString('base64'))],
+            );
+            ws.onmessage = (msg) => {
+                if (
+                    typeof msg.data !== 'string'
+                    || msg.data.toLowerCase() === 'ping'
+                    || msg.data.toLowerCase() === 'pong'
+                ) return;
+                answer = msg.data;
+            };
+            ws.onopen = () => {
+                ws.send(JSON.stringify({
+                    cmd: WebsocketCommand.REGISTER_LISTENER,
+                    data: WebsocketListenerType.LOGS,
+                } as WebsocketMessage<WebsocketListenerType>));
+
+                setTimeout(
+                    () => eventBus.emit(InternalEventTypes.LOG_ENTRY as any, 'Hello :)'),
+                    10,
+                );
+            };
+
+            await sleep(100);
+        } finally {
+            await rest.stop();
+        }
+
+        await sleep(100);
+        
+        expect(ws.readyState).to.equal(ws.CLOSED);
+        expect(rest.wsClients).to.be.undefined;
+        expect(answer!).to.equal(JSON.stringify('Hello :)'));
+    });
+
     it('REST-handleCommand', async () => {
 
-        let lastExecuted;
-        const testManager = {
-            initDone: false,
-            interface: {
-                execute: (req) => {
-                    lastExecuted = req;
-                    return {
-                        status: 200,
-                        body: 'ok',
-                    };
-                },
-            } as any,
-        } as Manager;
-        const rest = new REST(testManager);
+        manager.initDone = false;
+        interfaceService.execute.resolves({
+            status: 200,
+            body: 'ok',
+        });
+
+        const rest = injector.resolve(REST);
         
         const req = {
             headers: {
@@ -159,7 +234,7 @@ describe('Test REST', () => {
         expect(resResponseCode).to.equal(503);
         expect(resBody).to.be.undefined;
 
-        testManager.initDone = true;
+        manager.initDone = true;
         resResponseCode = undefined;
         resBody = undefined;
         
@@ -167,16 +242,16 @@ describe('Test REST', () => {
         expect(resResponseCode).to.equal(200);
         expect(resBody).to.be.not.undefined;
 
-        expect(lastExecuted).to.be.not.undefined;
-        expect(lastExecuted.body).to.equal(req.body);
-        expect(lastExecuted.resource).to.equal('testResource');
-        expect(lastExecuted.user).to.equal('admin');
+        expect(interfaceService.execute.called).to.be.true;
+        expect(interfaceService.execute.firstCall.lastArg.body).to.equal(req.body);
+        expect(interfaceService.execute.firstCall.lastArg.resource).to.equal('testResource');
+        expect(interfaceService.execute.firstCall.lastArg.user).to.equal('admin');
         
     });
 
-    it('REST-handleCommand', async () => {
+    it('REST-handleCommand-cors', async () => {
 
-        const rest = new REST(null);
+        const rest = injector.resolve(REST);
         
         const host = 'testhost';
         const req = {
@@ -221,7 +296,7 @@ describe('Test REST', () => {
 
     it('REST-handleUiRequest', async () => {
 
-        const rest = new REST(null);
+        const rest = injector.resolve(REST);
         
         let sentFile;
         const res = {

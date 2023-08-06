@@ -1,9 +1,10 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { AuthService } from '@modules/auth/services';
-import { environment } from 'environments/environment';
+import { AuthService } from '../../auth/services/auth.service';
+
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 
 @Injectable({ providedIn: 'root' })
@@ -15,16 +16,12 @@ export class MaintenanceService {
     ) {
     }
 
-    private getAuthHeaders(): { [k: string]: string } {
-        return this.auth.getAuthHeaders();
-    }
-
     public execute(action: string, body?: any): Promise<boolean> {
         return this.httpClient.post<any>(
-            `${environment.host}/api/${action}`,
+            `/api/${action}`,
             body,
             {
-                headers: this.getAuthHeaders(),
+                headers: this.auth.getAuthHeaders(),
                 observe: 'response',
                 withCredentials: true,
             },

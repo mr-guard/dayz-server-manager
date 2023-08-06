@@ -8,7 +8,9 @@ const expandedTable: {
     [index: string]: boolean;
 } = {};
 
-@Injectable()
+@Injectable({
+    providedIn: 'root'
+})
 export class SideNavService {
 
     public get expand$(): Subject<string[]> {

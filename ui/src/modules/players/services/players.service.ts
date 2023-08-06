@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import { DecimalPipe } from '@angular/common';
-import { Injectable, PipeTransform } from '@angular/core';
-import { MetricTypeEnum, MetricWrapper, RconPlayer } from '@common/models';
-import { AppCommonService } from '@common/services';
-import { SortDirection } from '@modules/players/directives';
+import { Injectable } from '@angular/core';
+import { MetricTypeEnum, MetricWrapper, RconPlayer } from '../../app-common/models';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, switchMap, tap } from 'rxjs/operators';
+import { SortDirection } from '../directives/sortable.directive';
+import { AppCommonService } from 'src/modules/app-common/services/app-common.service';
 
 interface SearchResult {
     players: RconPlayer[];
@@ -34,8 +32,7 @@ const sort = (players: RconPlayer[], column: 'name' | 'id' | 'ping', direction: 
     });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const matches = (player: RconPlayer, term: string, pipe: PipeTransform): boolean => {
+const matches = (player: RconPlayer, term: string): boolean => {
     return (
         player.name.toLowerCase().includes(term.toLowerCase())
         || player.beguid.includes(term)
@@ -63,7 +60,6 @@ export class PlayersService {
     protected sub!: Subscription;
 
     public constructor(
-        protected pipe: DecimalPipe,
         protected appCommon: AppCommonService,
     ) {
 
@@ -157,7 +153,7 @@ export class PlayersService {
         let players = sort(this.currentPlayers, sortColumn, sortDirection);
 
         // 2. filter
-        players = players.filter((country) => matches(country, searchTerm, this.pipe));
+        players = players.filter((country) => matches(country, searchTerm));
         const total = players.length;
 
         // 3. paginate
@@ -171,13 +167,12 @@ export class PlayersService {
 export class AllPlayersService extends PlayersService {
 
     public constructor(
-        protected pipe: DecimalPipe,
-        protected appCommon: AppCommonService,
+        appCommon: AppCommonService,
     ) {
-        super(pipe, appCommon);
+        super(appCommon);
     }
 
-    protected listenToPlayerChanges(): void {
+    protected override listenToPlayerChanges(): void {
         this.sub = this.appCommon.getApiFetcher<
         MetricTypeEnum.PLAYERS,
         MetricWrapper<RconPlayer[]>

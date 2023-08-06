@@ -10,8 +10,8 @@ describe('Test server info types', () => {
     });
 
     it('ServerInfo', () => {
-        expect(isSameServerInfo(null, null)).to.be.true;
-        expect(isSameServerInfo(null, {} as any)).to.be.false;
+        expect(isSameServerInfo(null!, null!)).to.be.true;
+        expect(isSameServerInfo(null!, {} as any)).to.be.false;
         expect(isSameServerInfo(
             {
                 name: '123',

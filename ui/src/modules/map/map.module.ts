@@ -5,17 +5,11 @@ import { RouterModule } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 /* Modules */
-import { AppCommonModule } from '@common/app-common.module';
-import { NavigationModule } from '@modules/navigation/navigation.module';
-
-/* Containers */
-import * as containers from './containers';
-
-
-/* Services */
-import * as services from './services';
+import { AppCommonModule } from '../app-common/app-common.module';
+import { NavigationModule } from '../navigation/navigation.module';
 
 import { LeafletModule } from '@asymmetrik/ngx-leaflet';
+import { MapComponent } from './containers/map/map.component';
 
 @NgModule({
     imports: [
@@ -29,13 +23,12 @@ import { LeafletModule } from '@asymmetrik/ngx-leaflet';
     ],
     providers: [
         DecimalPipe,
-        ...services.services,
     ],
     declarations: [
-        ...containers.containers,
+        MapComponent,
     ],
     exports: [
-        ...containers.containers,
+        MapComponent,
     ],
 })
 export class MapModule {}
