@@ -151,7 +151,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: server-manager-windows.zip
-        path: ./server-manager-windows.zip
+        path: ./
 
     - name: Upload Release Asset (Windows)
       id: upload-release-asset-windows
@@ -168,7 +168,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: server-manager-linux.zip
-        path: ./server-manager-linux.zip
+        path: ./
 
     - name: Upload Release Asset (Linux)
       id: upload-release-asset-linux
