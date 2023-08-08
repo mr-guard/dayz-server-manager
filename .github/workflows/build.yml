@@ -42,7 +42,7 @@ jobs:
     - name: Archive build artifacts (windows)
       uses: actions/upload-artifact@v2
       with:
-        name: server-manager-windows.zip
+        name: server-manager-windows
         path: ./server-manager.zip
     
   build-linux:
@@ -80,7 +80,7 @@ jobs:
     - name: Archive build artifacts (linux)
       uses: actions/upload-artifact@v2
       with:
-        name: server-manager-linux.zip
+        name: server-manager-linux
         path: ./server-manager.zip
 
   test:
@@ -150,8 +150,11 @@ jobs:
     - name: Download artifacts (windows)
       uses: actions/download-artifact@v2
       with:
-        name: server-manager-windows.zip
-        path: ./
+        name: server-manager-windows
+
+    - name: Rename
+      run: |
+        mv server-manager.zip server-manager-windows.zip
 
     - name: Upload Release Asset (Windows)
       id: upload-release-asset-windows
@@ -167,8 +170,11 @@ jobs:
     - name: Download artifacts (linux)
       uses: actions/download-artifact@v2
       with:
-        name: server-manager-linux.zip
-        path: ./
+        name: server-manager-linux
+
+    - name: Rename
+      run: |
+        mv server-manager.zip server-manager-linux.zip
 
     - name: Upload Release Asset (Linux)
       id: upload-release-asset-linux
