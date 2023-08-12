@@ -50,7 +50,8 @@ export class Requirements extends IService {
                 LogLevel.IMPORTANT,
                 '\n\nFirewall rules were not found.\n'
                     + 'You can add the rules manually or by running the following command in a elevated command promt:\n\n'
-                    + `netsh firewall add allowedprogram ${exePath} DayZ ENABLE\n\n`,
+                    + `netsh advfirewall firewall add rule name="DayZ" dir=in action=allow program="${exePath}" enable=yes\n\n`,
+                    + `Legacy alternative: netsh firewall add allowedprogram ${exePath} DayZ ENABLE\n\n`,
                 // + `Add the firewall rule and restart the manager`,
             );
             return false;
