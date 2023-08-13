@@ -25,6 +25,7 @@ import { DiscordBot } from '../services/discord';
 import { Interface } from '../interface/interface';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
 import { REST } from '../interface/rest';
+import { MetricsCollector } from '../services/metrics-collector';
 
 @singleton()
 @registry([
@@ -79,6 +80,11 @@ import { REST } from '../interface/rest';
     {
     token: DiscordBot,
     useClass: DiscordBot,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: MetricsCollector,
+    useClass: MetricsCollector,
     options: { lifecycle: Lifecycle.Singleton },
     },
 

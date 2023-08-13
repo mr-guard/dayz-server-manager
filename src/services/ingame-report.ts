@@ -20,7 +20,6 @@ export class IngameReport extends IStatefulService {
 
     public readonly EXPANSION_VEHICLES_MOD_ID = '2291785437';
 
-    private interval: any;
     public intervalTimeout: number = 1000;
     public readTimeout: number = 1000;
     private lastTickTimestamp: number = 0;
@@ -48,16 +47,13 @@ export class IngameReport extends IStatefulService {
             }
         }
 
-        this.interval = setInterval(() => {
+        this.timers.addInterval('scanTick', () => {
             void this.scanTick();
         }, this.intervalTimeout);
     }
 
     public async stop(): Promise<void> {
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = undefined;
-        }
+        this.timers.removeAllTimers();
     }
 
     private async scanTick(): Promise<void> {

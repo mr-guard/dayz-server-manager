@@ -17,7 +17,6 @@ export type ServerStateListener = (state: ServerState) => any;
 @injectable()
 export class Monitor extends IStatefulService {
 
-    private interval: any;
     public loopInterval = 500;
     private tickRunning = false;
     private lastTick = 0;
@@ -114,10 +113,11 @@ export class Monitor extends IStatefulService {
     }
 
     public async start(): Promise<void> {
-        if (this.interval) return;
+        if (this.timers.getTimer('tick')) return;
         this.lastTick = 0;
         this.tickRunning = false;
-        this.interval = setInterval(
+        this.timers.addInterval(
+            'tick',
             () => {
                 if (this.tickRunning) {
                     return;
@@ -145,9 +145,8 @@ export class Monitor extends IStatefulService {
     }
 
     public async stop(): Promise<void> {
-        if (!this.interval) return;
-        clearInterval(this.interval);
-        this.interval = undefined;
+        if (!this.timers.getTimer('tick')) return;
+        this.timers.removeAllTimers();
         this.eventBus.clear(InternalEventTypes.MONITOR_STATE_CHANGE);
         this.log.log(LogLevel.IMPORTANT, 'Stoping to watch server');
     }

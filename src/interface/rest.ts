@@ -243,7 +243,6 @@ export class REST extends IStatefulService {
         for (const user of (this.manager.config?.admins ?? [])) {
             users[user.userId] = user.password;
         }
-        console.log(users);
         this.router.use((basicAuth as any)({ users, challenge: false }));
 
         const commandMap = this.eventInterface.commandMap || new Map();
