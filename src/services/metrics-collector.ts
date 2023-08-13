@@ -2,7 +2,7 @@ import { Manager } from '../control/manager';
 import { MetricType, MetricTypeEnum } from '../types/metrics';
 import { LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
-import { delay, inject, injectable, singleton } from 'tsyringe';
+import { injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { RCON } from './rcon';
 import { SystemReporter } from './system-reporter';
@@ -13,41 +13,34 @@ import { Metrics } from './metrics';
 export class MetricsCollector extends IStatefulService {
 
     public initialTimeout = 1000;
-    private timeout: any;
-    private interval: any;
 
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
         private metrics: Metrics,
         private rcon: RCON,
-        @inject(delay(() => SystemReporter)) private systemReporter: SystemReporter,
+        private systemReporter: SystemReporter,
     ) {
         super(loggerFactory.createLogger('MetricsCollector'));
     }
 
     public async start(): Promise<void> {
-        if (this.interval) {
-            await this.stop();
-        }
+        await this.stop();
 
-        this.timeout = setTimeout(() => {
-            this.timeout = undefined;
-            this.interval = setInterval(() => {
-                void this.tick();
-            }, this.manager.config.metricPollIntervall);
-        }, this.initialTimeout);
+        this.timers.addTimeout(
+            'initialTimeout',
+            () => {
+                this.timers.removeTimer('initialTimeout');
+                this.timers.addInterval('tick', () => {
+                    void this.tick();
+                }, this.manager.config.metricPollIntervall);
+            },
+            this.initialTimeout,
+        );
     }
 
     public async stop(): Promise<void> {
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-            this.timeout = undefined;
-        }
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = undefined;
-        }
+        this.timers.removeAllTimers();
     }
 
     private async tick(): Promise<void> {
@@ -73,8 +66,8 @@ export class MetricsCollector extends IStatefulService {
                     value,
                 });
             }
-        } catch {
-            // ignore
+        } catch (e) {
+            this.log.log(LogLevel.WARN, 'Failed to evaluate or push metric', e);
         }
     }
 
