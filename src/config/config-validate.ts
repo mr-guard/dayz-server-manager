@@ -62,7 +62,7 @@ export const validateConfig = (config: Config): string[] => {
     // check types for severCfg
     if (config.serverCfg) {
         for (const configKey in config.serverCfg) {
-            if (typeof config.serverCfg[configKey] !== typeof refConfig.serverCfg[configKey]) {
+            if (typeof refConfig.serverCfg[configKey] !== 'undefined' && typeof config.serverCfg[configKey] !== typeof refConfig.serverCfg[configKey]) {
                 errors.push(`Wrong config type: serverCfg.${configKey}, allowed ${typeof refConfig.serverCfg[configKey]}`);
             } else if (typeof config.serverCfg[configKey] === 'number') {
                 const range: [number, number] | undefined = Reflect.getMetadata('config-range', refConfig.serverCfg, configKey);

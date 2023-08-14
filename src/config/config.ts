@@ -892,7 +892,6 @@ export class Config {
     /**
      * serverCfg
      */
-    @Reflect.metadata('config-required', true)
     public serverCfg: ServerCfg = new ServerCfg();
 
 }

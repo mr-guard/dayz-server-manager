@@ -145,11 +145,20 @@ This way you can not miss out on new properties which might be required.<br>
 ## Configuration <hr>  
 
 The configuration of the manager is all done in a single config file.<br>
-You MUST not edit the serverDZ.cfg manually because it will be overriden by the settings inside the `server-manager.json`.<br>
 <br>
 When installing the manager the first time, you will find a configuration template which needs to be renamed to `server-manager.json`.<br>
 You can then go ahead and change the settings inside of this file.<br>
 If you do not need anything special (you would probably know by now), then the default values will work out well.<br>
+<br>
+You can also configure serverDZ.cfg manually, but you will have to set the serverCfg to `null`:
+```json
+{
+  ...
+  "serverCfg": null
+  ...
+}
+``` 
+Otherwise it will be overriden by the settings inside the `server-manager.json`.<br>
 <br>
   
   

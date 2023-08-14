@@ -69,7 +69,8 @@ export class RCON extends IStatefulService {
 
         this.connectionErrorCounter = 0;
 
-        if (this.manager.config?.serverCfg?.BattlEye === 0) {
+        const serverCfg = await this.manager.getServerCfg();
+        if (serverCfg?.BattlEye === 0) {
             return;
         }
 

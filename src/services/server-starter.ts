@@ -67,11 +67,15 @@ export class ServerStarter extends IService {
     }
 
     public async writeServerCfg(): Promise<void> {
-        const cfgPath = path.join(this.manager.getServerPath(), this.manager.config.serverCfgPath);
-        const content = new ConfigParser().json2cfg(this.manager.config.serverCfg);
+        if (this.manager.config.serverCfg) {
+            const cfgPath = path.join(this.manager.getServerPath(), this.manager.config.serverCfgPath);
+            const content = new ConfigParser().json2cfg(this.manager.config.serverCfg);
 
-        this.log.log(LogLevel.INFO, `Writing server cfg`);
-        this.fs.writeFileSync(cfgPath, content);
+            this.log.log(LogLevel.INFO, `Writing server cfg`);
+            this.fs.writeFileSync(cfgPath, content);
+        } else {
+            this.log.log(LogLevel.INFO, `Skipping to write server cfg because it is not configured`);
+        }
     }
 
     private async prepareServerStart(skipPrep?: boolean): Promise<void> {

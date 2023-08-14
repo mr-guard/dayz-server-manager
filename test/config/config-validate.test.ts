@@ -32,7 +32,8 @@ export const VALID_CONFIG = `{
             "DayZ": {
                 "template": "test.chernarusplus"
             }
-        }
+        },
+        "someCustomField": "test"
     }
 }`;
 
@@ -56,11 +57,11 @@ describe('Test config validate', () => {
     });
 
     it('validate-config-positive', () => {
-        const base = parseConfigFileContent(VALID_CONFIG);
+        const base = parseConfigFileContent(VALID_CONFIG) as Config;
 
         const result = validateConfig(base);
-
         expect(result).to.be.empty;
+        expect(base.serverCfg['someCustomField']).to.equal('test');
     });
 
     it('validate-config-event', () => {
