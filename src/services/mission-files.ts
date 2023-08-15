@@ -41,7 +41,7 @@ export class MissionFiles extends IService {
         if (!normalizedSubPath.length) {
             return missionPath;
         }
-        const totalPath = path.resolve(missionPath, normalizedSubPath);
+        const totalPath = this.paths.resolve(missionPath, normalizedSubPath);
         if (
             !totalPath.startsWith(missionPath)
             || totalPath.includes('..')
