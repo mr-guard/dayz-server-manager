@@ -753,6 +753,13 @@ export class Config {
     public updateModsOnStartup: boolean = true;
 
     /**
+     * Whether or not to validate the mods files after updates.
+     * This can lead to mod files (files inside the mod folder) being reset, after manually editing them.
+     * Only disable this, when that happens or you really want to skip validation.
+     */
+    public validateModsAfterUpdate: boolean = true;
+
+    /**
      * Whether or not to check for server updates on each server restart
      */
     public updateServerBeforeServerStart: boolean = true;
@@ -761,6 +768,17 @@ export class Config {
      * Whether or not to check for mod updates when the manager is started
      */
     public updateServerOnStartup: boolean = true;
+
+    /**
+     * Whether or not to validate the server files after updates.
+     * This can lead to files being reset, after manually editing them.
+     * Examples are:
+     *   - Mission files inside the default missions dayzOffline.chernarusplus and dayzOffline.enoch
+     *   - serverDZ.cfg
+     * To avoid this, rename your mission / use a different name for the server cfg.. etc.
+     * Only disable this, when you need to use the default names or really want to skip validation.
+     */
+    public validateServerAfterUpdate: boolean = true;
 
     /**
      * Whether or not to use hardlink for mods instead of copying them
