@@ -253,7 +253,28 @@ export class SteamCMD extends IService {
 
     private async installSteamCmd(): Promise<boolean> {
         this.log.log(LogLevel.IMPORTANT, 'Checking/Installing SteamCMD');
-        return this.execute(['validate', '+quit']);
+        let lastProgress = '';
+        return this.execute(
+            ['validate', '+quit'],
+            {
+                listener: (event) => {
+                    if (event.type === 'output') {
+                        const output = (event as SteamCmdOutputEvent).text;
+                        if (!output) {
+                            return;
+                        }
+                        const matched = output.match(/\[([\s\d-]{3}[%-])\]\s(.*)$/);
+                        if (matched?.[1]) {
+                            const progress = `${matched[1]} - ${matched[2]}`;
+                            if (progress !== lastProgress) {
+                                lastProgress = progress;
+                                this.log.log(LogLevel.INFO, `Progress: ${progress}`);
+                            }
+                        }
+                    }
+                },
+            },
+        );
     }
 
     public async checkSteamCmd(): Promise<boolean> {
@@ -430,6 +451,7 @@ export class SteamCMD extends IService {
                 if (event.type === 'output') {
                     const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
                     if (progress?.length) {
+                        this.log.log(LogLevel.INFO, `Progress: ${progress[0]}`);
                         opts.listener({
                             type: 'app-progress',
                             progress: progress[0],
@@ -588,6 +610,7 @@ export class SteamCMD extends IService {
                 if (event.type === 'output') {
                     const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
                     if (progress?.length) {
+                        this.log.log(LogLevel.INFO, `Progress: ${progress[1]}`);
                         opts.listener({
                             type: 'mod-progress',
                             mod: lastDetectedMod,
