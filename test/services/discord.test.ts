@@ -158,10 +158,10 @@ describe('Test class Discord', () => {
         discord['ready'] = true;
         
         // should return instantly
-        await discord.relayRconMessage('test');
+        await discord.sendMessage({ type: 'rcon', message: 'test' });
         
         discord.client = discordClientMock.getMockInstance();
-        await discord.relayRconMessage('test');
+        await discord.sendMessage({ type: 'rcon', message: 'test' });
 
         expect(channel1.send.callCount).to.equal(1);
         expect(channel2.send.callCount).to.equal(0);

@@ -16,15 +16,43 @@
             <hr>
             <div class="row spaced">
                 <div class="col-md-3">
-                    <button class="btn btn-primary" (click)="updateServer()">
+                    <button class="btn btn-primary" (click)="updateServer(validateServerUpdate.value)">
                         Update Server
                     </button>
                 </div>
                 <div class="col-md-3">
-                    <button class="btn btn-primary" (click)="updateMods()">
+                    <div>
+                        <label for="validate-server-update">
+                            Validate?
+                        </label>
+                        <input #validateServerUpdate id="validate-server-update" type="checkbox" [value]="true">
+                    </div>
+                </div>
+            </div>
+            <div class="row spaced">
+                <div class="col-md-3">
+                    <button class="btn btn-primary" (click)="updateMods(validateModUpdate.value, forceModUpdate.value)">
                         Update Mods
                     </button>
                 </div>
+                <div class="col-md-3">
+                    <div>
+                        <label for="validate-mod-update">
+                            Validate?
+                        </label>
+                        <input #validateModUpdate id="validate-mod-update" type="checkbox" [value]="true">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div title="Disables mod meta data checks and always triggers mod update.">
+                        <label for="force-mod-update">
+                            Force?
+                        </label>
+                        <input #forceModUpdate id="force-mod-update" type="checkbox" [value]="false">
+                    </div>
+                </div>
+            </div>
+            <div class="row spaced">
                 <div class="col-md-3">
                     <button class="btn btn-primary" (click)="createBackup()">
                         Create Backup

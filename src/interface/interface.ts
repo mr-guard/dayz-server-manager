@@ -9,7 +9,7 @@ import { Monitor } from '../services/monitor';
 import { SystemReporter } from '../services/system-reporter';
 import { RCON } from '../services/rcon';
 import { SteamCMD } from '../services/steamcmd';
-import { CommandMap, Request, RequestTemplate, Response } from '../types/interface';
+import { CommandMap, Request, RequestTemplate, Response, ResponsePartHandler } from '../types/interface';
 import { IService } from '../types/service';
 import { LogLevel } from '../util/logger';
 import { makeTable } from '../util/table';
@@ -17,6 +17,11 @@ import { constants as HTTP } from 'http2';
 import { ConfigFileHelper } from '../config/config-file-helper';
 import { ServerDetector } from '../services/server-detector';
 
+/* istanbul ignore next */
+const parseBoolean = (val: any): boolean => true === val || 'true' === val;
+
+/* istanbul ignore next */
+const parseNumber = (val: any): number => typeof val === 'number' ? val : Number(val);
 
 @singleton()
 @injectable()
@@ -42,367 +47,226 @@ export class Interface extends IService {
         this.setupCommandMap();
     }
 
-    private singleParamWrapper(
-        param: string,
-        fnc: (p: any) => Promise<any>,
-        result?: boolean,
-        optional?: boolean,
-    ): (r: Request) => Promise<Response> {
-        return async (req: Request) => {
-            const paramVal = req.body ? req.body[param] : null;
-            if (!optional && !paramVal) {
-                return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param ${param}`);
-            }
-            if (result) {
-                return this.executeWithResult(
-                    req,
-                    () => fnc(paramVal),
-                );
-            }
-            return this.executeWithoutResult(
-                req,
-                () => fnc(paramVal),
-            );
-        };
-    }
-
     private setupCommandMap(): void {
 
         this.commandMap = new Map([
             ['ping', RequestTemplate.build({
                 level: 'view',
                 disableRest: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    async () => 'I won\'t say pong you stupid fuck',
-                ),
+                action: () => 'I won\'t say pong you stupid fuck',
             })],
             ['process', RequestTemplate.build({
                 level: 'view',
-                action: (req) => this.executeWithResult(
-                    req,
-                    this.getDayZProcesses,
-                ),
+                action: this.getDayZProcesses,
             })],
             ['system', RequestTemplate.build({
                 level: 'view',
-                action: (req) => this.executeWithResult(
-                    req,
-                    this.getSystemReport,
-                ),
+                action: this.getSystemReport,
             })],
             ['players', RequestTemplate.build({
                 level: 'view',
-                action: (req) => this.executeWithResult(
-                    req,
-                    this.getPlayers,
-                ),
+                action: this.getPlayers,
             })],
             ['bans', RequestTemplate.build({
                 level: 'view',
-                action: (req) => this.executeWithResult(
-                    req,
-                    this.getBans,
-                ),
+                action: this.getBans,
             })],
             ['lock', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.rcon.lock(),
-                ),
+                noResponse: true,
+                action: () => this.rcon.lock(),
             })],
             ['unlock', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.rcon.unlock(),
-                ),
+                noResponse: true,
+                action: () => this.rcon.unlock(),
             })],
             ['global', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                params: ['message'],
-                action: this.singleParamWrapper(
-                    'message',
-                    (message) => this.rcon.global(message),
-                ),
+                params: [{ name: 'message' }],
+                noResponse: true,
+                action: (req, params) => this.rcon.global(params.message),
             })],
             ['kickall', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.rcon.kickAll(),
-                ),
+                noResponse: true,
+                action: () => this.rcon.kickAll(),
             })],
             ['kick', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                params: ['player'],
-                action: this.singleParamWrapper(
-                    'player',
-                    (player) => this.rcon.kick(player),
-                ),
+                params: [{ name: 'player' }],
+                noResponse: true,
+                action: (req, params) => this.rcon.kick(params.player),
             })],
             ['ban', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                params: ['player'],
-                action: this.singleParamWrapper(
-                    'player',
-                    (player) => this.rcon.ban(player),
-                ),
+                params: [{ name: 'player' }],
+                noResponse: true,
+                action: (req, params) => this.rcon.ban(params.player),
             })],
             ['removeban', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                params: ['player'],
-                action: this.singleParamWrapper(
-                    'player',
-                    (player) => this.rcon.removeBan(player),
-                ),
+                params: [{ name: 'player' }],
+                noResponse: true,
+                action: (req, params) => this.rcon.removeBan(params.player),
             })],
             ['reloadbans', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.rcon.reloadBans(),
-                ),
+                noResponse: true,
+                action: () => this.rcon.reloadBans(),
             })],
             ['restart', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
-                params: ['force'],
-                paramsOptional: true,
-                action: this.singleParamWrapper(
-                    'force',
-                    (force) => this.monitor.killServer(!!force && force !== 'false'),
-                    false,
-                    true,
-                ),
+                params: [{ name: 'force', optional: true, parse: parseBoolean }],
+                noResponse: true,
+                action: (req, params) => this.monitor.killServer(!!params.force && params.force !== 'false'),
             })],
             ['isrestartlocked', RequestTemplate.build({
                 method: 'get',
                 level: 'view',
-                action: (req) => this.executeWithResult(
-                    req,
-                    async () => {
-                        return this.monitor.restartLock;
-                    },
-                ),
+                action: () => this.monitor.restartLock,
             })],
             ['lockrestart', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    async () => {
-                        this.monitor.restartLock = true;
-                    },
-                ),
+                noResponse: true,
+                action: () => this.monitor.restartLock = true,
             })],
             ['unlockrestart', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    async () => {
-                        this.monitor.restartLock = false;
-                    },
-                ),
+                noResponse: true,
+                action: () => this.monitor.restartLock = false,
             })],
             ['metrics', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                params: ['type', 'since'],
-                action: async (req: Request) => {
-                    if (!req.query?.type) {
-                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param type`);
-                    }
-                    return this.executeWithResult(
-                        req,
-                        () => {
-                            const ts = req.query?.since ? Number(req.query.since) : undefined;
-                            return this.metrics.fetchMetrics(
-                                req.query.type,
-                                ts,
-                            );
-                        },
-                    );
-                },
+                params: [{ name: 'type', location: 'query' }, { name: 'since', optional: true, location: 'query', parse: parseNumber }],
+                action: (req, params) => this.metrics.fetchMetrics(params.type, params.since ? Number(params.since) : undefined),
             })],
             ['deleteMetrics', RequestTemplate.build({
                 method: 'delete',
                 level: 'admin',
                 disableDiscord: true,
-                params: ['maxAgeDays'],
-                action: this.singleParamWrapper(
-                    'maxAgeDays',
-                    async (maxAgeDays) => {
-                        const days = Number(maxAgeDays);
-                        if (days > 0) {
-                            this.metrics.deleteMetrics(days * 24 * 60 * 60 * 1000);
-                        }
-                    },
-                    false,
-                    false,
-                ),
+                params: [{name: 'maxAgeDays'}],
+                noResponse: true,
+                action: (req, params) => {
+                    const days = Number(params.maxAgeDays);
+                    if (days > 0) {
+                        this.metrics.deleteMetrics(days * 24 * 60 * 60 * 1000);
+                    }
+                },
             })],
             ['logs', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                params: ['type', 'since'],
-                action: async (req: Request) => {
-                    if (!req.query?.type) {
-                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param type`);
-                    }
-                    return this.executeWithResult(
-                        req,
-                        () => this.logReader.fetchLogs(req.query.type, req.query.since ? Number(req.query.since) : undefined),
-                    );
-                },
+                params: [{ name: 'type', location: 'query' }, { name: 'since', optional: true, location: 'query', parse: parseNumber }],
+                action: (req, params) => this.logReader.fetchLogs(params.type, params.since ? Number(params.since) : undefined),
             })],
             ['login', RequestTemplate.build({
                 method: 'post',
                 level: 'view',
                 disableDiscord: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    async () => {
-                        console.log(req)
-                        const userLevel = this.manager.getUserLevel(req.user);
-                        if (userLevel) {
-                            this.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);
-                        }
-                        return userLevel;
-                    },
-                ),
+                action: (req) => {
+                    const userLevel = this.manager.getUserLevel(req.user);
+                    if (userLevel) {
+                        this.log.log(LogLevel.IMPORTANT, `User ${req.user} logged in`);
+                    }
+                    return userLevel;
+                },
             })],
             ['config', RequestTemplate.build({
                 method: 'get',
                 level: 'admin',
                 disableDiscord: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    () => Promise.resolve(this.manager.config),
-                ),
+                action: () => this.manager.config,
             })],
             ['updateconfig', RequestTemplate.build({
                 method: 'post',
                 level: 'admin',
                 disableDiscord: true,
-                params: ['config'],
-                action: this.singleParamWrapper(
-                    'config',
-                    async (config) => {
-
-                        try {
-                            this.configFileHelper.writeConfig(config);
-                            return true;
-                        } catch (e) {
-                            throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
-                        }
-
-                    },
-                    true,
-                    true,
-                ),
+                params: [{ name: 'config' }],
+                action: (req, params) => {
+                    try {
+                        this.configFileHelper.writeConfig(params.config);
+                        return true;
+                    } catch (e) {
+                        throw new Response(HTTP.HTTP_STATUS_BAD_REQUEST, e);
+                    }
+                },
             })],
             ['updatemods', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
                 disableDiscord: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    () => {
-                        return this.steamCmd.updateAllMods();
-                    },
-                ),
+                params: [{ name: 'validate', optional: true, parse: parseBoolean }, { name: 'force', optional: true, parse: parseBoolean }],
+                action: (req, params) => this.steamCmd.updateAllMods({
+                    validate: params?.validate,
+                    force: params?.force,
+                }),
             })],
             ['updateserver', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
                 disableDiscord: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    () => {
-                        return this.steamCmd.updateServer();
-                    },
-                ),
+                params: [{ name: 'validate', optional: true, parse: parseBoolean }],
+                action: (req, params) => this.steamCmd.updateServer({
+                    validate: params?.validate,
+                }),
             })],
             ['backup', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.backup.createBackup(),
-                ),
+                noResponse: true,
+                action: () => this.backup.createBackup(),
             })],
             ['getbackups', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
-                action: (req) => this.executeWithResult(
-                    req,
-                    () => this.backup.getBackups(),
-                ),
+                action: () => this.backup.getBackups(),
             })],
             ['writemissionfile', RequestTemplate.build({
                 method: 'post',
                 level: 'manage',
                 disableDiscord: true,
-                params: ['file', 'content', 'createBackup'],
-                action: (req) => this.executeWithoutResult(
-                    req,
-                    () => this.missionFiles.writeMissionFile(
-                        req.body?.file,
-                        req.body?.content,
-                        req.body?.createBackup,
-                    ),
+                params: [{ name: 'file' }, { name: 'content' }, { name: 'createBackup', optional: true, parse: parseBoolean }],
+                noResponse: true,
+                action: (req, params) => this.missionFiles.writeMissionFile(
+                    params.file,
+                    params.content,
+                    params.createBackup,
                 ),
             })],
             ['readmissionfile', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                params: ['file'],
-                action: async (req: Request) => {
-                    if (!req.query?.file) {
-                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param 'file'`);
-                    }
-                    return this.executeWithResult(
-                        req,
-                        () => this.missionFiles.readMissionFile(req.query.file),
-                    );
-                },
+                params: [{ name: 'file', location: 'query' }],
+                action: (req, params) => this.missionFiles.readMissionFile(params.file),
             })],
             ['readmissiondir', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
                 disableDiscord: true,
-                action: async (req: Request) => {
-                    if (!req.query?.dir) {
-                        return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param 'dir'`);
-                    }
-                    return this.executeWithResult(
-                        req,
-                        () => this.missionFiles.readMissionDir(req.query.dir),
-                    );
-                },
+                params: [{ name: 'dir', location: 'query' }],
+                action: async (req, params) => this.missionFiles.readMissionDir(params.dir),
             })],
             ['serverinfo', RequestTemplate.build({
                 method: 'get',
                 level: 'view',
                 disableDiscord: true,
-                action: (req) => this.executeWithResult(
-                    req,
-                    () => this.manager.getServerInfo(),
-                ),
+                action: () => this.manager.getServerInfo(),
             })],
         ]);
     }
@@ -417,30 +281,6 @@ export class Interface extends IService {
             HTTP.HTTP_STATUS_INTERNAL_SERVER_ERROR,
             errorMsg,
         );
-    }
-
-    private async executeWithoutResult(req: Request, fnc: (request: Request) => Promise<any>): Promise<Response> {
-        try {
-            await fnc(req);
-            return new Response(
-                HTTP.HTTP_STATUS_OK,
-                'Done',
-            );
-        } catch (e) {
-            return this.handleExecutionError(req, e);
-        }
-    }
-
-    private async executeWithResult(req: Request, fnc: (request: Request) => Promise<any>): Promise<Response> {
-        try {
-            const result = await fnc(req);
-            if (!result) {
-                return new Response(HTTP.HTTP_STATUS_NOT_FOUND, 'Action had no results');
-            }
-            return new Response(HTTP.HTTP_STATUS_OK, result);
-        } catch (e) {
-            return this.handleExecutionError(req, e);
-        }
     }
 
     private acceptsText(req: Request): boolean {
@@ -492,8 +332,7 @@ export class Interface extends IService {
     };
 
     // apply RBAC and audit
-    private async actionRbacCheck(req: Request): Promise<Response | null> {
-        const x = this.commandMap.get(req.resource);
+    private async actionRbacCheck(req: Request, x: RequestTemplate): Promise<Response | null> {
         if (x.level) {
             const user = this.manager.config?.admins?.find((admin) => admin.userId === req.user);
             if (
@@ -539,7 +378,17 @@ export class Interface extends IService {
         return null;
     }
 
-    public async execute(req: Request): Promise<Response> {
+    private async actionParamsCheck(req: Request, template: RequestTemplate): Promise<Response | null> {
+        for (const param of template.params || []) {
+            const paramVal = req[param.location || 'body']?.[param.name];
+            if (!param.optional && !paramVal) {
+                return new Response(HTTP.HTTP_STATUS_BAD_REQUEST, `Missing param ${param.name}`);
+            }
+        }
+        return null;
+    }
+
+    public async execute(req: Request, responsePartHandler?: ResponsePartHandler): Promise<Response> {
         if (!req.resource || !this.commandMap.has(req.resource)) {
             return new Response(
                 HTTP.HTTP_STATUS_BAD_REQUEST,
@@ -547,19 +396,50 @@ export class Interface extends IService {
             );
         }
 
-        const interceptors: ((r: Request) => Promise<Response | null>)[] = [
+        const template = this.commandMap.get(req.resource);
+
+        const interceptors: ((r: Request, t: RequestTemplate) => Promise<Response | null>)[] = [
             (r) => this.actionInitCheck(r),
-            (r) => this.actionRbacCheck(r),
+            (r, t) => this.actionRbacCheck(r, t),
+            (r, t) => this.actionParamsCheck(r, t),
         ];
 
         for (const interceptor of interceptors) {
-            const resp = await interceptor(req);
+            const resp = await interceptor(req, template);
             if (resp) {
                 return resp;
             }
         }
 
-        return this.commandMap.get(req.resource).action(req);
+        const resolvedParams = {} as Record<string, any>;
+        template.params.forEach(
+            (param) => {
+                resolvedParams[param.name] = req[param.location || 'body']?.[param.name];
+            },
+        );
+
+        /* istanbul ignore next */
+        const responsePartHandlerWrapper: ResponsePartHandler = async (part) => {
+            return (req.canStream && responsePartHandler) ? responsePartHandler(part) : undefined;
+        }
+
+        try {
+            if (template.noResponse) {
+                await template.action(req, resolvedParams, { partialResponseCallback: responsePartHandlerWrapper });
+                return new Response(
+                    HTTP.HTTP_STATUS_OK,
+                    'Done',
+                );
+            } else {
+                const result = await template.action(req, resolvedParams, { partialResponseCallback: responsePartHandlerWrapper });
+                if (!result) {
+                    return new Response(HTTP.HTTP_STATUS_NOT_FOUND, 'Action had no results');
+                }
+                return new Response(HTTP.HTTP_STATUS_OK, result);
+            }
+        } catch (e) {
+            return this.handleExecutionError(req, e);
+        }
     }
 
 }

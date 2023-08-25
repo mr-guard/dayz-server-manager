@@ -15,6 +15,7 @@ import { request } from '../util/request';
 import { DAYZ_APP_ID, DAYZ_EXPERIMENTAL_SERVER_APP_ID, DAYZ_SERVER_APP_ID, LocalMetaData, PublishedFileDetail, SteamApiWorkshopItemDetailsResponse, SteamCmdAppUpdateProgressEvent, SteamCmdEvent, SteamCmdEventListener, SteamCmdExitEvent, SteamCmdModUpdateProgressEvent, SteamCmdOutputEvent, SteamCmdRetryEvent, SteamExitCodes } from '../types/steamcmd';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
+import { RichEmbed } from 'discord.js';
 
 
 
@@ -406,12 +407,18 @@ export class SteamCMD extends IService {
                     if (!(event as SteamCmdExitEvent).success) {
                         this.eventBus.emit(
                             InternalEventTypes.DISCORD_MESSAGE,
-                            'Failed to update server!',
+                            {
+                                type: 'admin',
+                                message: 'Failed to update server!',
+                            },
                         );
                     } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
                         this.eventBus.emit(
                             InternalEventTypes.DISCORD_MESSAGE,
-                            'Successfully updated server!',
+                            {
+                                type: 'notification',
+                                message: 'Successfully updated server!',
+                            },
                         );
                     }
                 }
@@ -527,16 +534,49 @@ export class SteamCMD extends IService {
                             isSuccess = true;
                         }
                         if (isSuccess !== null) {
-                            const modInfo = await this.metaData.getModsMetaData(modIds);
-                            const currentModNames = modIds.map((modId) => {
-                                return modInfo.find((x) => x.publishedfileid)?.filename || modId;
-                            }).join('\n');
-                            this.eventBus.emit(
-                                InternalEventTypes.DISCORD_MESSAGE,
-                                isSuccess
-                                    ? `Successfully updated mods: ${currentModNames}`
-                                    : `Failed to update mods: ${currentModNames}`,
-                            );
+                            if (isSuccess) {
+                                const modInfos = await this.metaData.getModsMetaData(modIds);
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    {
+                                        type: 'notification',
+                                        message: `Successfully updated mods:`,
+                                        embeds: modInfos.map((modInfo) => {
+                                            const embed = new RichEmbed({
+                                                color: 0x0099FF,
+                                                title: modInfo.title,
+                                                url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
+                                                fields: [
+                                                    {
+                                                        name: 'Uploaded at',
+                                                        value: new Date((modInfo.time_updated || modInfo.time_created) * 1000)
+                                                            .toISOString()
+                                                            .split(/[T\.]/)
+                                                            .slice(0, 2)
+                                                            .join(' ')
+                                                            + ' UTC',
+                                                        inline: true,
+                                                    },
+                                                ],
+                                                thumbnail: { url: modInfo.preview_url },
+                                                image: { url: modInfo.preview_url },
+                                                footer: {
+                                                    text: 'Powered by DayZ Server Manager',
+                                                },
+                                            });
+                                            return embed;
+                                        }),
+                                    },
+                                );
+                            } else {
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    {
+                                        type: 'admin',
+                                        message: `Failed to update mods: ${modIds.join('\n')}`,
+                                    },
+                                );
+                            }
                         }
                     })();
                 }

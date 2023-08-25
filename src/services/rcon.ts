@@ -161,7 +161,10 @@ export class RCON extends IStatefulService {
             this.log.log(LogLevel.DEBUG, `message`, message);
             this.eventBus.emit(
                 InternalEventTypes.DISCORD_MESSAGE,
-                message,
+                {
+                    type: 'rcon',
+                    message,
+                },
             );
         });
 

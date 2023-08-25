@@ -461,6 +461,12 @@ export class WorkshopMod {
 
 }
 
+export type DiscordChannelType =
+    'admin' // admin commands are allowed and public as well as private notifications are posted in this channel
+    | 'rcon' // rcon relay
+    | 'notification' // public server notifications are posted here (i.e. server restart, server update, mod update)
+    ;
+
 export class Config {
 
     /**
@@ -544,16 +550,16 @@ export class Config {
      * Channels the discord commands will work in
      * by default (if the channel is not listed), only public discord commands are allowed
      *
-     * Modes:
-     * 'admin' - admin commands are allowed in this channel
+     * Mode:
+     * 'admin' - admin commands are allowed and public as well as private notifications are posted in this channel
      * 'rcon' - rcon relay (rcon messages will be posted there)
+     * 'notification' - public server notifications are posted here (i.e. server restart, server update, mod update)
+     *
+     * Mode can also be a list of modes, i.e.: ['rcon', 'notification']
      */
     public discordChannels: {
         channel: string;
-        mode:
-        'admin' // admin commands are allowed in this channel
-        | 'rcon' // rcon relay
-        ;
+        mode: DiscordChannelType | DiscordChannelType[]
     }[] = [];
 
     // /////////////////////////// DayZ ///////////////////////////////////////

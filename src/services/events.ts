@@ -60,7 +60,10 @@ export class Events extends IStatefulService {
                             void checkAndRun(async () => {
                                 this.eventBus.emit(
                                     InternalEventTypes.DISCORD_MESSAGE,
-                                    'Scheduled Restart!',
+                                    {
+                                        type: 'notification',
+                                        message: 'Executing planned Restart!',
+                                    },
                                 );
                                 await this.monitor.killServer();
                             });

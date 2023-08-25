@@ -21,8 +21,19 @@ export class MaintenanceComponent implements OnInit {
         // ignore
     }
 
-    public async updateServer(): Promise<void> {
-        const success = await this.maintenance.updateServer();
+    private exactBooleanParse(val?: string): boolean | undefined {
+        val = val + '';
+        if (val === 'true') {
+            return true;
+        } else if (val === 'false') {
+            return false;
+        } else {
+            return undefined;
+        }
+    }
+
+    public async updateServer(validate?: string): Promise<void> {
+        const success = await this.maintenance.updateServer(this.exactBooleanParse(validate));
         if (success) {
             this.outcomeBadge = {
                 message: 'Successfully updated server',
@@ -36,8 +47,8 @@ export class MaintenanceComponent implements OnInit {
         }
     }
 
-    public async updateMods(): Promise<void> {
-        const success = await this.maintenance.updateMods();
+    public async updateMods(validate?: string, force?: string): Promise<void> {
+        const success = await this.maintenance.updateMods(this.exactBooleanParse(validate), this.exactBooleanParse(force));
         if (success) {
             this.outcomeBadge = {
                 message: 'Successfully updated mods',

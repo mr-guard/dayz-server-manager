@@ -71,7 +71,10 @@ export class Monitor extends IStatefulService {
         ) {
             this.eventBus.emit(
                 InternalEventTypes.DISCORD_MESSAGE,
-                'Server start sucessful',
+                {
+                    type: 'notification',
+                    message: 'Server start sucessful',
+                },
             );
         }
 
@@ -87,7 +90,10 @@ export class Monitor extends IStatefulService {
             this.log.log(LogLevel.WARN, msg);
             this.eventBus.emit(
                 InternalEventTypes.DISCORD_MESSAGE,
-                msg,
+                {
+                    type: 'notification',
+                    message: msg,
+                },
             );
         }
 
@@ -222,7 +228,10 @@ export class Monitor extends IStatefulService {
                 this.log.log(LogLevel.WARN, msg);
                 this.eventBus.emit(
                     InternalEventTypes.DISCORD_MESSAGE,
-                    msg,
+                    {
+                        type: 'admin',
+                        message: msg,
+                    },
                 );
                 return true;
             }
