@@ -478,6 +478,11 @@ export class Config {
 
     /**
      * Manager log level
+     * 0 - DEBUG - very verbose
+     * 1 - INFO - informational logs
+     * 2 - IMPORTANT - only important logs
+     * 3 - WARN - warning and errors
+     * 4 - ERROR - only errors
      */
     public loglevel: number = 1;
 
