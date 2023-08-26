@@ -74,6 +74,7 @@ export interface SteamCmdEvent {
 export interface SteamCmdModUpdateProgressEvent extends SteamCmdEvent {
     type: 'mod-progress';
     mod: string;
+    step: string;
     progress: string;
     progressAmount: string;
     progressTotalAmount: string;
@@ -81,6 +82,7 @@ export interface SteamCmdModUpdateProgressEvent extends SteamCmdEvent {
 
 export interface SteamCmdAppUpdateProgressEvent extends SteamCmdEvent {
     type: 'app-progress';
+    step: string;
     progress: string;
     progressAmount: string;
     progressTotalAmount: string;

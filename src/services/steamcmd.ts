@@ -174,7 +174,7 @@ export class SteamCMD extends IService {
 
     private execMode: 'child_process' | 'pty' = 'pty';
 
-    private progressRegex = /Update state \(0x\d+\) \w+, progress: (\d+.\d+) \((\d+) \/ (\d+)\)$/;
+    private progressRegex = /Update state \(0x\d+\) (?<step>.*), progress: (?<progress>\d+.\d+) \((?<current>\d+) \/ (?<total>\d+)\)$/;
 
     public constructor(
         loggerFactory: LoggerFactory,
@@ -444,24 +444,21 @@ export class SteamCMD extends IService {
                     }
                 }
 
-                if (!opts?.listener) {
-                    return;
-                }
-
                 if (event.type === 'output') {
                     const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
                     if (progress?.length) {
-                        this.log.log(LogLevel.INFO, `Progress: ${progress[0]}`);
-                        opts.listener({
+                        this.log.log(LogLevel.INFO, `Server Update Progress: ${progress.groups?.step}: ${progress.groups?.progress}%`);
+                        opts?.listener?.({
                             type: 'app-progress',
-                            progress: progress[0],
-                            progressAmount: progress[1],
-                            progressTotalAmount: progress[2],
+                            step: progress.groups?.step,
+                            progress: progress.groups?.progress,
+                            progressAmount: progress.groups?.current,
+                            progressTotalAmount: progress.groups?.total,
                         } as SteamCmdAppUpdateProgressEvent);
                         return;
                     }
                 }
-                opts.listener(event);
+                opts?.listener?.(event);
             },
         });
 
@@ -603,20 +600,17 @@ export class SteamCMD extends IService {
                     })();
                 }
 
-                if (!opts?.listener) {
-                    return;
-                }
-
                 if (event.type === 'output') {
                     const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
                     if (progress?.length) {
-                        this.log.log(LogLevel.INFO, `Progress: ${progress[1]}`);
-                        opts.listener({
+                        this.log.log(LogLevel.INFO, `Mod Update Progress: ${progress.groups?.step}: ${progress.groups?.progress}%`);
+                        opts?.listener?.({
                             type: 'mod-progress',
                             mod: lastDetectedMod,
-                            progress: progress[0],
-                            progressAmount: progress[1],
-                            progressTotalAmount: progress[2],
+                            step: progress.groups?.step,
+                            progress: progress.groups?.progress,
+                            progressAmount: progress.groups?.current,
+                            progressTotalAmount: progress.groups?.total,
                         } as SteamCmdModUpdateProgressEvent);
                         return;
                     }
@@ -627,7 +621,7 @@ export class SteamCMD extends IService {
                 if (event.type === 'retry') {
                     (event as SteamCmdRetryEvent).mods = [...modIds];
                 }
-                opts.listener(event);
+                opts?.listener?.(event);
             },
         });
 
@@ -637,13 +631,11 @@ export class SteamCMD extends IService {
             for (const modId of modIds) {
                 this.metaData.updateLocalModMeta(modId, { lastDownloaded: 0 });
             }
-            if (opts?.listener) {
-                opts.listener({
-                    type: 'exit',
-                    mods: modIds,
-                    success: false,
-                } as SteamCmdExitEvent);
-            }
+            opts?.listener?.({
+                type: 'exit',
+                mods: modIds,
+                success: false,
+            } as SteamCmdExitEvent);
             return false;
         }
 
@@ -651,13 +643,11 @@ export class SteamCMD extends IService {
             this.metaData.updateLocalModMeta(modId, { lastDownloaded: new Date().valueOf() });
         }
 
-        if (opts?.listener) {
-            opts.listener({
-                type: 'exit',
-                mods: modIds,
-                success: true,
-            } as SteamCmdExitEvent);
-        }
+        opts?.listener?.({
+            type: 'exit',
+            mods: modIds,
+            success: true,
+        } as SteamCmdExitEvent);
 
         return true;
     }
