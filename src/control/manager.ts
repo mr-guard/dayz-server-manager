@@ -99,6 +99,7 @@ export class Manager {
             password: !!serverCfg.password,
             battleye: !!serverCfg.BattlEye,
             maxPlayers: serverCfg.maxPlayers,
+            mapHost: this.config.mapHost,
         };
     }
 

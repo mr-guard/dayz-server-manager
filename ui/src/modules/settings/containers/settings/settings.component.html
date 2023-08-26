@@ -80,7 +80,7 @@
                             <pre class="small text-muted">
                                 {{ schema.properties.discordChannels.description }}
                             </pre>
-                            <div class="row" *ngFor="let chan of config.discordChannels; let idx = index">
+                            <div class="row" *ngFor="let chan of getDiscordChannels(); let idx = index">
                                 <div class="col-md-6">
                                     <input  type="text"
                                             class="form-control"
@@ -88,24 +88,34 @@
                                             [ngModelOptions]="{standalone: true}"
                                     >
                                 </div>
-                                <div class="col-md-4">
-                                    <select class="form-control"
-                                            [(ngModel)]="chan.mode"
-                                            [ngModelOptions]="{standalone: true}"
-                                    >
-                                        <option [ngValue]="'admin'">Admin</option>
-                                        <option [ngValue]="'rcon'">RCon</option>
-                                    </select>
-                                </div>
                                 <div class="col-md-1">
                                     <button class="btn btn-danger form-control" type="button" (click)="config.discordChannels.splice(idx, 1)">
-                                        <fa-icon class="mr-1" [icon]='["fas", "trash"]'></fa-icon>
+                                        <fa-icon class="mr-1" [icon]='["fas", "trash"]'></fa-icon>Delete Channel
                                     </button>
                                 </div>
+                                <div class="col-md-4">
+                                    <div *ngFor="let mode of chan.mode; let modeidx = index" style="display: flex; flex-direction: row;">
+                                        <select class="form-control"
+                                                [(ngModel)]="chan.mode[modeidx]"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                            <option [ngValue]="'admin'">Admin</option>
+                                            <option [ngValue]="'rcon'">RCon</option>
+                                            <option [ngValue]="'notification'">Notification</option>
+                                        </select>
+                                        <button class="btn btn-danger form-control" type="button" (click)="chan.mode.splice(modeidx, 1)">
+                                            <fa-icon class="mr-1" [icon]='["fas", "trash"]'></fa-icon>Delete Mode
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn form-control" (click)="chan.mode.push('admin')">
+                                        <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Mode
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
                         <button type="button" class="btn form-control" (click)="config.discordChannels.push({channel: '', mode: 'admin'})">
-                            <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Entry
+                            <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Channel
                         </button>
                     </div>
                 </div>
@@ -429,34 +439,59 @@
                                 [(ngModel)]="config.steamWorkshopPath" name="steamWorkshopPath">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="updateServerBeforeServerStart" [(ngModel)]="config.updateServerBeforeServerStart"
-                            name="updateServerBeforeServerStart">
-                            <label class="form-check-label" for="updateServerBeforeServerStart">Update Server Before Server Start</label>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="steamMetaPath">Steam Meta Path</label>
+                            <pre class="small text-muted">
+                                {{ schema.properties.steamMetaPath.description }}
+                            </pre>
+                            <input type="text" class="form-control" id="steamMetaPath"
+                                [(ngModel)]="config.steamMetaPath" name="steamMetaPath">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="updateModsBeforeServerStart" [(ngModel)]="config.updateModsBeforeServerStart"
-                            name="updateModsBeforeServerStart">
-                            <label class="form-check-label" for="updateModsBeforeServerStart">Update Mods Before Server Start</label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="updateServerOnStartup" [(ngModel)]="config.updateServerOnStartup"
                             name="updateServerOnStartup">
                             <label class="form-check-label" for="updateServerOnStartup">Update Server on StartUp</label>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="updateServerBeforeServerStart" [(ngModel)]="config.updateServerBeforeServerStart"
+                            name="updateServerBeforeServerStart">
+                            <label class="form-check-label" for="updateServerBeforeServerStart">Update Server Before Server Start</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="validateServerAfterUpdate" [(ngModel)]="config.validateServerAfterUpdate"
+                            name="validateServerAfterUpdate">
+                            <label class="form-check-label" for="validateServerAfterUpdate">Validate Server After Update</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="updateModsOnStartup" [(ngModel)]="config.updateModsOnStartup"
                             name="updateModsOnStartup">
                             <label class="form-check-label" for="updateModsOnStartup">Update Mods on StartUp</label>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="updateModsBeforeServerStart" [(ngModel)]="config.updateModsBeforeServerStart"
+                            name="updateModsBeforeServerStart">
+                            <label class="form-check-label" for="updateModsBeforeServerStart">Update Mods Before Server Start</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="validateModsAfterUpdate" [(ngModel)]="config.validateModsAfterUpdate"
+                            name="validateModsAfterUpdate">
+                            <label class="form-check-label" for="validateModsAfterUpdate">Validate Mods After Update</label>
+                        </div>
+                    </div>
+
                     <div class="col-md-6">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="linkModDirs" [(ngModel)]="config.linkModDirs"
@@ -464,6 +499,35 @@
                             <label class="form-check-label" for="linkModDirs">Link Mod Dirs</label>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input  type="checkbox" class="form-check-input" id="copyModDeepCompare"
+                                    [(ngModel)]="config.copyModDeepCompare" name="copyModDeepCompare">
+                            <label for="copyModDeepCompare">Copy Mod Deep Compare</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="updateModsMaxBatchSize">Mod Update Batch Size</label>
+                            <pre class="small text-muted">
+                                {{ schema.properties.updateModsMaxBatchSize.description }}
+                            </pre>
+                            <input type="number" class="form-control" id="updateModsMaxBatchSize"
+                                [(ngModel)]="config.updateModsMaxBatchSize" name="updateModsMaxBatchSize">
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="updateModsMaxBatchFileSize">Mod Update Max Batch Filesize</label>
+                            <pre class="small text-muted">
+                                {{ schema.properties.updateModsMaxBatchFileSize.description }}
+                            </pre>
+                            <input type="number" class="form-control" id="updateModsMaxBatchFileSize"
+                                [(ngModel)]="config.updateModsMaxBatchFileSize" name="updateModsMaxBatchFileSize">
+                        </div>
+                    </div>
+
                 </div>
 
                 <strong>Events</strong>
@@ -493,36 +557,43 @@
                 <strong>Server.cfg</strong>
                 <hr>
                 <div class="row spaced">
-                    <div class="col-md-12" *ngFor="let prop of serverCfgProps">
-                        <div class="form-group">
-                            <label for="cfg.{{prop.name}}">{{prop.name}}</label>
-                            <pre class="small text-muted">
-                                {{ prop.description }}
-                            </pre>
-                            <input  *ngIf="!prop.enum && prop.type === 'string'"
-                                    type="text" class="form-control"
-                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
-                                    [(ngModel)]="config.serverCfg[prop.name]"
-                                    [ngModelOptions]="{standalone: true}"
-                            >
-                            <input  *ngIf="!prop.enum && prop.type === 'number'"
-                                    type="number" class="form-control"
-                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
-                                    [(ngModel)]="config.serverCfg[prop.name]"
-                                    [ngModelOptions]="{standalone: true}"
-                            >
-                            <select *ngIf="prop.enum"
-                                    class="form-control"
-                                    id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
-                                    [(ngModel)]="config.serverCfg[prop.name]"
-                                    [ngModelOptions]="{standalone: true}"
-                            >
-                                <option *ngFor="let opt of prop.enum"
-                                        [ngValue]="opt"
+                    <div class="col-md-12" *ngFor="let prop of (serverCfgProps || [])">
+                        <div style="display: flex; flex-direction: row; justify-content: space-between;">
+                            <div class="form-group">
+                                <label for="cfg.{{prop.name}}">{{prop.name}}</label>
+                                <pre class="small text-muted">
+                                    {{ prop.description }}
+                                </pre>
+                                <input  *ngIf="!prop.enum && prop.type === 'string'"
+                                        type="text" class="form-control"
+                                        id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                        [(ngModel)]="config.serverCfg[prop.name]"
+                                        [ngModelOptions]="{standalone: true}"
                                 >
-                                    {{ opt }}
-                                </option>
-                            </select>
+                                <input  *ngIf="!prop.enum && prop.type === 'number'"
+                                        type="number" class="form-control"
+                                        id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                        [(ngModel)]="config.serverCfg[prop.name]"
+                                        [ngModelOptions]="{standalone: true}"
+                                >
+                                <select *ngIf="prop.enum"
+                                        class="form-control"
+                                        id="cfg.{{prop.name}}" name="cfg.{{prop.name}}"
+                                        [(ngModel)]="config.serverCfg[prop.name]"
+                                        [ngModelOptions]="{standalone: true}"
+                                >
+                                    <option *ngFor="let opt of prop.enum"
+                                            [ngValue]="opt"
+                                    >
+                                        {{ opt }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div *ngIf="prop.custom">
+                            <button type="submit" class="btn btn-danger">
+                                <fa-icon class="mr-1" [icon]='["fas", "trash"]'></fa-icon>Delete Field
+                            </button>
                         </div>
                     </div>
                     <div class="col-md-12">
@@ -539,9 +610,34 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-success"
-                    [disabled]="!configForm.form.valid">Submit</button>
-                <button type="button" class="btn btn-default" (click)="reset()">Reset</button>
+                <div class="row" style="justify-content: space-between;">
+                    <div class="col-md-9">
+                        <div style="display: flex; flex-direction: row; flex-grow: 1;">
+                            <div class="form-group" style="display: flex; flex-direction: row;">
+                                <label for="customServerCfgField">Custom Field Name</label>
+                                <input  type="text" class="form-control ml-3"
+                                        id="customServerCfgField" name="customServerCfgField"
+                                        #customServerCfgField
+                                >
+                            </div>
+                            <div style="display: flex; flex-direction: row;">
+                                <button type="button" class="btn form-control ml-3" (click)="addCustomServerCfgEntry(customServerCfgField.value, 'string'); customServerCfgField.value = ''">
+                                    <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Custom Text Entry
+                                </button>
+                                <button type="button" class="btn form-control ml-3" (click)="addCustomServerCfgEntry(customServerCfgField.value, 'number'); customServerCfgField.value = ''">
+                                    <fa-icon class="mr-1" [icon]='["fas", "plus-circle"]'></fa-icon>Add Custom Number Entry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="display: flex; flex-direction: row; justify-content: space-between;">
+                            <button type="submit" class="btn btn-success"
+                                [disabled]="!configForm.form.valid">Submit</button>
+                            <button type="button" class="btn btn-secondary" (click)="reset()">Reset</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
         <div class="card-body" *ngIf="loading">

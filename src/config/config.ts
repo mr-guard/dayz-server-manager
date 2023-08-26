@@ -543,6 +543,11 @@ export class Config {
      */
     public publishWebServer: boolean = false;
 
+    /**
+     * URL to load the map images from.
+     */
+    public mapHost: string = 'https://mr-guard.de/dayz-maps';
+
     // /////////////////////////// Discord ////////////////////////////////////
 
     /**
