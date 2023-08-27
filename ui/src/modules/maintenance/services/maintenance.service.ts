@@ -33,12 +33,12 @@ export class MaintenanceService {
         ).toPromise();
     }
 
-    public async updateServer(): Promise<boolean> {
-        return this.execute('updateserver');
+    public async updateServer(validate?: boolean): Promise<boolean> {
+        return this.execute('updateserver', { validate });
     }
 
-    public async updateMods(): Promise<boolean> {
-        return this.execute('updatemods');
+    public async updateMods(validate?: boolean, force?: boolean): Promise<boolean> {
+        return this.execute('updatemods', { validate, force });
     }
 
     public async createBackup(): Promise<boolean> {

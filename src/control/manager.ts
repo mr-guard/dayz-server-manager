@@ -1,4 +1,4 @@
-import { Config, UserLevel } from '../config/config';
+import { Config, ServerCfg, UserLevel } from '../config/config';
 import { Paths } from '../services/paths';
 import * as path from 'path';
 import { Logger, LogLevel } from '../util/logger';
@@ -6,6 +6,7 @@ import { ServerInfo } from '../types/server-info';
 import { LoggerFactory } from '../services/loggerfactory';
 import { inject, injectable, singleton } from 'tsyringe';
 import { FSAPI, InjectionTokens } from '../util/apis';
+import { ConfigParser } from '../util/config-parser';
 
 @singleton()
 @injectable()
@@ -80,14 +81,25 @@ export class Manager {
         return this.config.serverPort + 11;
     }
 
+    public async getServerCfg(): Promise<ServerCfg> {
+        if (this.config.serverCfg) {
+            return this.config.serverCfg;
+        }
+        const cfgPath = path.join(this.getServerPath(), this.config.serverCfgPath);
+        const rawCfg = this.fs.readFileSync(cfgPath) + '';
+        return new ConfigParser().cfg2json(rawCfg);
+    }
+
     public async getServerInfo(): Promise<ServerInfo> {
+        const serverCfg = await this.getServerCfg();
         return {
-            name: this.config.serverCfg.hostname,
+            name: serverCfg.hostname,
             port: this.config.serverPort,
-            worldName: this.config.serverCfg.Missions.DayZ.template.split('.')[1],
-            password: !!this.config.serverCfg.password,
-            battleye: !!this.config.serverCfg.BattlEye,
-            maxPlayers: this.config.serverCfg.maxPlayers,
+            worldName: serverCfg.Missions.DayZ.template.split('.')[1],
+            password: !!serverCfg.password,
+            battleye: !!serverCfg.BattlEye,
+            maxPlayers: serverCfg.maxPlayers,
+            mapHost: this.config.mapHost,
         };
     }
 

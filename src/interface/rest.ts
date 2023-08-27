@@ -7,7 +7,7 @@ import { loggerMiddleware } from '../middleware/logger';
 
 import { Manager } from '../control/manager';
 import { Server } from 'http';
-import { Request } from '../types/interface';
+import { Request, Response, ResponsePart } from '../types/interface';
 import { LogLevel } from '../util/logger';
 import { IStatefulService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
@@ -15,7 +15,7 @@ import { injectable, singleton } from 'tsyringe';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
 import { Listener } from 'eventemitter2';
-import { WebsocketCommand, WebsocketListenerType, WebsocketMessage } from '../types/websocket';
+import { WebsocketCommand, WebsocketListenerEvent, WebsocketListenerType, WebsocketMessage } from '../types/websocket';
 import { Interface } from './interface';
 
 @singleton()
@@ -167,7 +167,13 @@ export class REST extends IStatefulService {
         const listener = this.eventBus.on(
             eventType as any,
             async (event) => {
-                socket.send(JSON.stringify(event));
+                socket.send(JSON.stringify({
+                    cmd: WebsocketCommand.LISTENER_EVENT,
+                    data: {
+                        type: listenerType,
+                        event: event,
+                    },
+                } as WebsocketMessage<WebsocketListenerEvent>));
             },
         );
         const socketDetails = this.wsClients.get(socket);
@@ -182,15 +188,69 @@ export class REST extends IStatefulService {
         try {
             const data = JSON.parse(str) as WebsocketMessage<any>;
             if (data?.cmd === WebsocketCommand.REGISTER_LISTENER) {
+                this.log.log(LogLevel.DEBUG, 'Received register websocket listener', str);
                 this.registerWsEventListener(
                     socket,
                     (data as WebsocketMessage<WebsocketListenerType>)?.data,
                 )
+            } else if (data?.cmd === WebsocketCommand.REQUEST) {
+                this.log.log(LogLevel.DEBUG, 'Received websocket request', str);
+                void this.handleWsRequest(socket, (data as WebsocketMessage<Request>)?.data);
             } else {
                 this.log.log(LogLevel.INFO, 'Received unknown websocket cmd', str);
             }
         } catch (e) {
             this.log.log(LogLevel.ERROR, `Failed to parse/handle websocket message`, e, str);
+        }
+    }
+
+    private websocketRespond(socket: ws, response: Response | ResponsePart): Promise<void> {
+        return new Promise((resolve, reject) => {
+            socket.send(JSON.stringify({
+                cmd: WebsocketCommand.RESPONSE,
+                data: response,
+            } as WebsocketMessage<Response>), (e) => {
+                if (e) {
+                    reject(e);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    private async handleWsRequest(socket: ws, request: Request): Promise<void> {
+        try {
+            if (!request.uuid) {
+                return;
+            }
+            if (!this.manager.initDone) {
+                await this.websocketRespond(socket, new Response(503, '', request.uuid));
+                return;
+            }
+
+            const handler = this.eventInterface.commandMap?.get(request.resource);
+            if (!handler || handler.disableRest) {
+                await this.websocketRespond(socket, new Response(501, '', request.uuid));
+                return;
+            }
+
+            const internalRequest = new Request();
+            internalRequest.accept = request.accept ?? 'application/json';
+            internalRequest.body = request.body;
+            internalRequest.query = request.query;
+            internalRequest.resource = request.resource;
+            internalRequest.user = this.wsClients.get(socket).user;
+            internalRequest.canStream = true;
+
+            const internalResponse = await this.eventInterface.execute(
+                internalRequest,
+                /* istanbul ignore next */ (part) => this.websocketRespond(socket, part),
+            );
+
+            await this.websocketRespond(socket, internalResponse);
+        } catch (e) {
+            this.log.log(LogLevel.ERROR, `Failed to handle websocket request`, e, request);
         }
     }
 

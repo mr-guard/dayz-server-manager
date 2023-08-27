@@ -461,6 +461,12 @@ export class WorkshopMod {
 
 }
 
+export type DiscordChannelType =
+    'admin' // admin commands are allowed and public as well as private notifications are posted in this channel
+    | 'rcon' // rcon relay
+    | 'notification' // public server notifications are posted here (i.e. server restart, server update, mod update)
+    ;
+
 export class Config {
 
     /**
@@ -472,6 +478,11 @@ export class Config {
 
     /**
      * Manager log level
+     * 0 - DEBUG - very verbose
+     * 1 - INFO - informational logs
+     * 2 - IMPORTANT - only important logs
+     * 3 - WARN - warning and errors
+     * 4 - ERROR - only errors
      */
     public loglevel: number = 1;
 
@@ -532,6 +543,11 @@ export class Config {
      */
     public publishWebServer: boolean = false;
 
+    /**
+     * URL to load the map images from.
+     */
+    public mapHost: string = 'https://mr-guard.de/dayz-maps';
+
     // /////////////////////////// Discord ////////////////////////////////////
 
     /**
@@ -544,16 +560,16 @@ export class Config {
      * Channels the discord commands will work in
      * by default (if the channel is not listed), only public discord commands are allowed
      *
-     * Modes:
-     * 'admin' - admin commands are allowed in this channel
+     * Mode:
+     * 'admin' - admin commands are allowed and public as well as private notifications are posted in this channel
      * 'rcon' - rcon relay (rcon messages will be posted there)
+     * 'notification' - public server notifications are posted here (i.e. server restart, server update, mod update)
+     *
+     * Mode can also be a list of modes, i.e.: ['rcon', 'notification']
      */
     public discordChannels: {
         channel: string;
-        mode:
-        'admin' // admin commands are allowed in this channel
-        | 'rcon' // rcon relay
-        ;
+        mode: DiscordChannelType | DiscordChannelType[]
     }[] = [];
 
     // /////////////////////////// DayZ ///////////////////////////////////////
@@ -753,6 +769,13 @@ export class Config {
     public updateModsOnStartup: boolean = true;
 
     /**
+     * Whether or not to validate the mods files after updates.
+     * This can lead to mod files (files inside the mod folder) being reset, after manually editing them.
+     * Only disable this, when that happens or you really want to skip validation.
+     */
+    public validateModsAfterUpdate: boolean = true;
+
+    /**
      * Whether or not to check for server updates on each server restart
      */
     public updateServerBeforeServerStart: boolean = true;
@@ -761,6 +784,17 @@ export class Config {
      * Whether or not to check for mod updates when the manager is started
      */
     public updateServerOnStartup: boolean = true;
+
+    /**
+     * Whether or not to validate the server files after updates.
+     * This can lead to files being reset, after manually editing them.
+     * Examples are:
+     *   - Mission files inside the default missions dayzOffline.chernarusplus and dayzOffline.enoch
+     *   - serverDZ.cfg
+     * To avoid this, rename your mission / use a different name for the server cfg.. etc.
+     * Only disable this, when you need to use the default names or really want to skip validation.
+     */
+    public validateServerAfterUpdate: boolean = true;
 
     /**
      * Whether or not to use hardlink for mods instead of copying them
@@ -892,7 +926,6 @@ export class Config {
     /**
      * serverCfg
      */
-    @Reflect.metadata('config-required', true)
     public serverCfg: ServerCfg = new ServerCfg();
 
 }

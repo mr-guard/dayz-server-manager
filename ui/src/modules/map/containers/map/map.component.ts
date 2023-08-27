@@ -144,6 +144,9 @@ export class MapComponent implements OnInit, OnDestroy {
             )
             .subscribe(
                 (x?: ServerInfo) => {
+                    if (x?.mapHost) {
+                        this.mapHost = x.mapHost;
+                    }
                     if (x?.worldName && x.worldName !== this.mapName) {
                         void this.setUpWorld(x.worldName.toLowerCase());
                     }
@@ -436,7 +439,7 @@ export class MapComponent implements OnInit, OnDestroy {
                 this.unproject([pos[0], this.info!.worldSize - pos[2]]),
                 {
                     icon: divIcon({
-                        html: `<i class="fa fa-user fa-lg"></i>`,
+                        html: `<i class="fa fa-user fa-lg" style="color: lime"></i>`,
                         iconSize: [50, 50],
                         className: 'locationIcon',
                     }),
@@ -492,7 +495,7 @@ export class MapComponent implements OnInit, OnDestroy {
                 this.unproject([pos[0], this.info!.worldSize - pos[2]]),
                 {
                     icon: divIcon({
-                        html: `<i class="${iconClass}"></i>`,
+                        html: `<i class="${iconClass}" style="color: yellow"></i>`,
                         iconSize: [50, 50],
                         className: 'locationIcon',
                     }),

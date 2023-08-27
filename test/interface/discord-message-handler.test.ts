@@ -4,7 +4,6 @@ import { DiscordMessageHandler } from '../../src/interface/discord-message-handl
 import { StubInstance, disableConsole, enableConsole, stubClass } from '../util';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
-import * as sinon from 'sinon';
 import { Interface } from '../../src/interface/interface';
 
 class TestMessage {
@@ -147,6 +146,16 @@ describe('Test Discord Message handler', () => {
         await handler.handleCommandMessage(message as any);
         expect(message.replyMsg).to.include('test success');
         expect(interfaceService.execute.called).to.be.true;
+    });
+
+    it('handleMessage-help', async () => {
+        const handler = injector.resolve(DiscordMessageHandler);
+        
+        const message = new TestMessage();
+        message.content = '!help'
+        await handler.handleCommandMessage(message as any);
+        expect(message.replyMsg).to.be.not.empty;
+        expect(interfaceService.execute.called).to.be.false;
     });
 
     // it('handleMessage-help', async () => {

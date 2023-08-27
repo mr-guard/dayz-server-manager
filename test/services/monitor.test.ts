@@ -20,6 +20,7 @@ import { IngameReport } from '../../src/services/ingame-report';
 import { Hooks } from '../../src/services/hooks';
 import { EventBus } from '../../src/control/event-bus';
 import { InternalEventTypes } from '../../src/types/events';
+import { DiscordMessage } from '../../src/types/discord';
 
 describe('Test class ServerDetector', () => {
 
@@ -390,7 +391,7 @@ describe('Test class Monitor', () => {
 
     it('Monitor-stateChange', async () => {
         
-        let sentMsg: string;
+        let sentMsg: DiscordMessage;
         eventBus.on(
             InternalEventTypes.DISCORD_MESSAGE,
             async (message) => {sentMsg = message},

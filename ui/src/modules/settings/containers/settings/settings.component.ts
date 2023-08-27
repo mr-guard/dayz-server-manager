@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Config } from '../../../app-common/models';
+import { Config, DiscordChannelType } from '../../../app-common/models';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 
 import configschema from '../../../../../../src/config/config.schema.json';
@@ -12,6 +12,7 @@ interface Property {
     enum?: (string | number)[];
     type: 'number' | 'string' | 'boolean';
     default: any;
+    custom?: boolean;
 }
 
 @Component({
@@ -31,7 +32,7 @@ export class SettingsComponent implements OnInit {
         success: boolean;
     };
 
-    public serverCfgProps = this.getServerCfgProps();
+    public serverCfgProps?: Property[];
 
     public constructor(
         public appCommon: AppCommonService,
@@ -69,26 +70,50 @@ export class SettingsComponent implements OnInit {
         this.appCommon.fetchManagerConfig().toPromise().then(
             (config) => {
                 this.config = config;
+                if (this.config.discordChannels?.length) {
+                    this.config.discordChannels = this.config.discordChannels.map((x) => {
+                        if (typeof x.mode === 'string') {
+                            x.mode = [x.mode];
+                        }
+                        return x;
+                    })
+                }
+
+                if (this.config.serverCfg) {
+                    this.serverCfgProps = this.getServerCfgProps(this.config);
+                } else {
+                    this.serverCfgProps = [];
+                }
+
                 this.loading = false;
             },
             console.error,
         );
     }
 
+    public getDiscordChannels(): {
+        channel: string;
+        mode: DiscordChannelType[];
+    }[] {
+        return this.config.discordChannels as any;
+    }
+
     public addDiscordChannel(): void {
         this.config.discordChannels.push({
             channel: '',
-            mode: 'admin',
+            mode: ['admin'],
         });
     }
 
-    public getServerCfgProps(): Property[] {
-        return (this.schema.definitions.ServerCfg.propertyOrder as ServerCfgKey[])
+    private getServerCfgProps(config: Config): Property[] {
+        const fixedKeys = ['motd', 'motdInterval', 'Missions'] as ServerCfgKey[];
+
+        const known = (this.schema.definitions.ServerCfg.propertyOrder as ServerCfgKey[])
             .filter((x) => {
                 const { type } = this.schema.definitions.ServerCfg.properties[x];
 
                 const included = ['string', 'number'].includes(type)
-                    && !(['motd', 'motdInterval', 'Missions'] as ServerCfgKey[]).includes(x);
+                    && !fixedKeys.includes(x);
 
                 console.log(`${x}: ${included}`);
 
@@ -98,6 +123,38 @@ export class SettingsComponent implements OnInit {
                 ...(this.schema.definitions.ServerCfg.properties[x] as Property),
                 name: x,
             }));
+
+        const unknown = Object.keys(config.serverCfg || {})
+            .filter((key) => !known.some((knownKey) => knownKey.name === key) && !fixedKeys.includes(key as ServerCfgKey) && ['string', 'number'].includes(typeof config.serverCfg[key]))
+            .map((key) => {
+                return {
+                    name: key as ServerCfgKey,
+                    description: '',
+                    type: typeof config.serverCfg[key] as 'string' | 'number',
+                    default: typeof config.serverCfg[key] === 'string' ? '' : 0,
+                    custom: true,
+                }
+            });
+
+        return [...known, ...unknown];
+    }
+
+    public addCustomServerCfgEntry(name: string, type: 'string' | 'number'): void {
+        if (!name || name.length < 3) {
+            this.outcomeBadge = {
+                message: 'Custom field names must be at least 3 characters long',
+                success: false,
+            };
+            return;
+        }
+
+        this.serverCfgProps?.push({
+            name: name as ServerCfgKey,
+            description: '',
+            type,
+            default: type === 'string' ? '' : 0,
+            custom: true,
+        });
     }
 
 }

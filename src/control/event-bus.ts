@@ -8,6 +8,7 @@ import { CommandMap, Request, Response } from '../types/interface';
 import { ServerState } from '../types/monitor';
 import { LogEntryEvent } from '../types/log-reader';
 import { MetricEntryEvent } from '../types/metrics';
+import { DiscordMessage } from '../types/discord';
 
 @singleton()
 @injectable()
@@ -28,7 +29,7 @@ export class EventBus extends IService {
     }
     */
 
-    public emit(name: InternalEventTypes.DISCORD_MESSAGE, message: string): void;
+    public emit(name: InternalEventTypes.DISCORD_MESSAGE, message: DiscordMessage): void;
     public emit(name: InternalEventTypes.MONITOR_STATE_CHANGE, newState: ServerState, previousState: ServerState): void;
     public emit(name: InternalEventTypes.METRIC_ENTRY, metricEntryEvent: MetricEntryEvent): void;
     public emit(name: InternalEventTypes.LOG_ENTRY, logEntryEvent: LogEntryEvent): void;
@@ -36,7 +37,7 @@ export class EventBus extends IService {
         this.EVENT_EMITTER.emit(name, data);
     }
 
-    public on(name: InternalEventTypes.DISCORD_MESSAGE, listener: (message: string) => Promise<any>): Listener;
+    public on(name: InternalEventTypes.DISCORD_MESSAGE, listener: (message: DiscordMessage) => Promise<any>): Listener;
     public on(name: InternalEventTypes.MONITOR_STATE_CHANGE, listener: (newState: ServerState, previousState: ServerState) => Promise<any>): Listener;
     public on(name: InternalEventTypes.METRIC_ENTRY, listener: (metricEntryEvent: MetricEntryEvent) => Promise<any>): Listener;
     public on(name: InternalEventTypes.LOG_ENTRY, listener: (logEntryEvent: LogEntryEvent) => Promise<any>): Listener;

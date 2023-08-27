@@ -121,3 +121,14 @@ body {
     margin-bottom: 0 !important;
     padding: 0.25rem 0.5rem;
 }
+
+ngb-alert > button {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    border: unset;
+    background: unset;
+    float: right;
+    &:before {
+        content: "\f00d";
+    }
+}

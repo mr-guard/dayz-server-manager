@@ -12,91 +12,12 @@ import { FSAPI, HTTPSAPI, InjectionTokens } from '../util/apis';
 import { Downloader } from './download';
 import { merge } from '../util/merge';
 import { request } from '../util/request';
+import { DAYZ_APP_ID, DAYZ_EXPERIMENTAL_SERVER_APP_ID, DAYZ_SERVER_APP_ID, LocalMetaData, PublishedFileDetail, SteamApiWorkshopItemDetailsResponse, SteamCmdAppUpdateProgressEvent, SteamCmdEvent, SteamCmdEventListener, SteamCmdExitEvent, SteamCmdModUpdateProgressEvent, SteamCmdOutputEvent, SteamCmdRetryEvent, SteamExitCodes } from '../types/steamcmd';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
+import { RichEmbed } from 'discord.js';
 
-/* eslint-disable no-shadow */
-export enum SteamExitCodes {
-    SUCCESS = 0,
-    UNKNOWN_ERROR = 1,
-    ALREADY_LOGGED_IN = 2,
-    NO_INTERNET = 3,
-    INVALID_CREDENTIALS = 5,
-    UP2DATE = 6,
-    FRESH_INSTALL = 7,
-    UPDATE_FAILED = 8,
-    TIMEOUT = 10,
-    GUARD_CODE_REQUIRED = 63,
-}
-/* eslint-enable no-shadow */
 
-export const steamExitCodesDetails = {
-    [SteamExitCodes.SUCCESS]: [true, 'Success'],
-    [SteamExitCodes.UNKNOWN_ERROR]: [false, 'Unknown Error'],
-    [SteamExitCodes.ALREADY_LOGGED_IN]: [false, 'Already logged in with another user'],
-    [SteamExitCodes.NO_INTERNET]: [false, 'No internet / Connection failed'],
-    [SteamExitCodes.INVALID_CREDENTIALS]: [false, 'Invalid credentials'],
-    [SteamExitCodes.FRESH_INSTALL]: [true, 'Fresh Install / No Command'],
-    [SteamExitCodes.UP2DATE]: [true, 'Already up to date'],
-    [SteamExitCodes.UPDATE_FAILED]: [false, 'Failed to update (Network Error / Out of Diskspace / App not owned / Wrong platform)'],
-    [SteamExitCodes.TIMEOUT]: [false, 'Timeout'],
-    [SteamExitCodes.GUARD_CODE_REQUIRED]: [false, 'SteamGuard code required'],
-};
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export const DAYZ_APP_ID = '221100';
-export const DAYZ_SERVER_APP_ID = '223350';
-export const DAYZ_EXPERIMENTAL_SERVER_APP_ID = '1042420';
-
-export interface PublishedFileDetail {
-    publishedfileid: string;
-    result: number;
-    creator: string;
-    creator_app_id: number;
-    consumer_app_id: number;
-    filename: string;
-    file_size: number;
-    file_url: string;
-    hcontent_file: string;
-    preview_url: string;
-    hcontent_preview: string;
-    title: string;
-    description: string;
-    time_created: number;
-    time_updated: number;
-    visibility: number;
-    banned: number;
-    ban_reason: string;
-    subscriptions: number;
-    favorited: number;
-    lifetime_subscriptions: number;
-    lifetime_favorited: number;
-    views: number;
-    tags: {tag: string}[];
-}
-/* eslint-enable @typescript-eslint/naming-convention */
-
-export interface SteamApiWorkshopItemDetailsResponse {
-    response: {
-        result: number;
-        resultcount: number;
-        publishedfiledetails: PublishedFileDetail[];
-    };
-}
-
-export type SteamCmdProgressHandler = (
-    stateCode: string,
-    state: string,
-    progressPercent: string,
-    progressAmount: string,
-    progressTotalAmount: string,
-) => any;
-
-export interface SteamCmdProgressOptions {
-    onProgress?: SteamCmdProgressHandler;
-}
-
-export interface LocalMetaData {
-    lastDownloaded?: number;
-}
 
 @singleton()
 @injectable()
@@ -173,29 +94,33 @@ export class SteamMetaData extends IService {
             return [];
         }
 
-        const cached = [];
-        const requireUpdate = [];
+        const modInfos: PublishedFileDetail[] = [];
+        const requireUpdate: string[] = [];
 
         for (const modId of modIds) {
             const cache = this.workshopMetaData.get(modId);
             if (cache?.lastCheck && (new Date().valueOf() - cache.lastCheck) < 60000) {
-                cached.push(cache.data);
+                modInfos.push(cache.data);
             } else {
                 requireUpdate.push(modId);
             }
         }
-        const response = (await this.requestWorkshopItemDetails(requireUpdate))?.response?.publishedfiledetails || [];
-        for (const responseItem of response) {
-            this.workshopMetaData.set(
-                responseItem.publishedfileid,
-                {
-                    lastCheck: new Date().valueOf(),
-                    data: responseItem,
-                },
-            );
+
+        if (requireUpdate?.length) {
+            const response = (await this.requestWorkshopItemDetails(requireUpdate))?.response?.publishedfiledetails || [];
+            for (const responseItem of response) {
+                this.workshopMetaData.set(
+                    responseItem.publishedfileid,
+                    {
+                        lastCheck: new Date().valueOf(),
+                        data: responseItem,
+                    },
+                );
+                modInfos.push(responseItem);
+            }
         }
 
-        return [...cached, ...response];
+        return [...modInfos];
     }
 
     public async requestWorkshopItemDetails(ids: string[]): Promise<SteamApiWorkshopItemDetailsResponse | null> {
@@ -249,6 +174,8 @@ export class SteamCMD extends IService {
 
     private execMode: 'child_process' | 'pty' = 'pty';
 
+    private progressRegex = /Update state \(0x\d+\) (?<step>.*), progress: (?<progress>\d+.\d+) \((?<current>\d+) \/ (?<total>\d+)\)$/;
+
     public constructor(
         loggerFactory: LoggerFactory,
         private manager: Manager,
@@ -256,6 +183,7 @@ export class SteamCMD extends IService {
         private processes: Processes,
         private downloader: Downloader,
         private metaData: SteamMetaData,
+        private eventBus: EventBus,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('SteamCMD'));
@@ -325,7 +253,28 @@ export class SteamCMD extends IService {
 
     private async installSteamCmd(): Promise<boolean> {
         this.log.log(LogLevel.IMPORTANT, 'Checking/Installing SteamCMD');
-        return this.execute(['validate', '+quit']);
+        let lastProgress = '';
+        return this.execute(
+            ['validate', '+quit'],
+            {
+                listener: (event) => {
+                    if (event.type === 'output') {
+                        const output = (event as SteamCmdOutputEvent).text;
+                        if (!output) {
+                            return;
+                        }
+                        const matched = output.match(/\[([\s\d-]{3}[%-])\]\s(.*)$/);
+                        if (matched?.[1]) {
+                            const progress = `${matched[1]} - ${matched[2]}`;
+                            if (progress !== lastProgress) {
+                                lastProgress = progress;
+                                this.log.log(LogLevel.INFO, `Progress: ${progress}`);
+                            }
+                        }
+                    }
+                },
+            },
+        );
     }
 
     public async checkSteamCmd(): Promise<boolean> {
@@ -353,7 +302,12 @@ export class SteamCMD extends IService {
         ];
     }
 
-    private async spawnCommand(args: string[]): Promise<SpawnOutput> {
+    private async spawnCommand(
+        args: string[],
+        opts?: {
+            listener: (data: string) => any,
+        },
+    ): Promise<SpawnOutput> {
         const defaultCommands = [
             '@ShutdownOnFailedCommand 1',
             '@NoPromptForPassword 1',
@@ -376,15 +330,37 @@ export class SteamCMD extends IService {
                     ],
                 },
                 pty: this.execMode === 'pty',
+                stdOutHandler: opts?.listener ? opts.listener : undefined,
             },
         );
     }
 
-    private async execute(args: string[]): Promise<boolean> {
+    private async execute(
+        args: string[],
+        opts?: {
+            listener: SteamCmdEventListener,
+        },
+    ): Promise<boolean> {
+
         let retries = 3;
         while (retries >= 0) {
             try {
-                await this.spawnCommand(args);
+                const output = await this.spawnCommand(
+                    args,
+                    {
+                        listener: opts?.listener ? /* istanbul ignore next */ (data: string) => {
+                            opts.listener({
+                                type: 'output',
+                                text: data,
+                            } as SteamCmdOutputEvent);
+                        } : undefined,
+                    },
+                );
+                opts?.listener?.({
+                    type: 'exit',
+                    success: true,
+                    status: output.status,
+                } as SteamCmdExitEvent);
                 return true;
             } catch (e) {
                 const argsStr = args.map((x) => ((x === this.manager.config!.steamPassword) ? '******' : x)).join(' ');
@@ -392,16 +368,29 @@ export class SteamCMD extends IService {
                     // timeout && some retries left
                     retries--;
                     this.log.log(LogLevel.INFO, `Retrying "${argsStr}" because of timeout`);
+                    opts?.listener?.({
+                        type: 'retry',
+                    } as SteamCmdRetryEvent);
                 } else {
                     this.log.log(LogLevel.ERROR, `SteamCMD "${argsStr}" failed`, e);
                     if (!this.progressLog) {
                         this.log.log(LogLevel.INFO, e.stdout);
                         this.log.log(LogLevel.ERROR, e.stderr);
                     }
+                    opts?.listener?.({
+                        type: 'exit',
+                        success: false,
+                        status: e.status,
+                    } as SteamCmdExitEvent);
                     return false;
                 }
             }
         }
+        opts?.listener?.({
+            type: 'exit',
+            success: false,
+            status: 1,
+        } as SteamCmdExitEvent);
         return false;
     }
 
@@ -415,7 +404,12 @@ export class SteamCMD extends IService {
 
     }
 
-    public async updateServer(): Promise<boolean> {
+    public async updateServer(
+        opts?: {
+            listener?: SteamCmdEventListener,
+            validate?: boolean,
+        },
+    ): Promise<boolean> {
 
         const serverPath = this.manager.getServerPath();
         this.fs.mkdirSync(serverPath, { recursive: true });
@@ -426,9 +420,47 @@ export class SteamCMD extends IService {
             ...this.getLoginArgs(),
             '+app_update',
             (this.manager.config?.experimentalServer ? DAYZ_EXPERIMENTAL_SERVER_APP_ID : DAYZ_SERVER_APP_ID),
-            'validate',
+            ...((opts?.validate ?? this.manager.config?.validateServerAfterUpdate ?? true) ? ['validate'] : []),
             '+quit',
-        ]);
+        ], {
+            listener: (event: SteamCmdEvent) => {
+                if (event.type === 'exit') {
+                    if (!(event as SteamCmdExitEvent).success) {
+                        this.eventBus.emit(
+                            InternalEventTypes.DISCORD_MESSAGE,
+                            {
+                                type: 'admin',
+                                message: 'Failed to update server!',
+                            },
+                        );
+                    } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
+                        this.eventBus.emit(
+                            InternalEventTypes.DISCORD_MESSAGE,
+                            {
+                                type: 'notification',
+                                message: 'Successfully updated server!',
+                            },
+                        );
+                    }
+                }
+
+                if (event.type === 'output') {
+                    const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
+                    if (progress?.length) {
+                        this.log.log(LogLevel.INFO, `Server Update Progress: ${progress.groups?.step}: ${progress.groups?.progress}%`);
+                        opts?.listener?.({
+                            type: 'app-progress',
+                            step: progress.groups?.step,
+                            progress: progress.groups?.progress,
+                            progressAmount: progress.groups?.current,
+                            progressTotalAmount: progress.groups?.total,
+                        } as SteamCmdAppUpdateProgressEvent);
+                        return;
+                    }
+                }
+                opts?.listener?.(event);
+            },
+        });
 
         if (!success) {
             this.log.log(LogLevel.ERROR, 'Failed to update server');
@@ -476,7 +508,13 @@ export class SteamCMD extends IService {
             .map((x) => this.getWsModName(x));
     }
 
-    public async updateMod(modIds: string[]): Promise<boolean> {
+    public async updateMod(
+        modIds: string[],
+        opts?: {
+            validate?: boolean,
+            listener?: SteamCmdEventListener,
+        },
+    ): Promise<boolean> {
 
         if (!modIds?.length) {
             return true;
@@ -485,6 +523,7 @@ export class SteamCMD extends IService {
         const wsBasePath = this.getWsBasePath();
         this.fs.mkdirSync(wsBasePath, { recursive: true });
 
+        let lastDetectedMod: string;
         let success = await this.execute([
             '+force_install_dir',
             wsBasePath,
@@ -495,14 +534,96 @@ export class SteamCMD extends IService {
                         '+workshop_download_item',
                         DAYZ_APP_ID,
                         modId,
-                        'validate',
+                        ...((opts?.validate ?? this.manager.config?.validateModsAfterUpdate ?? true) ? ['validate'] : []),
                     );
                     return acc;
                 },
                 [],
             ),
             '+quit',
-        ]);
+        ], {
+            listener: (event: SteamCmdEvent) => {
+
+                if (event.type === 'exit') {
+                    void (async () => {
+                        let isSuccess = null;
+                        if (!(event as SteamCmdExitEvent).success) {
+                            isSuccess = false;
+                        } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
+                            isSuccess = true;
+                        }
+                        if (isSuccess !== null) {
+                            if (isSuccess) {
+                                const modInfos = await this.metaData.getModsMetaData(modIds);
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    {
+                                        type: 'notification',
+                                        message: `Successfully updated mods:`,
+                                        embeds: modInfos.map((modInfo) => {
+                                            const embed = new RichEmbed({
+                                                color: 0x0099FF,
+                                                title: modInfo.title,
+                                                url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
+                                                fields: [
+                                                    {
+                                                        name: 'Uploaded at',
+                                                        value: new Date((modInfo.time_updated || modInfo.time_created) * 1000)
+                                                            .toISOString()
+                                                            .split(/[T\.]/)
+                                                            .slice(0, 2)
+                                                            .join(' ')
+                                                            + ' UTC',
+                                                        inline: true,
+                                                    },
+                                                ],
+                                                thumbnail: { url: modInfo.preview_url },
+                                                image: { url: modInfo.preview_url },
+                                                footer: {
+                                                    text: 'Powered by DayZ Server Manager',
+                                                },
+                                            });
+                                            return embed;
+                                        }),
+                                    },
+                                );
+                            } else {
+                                this.eventBus.emit(
+                                    InternalEventTypes.DISCORD_MESSAGE,
+                                    {
+                                        type: 'admin',
+                                        message: `Failed to update mods: ${modIds.join('\n')}`,
+                                    },
+                                );
+                            }
+                        }
+                    })();
+                }
+
+                if (event.type === 'output') {
+                    const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
+                    if (progress?.length) {
+                        this.log.log(LogLevel.INFO, `Mod Update Progress: ${progress.groups?.step}: ${progress.groups?.progress}%`);
+                        opts?.listener?.({
+                            type: 'mod-progress',
+                            mod: lastDetectedMod,
+                            step: progress.groups?.step,
+                            progress: progress.groups?.progress,
+                            progressAmount: progress.groups?.current,
+                            progressTotalAmount: progress.groups?.total,
+                        } as SteamCmdModUpdateProgressEvent);
+                        return;
+                    }
+                }
+                if (event.type === 'exit') {
+                    (event as SteamCmdExitEvent).mods = [...modIds];
+                }
+                if (event.type === 'retry') {
+                    (event as SteamCmdRetryEvent).mods = [...modIds];
+                }
+                opts?.listener?.(event);
+            },
+        });
 
         success = success && modIds.every((modId) => !!this.getWsModName(modId));
         if (!success) {
@@ -510,6 +631,11 @@ export class SteamCMD extends IService {
             for (const modId of modIds) {
                 this.metaData.updateLocalModMeta(modId, { lastDownloaded: 0 });
             }
+            opts?.listener?.({
+                type: 'exit',
+                mods: modIds,
+                success: false,
+            } as SteamCmdExitEvent);
             return false;
         }
 
@@ -517,13 +643,25 @@ export class SteamCMD extends IService {
             this.metaData.updateLocalModMeta(modId, { lastDownloaded: new Date().valueOf() });
         }
 
+        opts?.listener?.({
+            type: 'exit',
+            mods: modIds,
+            success: true,
+        } as SteamCmdExitEvent);
+
         return true;
     }
 
-    public async updateAllMods(): Promise<boolean> {
-        const modIds = await this.metaData.modNeedsUpdate(
-            this.manager.getModIdList(),
-        );
+    public async updateAllMods(opts?: {
+        force?: boolean,
+        validate?: boolean,
+        listener?: SteamCmdEventListener,
+    }): Promise<boolean> {
+        const modIds = opts?.force
+            ?  this.manager.getModIdList()
+            : await this.metaData.modNeedsUpdate(
+                this.manager.getModIdList(),
+            );
 
         const modsMeta = (await this.metaData.getModsMetaData(modIds)) || [];
 
@@ -561,7 +699,13 @@ export class SteamCMD extends IService {
 
             // check if batch is full or exceeds size limit
             if (curBatchFileSize >= maxDownloadSize || curBatch.length >= maxBatchSize) {
-                if (!await this.updateMod(curBatch.map((x) => x.publishedfileid))) {
+                if (!await this.updateMod(
+                    curBatch.map((x) => x.publishedfileid),
+                    {
+                        validate: opts?.validate,
+                        listener: opts?.listener,
+                    },
+                )) {
                     return false;
                 }
                 curBatch = [];

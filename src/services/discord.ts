@@ -11,6 +11,7 @@ import { injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
+import { DiscordMessage, isDiscordChannelType } from '../types/discord';
 
 @singleton()
 @injectable()
@@ -31,7 +32,7 @@ export class DiscordBot extends IStatefulService {
 
         this.eventBus.on(
             InternalEventTypes.DISCORD_MESSAGE,
-            /* istanbul ignore next */ (message: string) => this.relayRconMessage(message),
+            /* istanbul ignore next */ (message: DiscordMessage) => this.sendMessage(message),
         );
     }
 
@@ -94,20 +95,27 @@ export class DiscordBot extends IStatefulService {
         }
     }
 
-    public async relayRconMessage(message: string): Promise<void> {
+    public async sendMessage(message: DiscordMessage): Promise<void> {
 
         if (!this.client || !this.ready) {
             this.log.log(LogLevel.WARN, `Not sending message because client did not start or is not yet ready`);
             return;
         }
 
-        const rconChannels = this.manager.config.discordChannels?.filter((x) => x.mode === 'rcon');
-        const matching = this.client?.guilds?.first()?.channels?.filter((channel) => {
-            return rconChannels?.some((x) => x.channel === channel.name?.toLowerCase()) ?? false;
-        }).array() || [];
+        const channels = this.manager.config.discordChannels
+            ?.filter((x) => isDiscordChannelType(x.mode, message.type));
+        const matching = this.client?.guilds?.first()?.channels
+            ?.filter((channel) => {
+                return channels?.some((x) => x.channel === channel.name?.toLowerCase()) ?? false;
+            }).array() || [];
         for (const x of matching) {
             try {
-                await (x as TextChannel).send(message);
+                await (x as TextChannel).send(message.message);
+                if (message.embeds?.length) {
+                    for (const embed of message.embeds) {
+                        await (x as TextChannel).send(embed);
+                    }
+                }
             } catch (e) {
                 this.log.log(LogLevel.ERROR, `Error relaying message to channel: ${x.name}`, e);
             }

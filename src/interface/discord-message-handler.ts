@@ -1,7 +1,7 @@
 import { GuildChannel, Message } from 'discord.js';
 import { Manager } from '../control/manager';
 import { LogLevel } from '../util/logger';
-import { Request } from '../types/interface';
+import { Request, RequestTemplate } from '../types/interface';
 import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
@@ -21,6 +21,14 @@ export class DiscordMessageHandler extends IService {
         super(loggerFactory.createLogger('DiscordMsgHandler'));
     }
 
+    private formatCommandUsage(command: string, template: RequestTemplate): string {
+        return this.PREFIX + command
+        + ' '
+        + template.params
+            .map((param) => param.optional ? `[${param.name}]` : `<${param.name}>`)
+            .join(' ')
+    }
+
     public async handleCommandMessage(message: Message): Promise<void> {
         if (!this.manager.initDone) {
             this.log.log(LogLevel.DEBUG, `Received command before init was completed`);
@@ -28,7 +36,7 @@ export class DiscordMessageHandler extends IService {
         }
 
         const args = message.content.slice(this.PREFIX.length).trim().split(/ +/);
-        const command = args?.shift()?.toLowerCase();
+        const command = args.shift()?.toLowerCase();
 
         if (!command) {
             return;
@@ -46,19 +54,16 @@ export class DiscordMessageHandler extends IService {
         this.log.log(LogLevel.INFO, `Command "${command}" from "${authorId}" in "${channelName}" with args: "${args?.join(' ')}"`);
 
         const configChannel = this.manager.config.discordChannels.find((x) => x.channel.toLowerCase() === channelName?.toLowerCase());
-        // if (command === 'help') {
-        //     let response = 'The following commands are available: \n\n';
-        //     response += [...this.interfaceService.commandMap.entries()]
-        //         .filter((x) => !x[1].disableDiscord)
-        //         .map((x) => this.PREFIX + x[0]
-        //             + x[1].params
-        //                 .map((param) => x[1].paramsOptional ? `[${param}]` : `<${param}>`)
-        //                 .join(' '))
-        //         .join('\n\n');
-        //     response += '\n\n ([x] means x is optional, <x> means x is required)';
-        //     await message.reply(response);
-        //     return;
-        // }
+        if (command === 'help') {
+            let response = 'The following commands are available: \n\n';
+            response += [...this.eventInterface.commandMap.entries()]
+                .filter((x) => !x[1].disableDiscord)
+                .map((x) => this.formatCommandUsage(...x))
+                .join('\n\n');
+            response += '\n\n ([x] means x is optional, <x> means x is required)';
+            await message.reply(response);
+            return;
+        }
 
         const handler = this.eventInterface.commandMap?.get(command);
         if (!handler || handler.disableDiscord) {
@@ -75,22 +80,29 @@ export class DiscordMessageHandler extends IService {
         req.accept = 'text/plain';
         req.resource = command;
         req.user = authorId;
+        req.body = {};
+        req.query = {};
+        req.canStream = true;
 
-        if (handler.params?.length) {
-            if (!handler.paramsOptional && handler.params.length !== args?.length) {
-                await message.reply(`Wrong param count. Usage: ${this.PREFIX}${command} ${handler.params.join(' ')}`);
+        const templateParams = (handler.params || []);
+        for (let i = 0; i < templateParams.length; i++) {
+            if (i >= args.length) {
+                await message.reply(`Wrong param count. Usage: ${this.formatCommandUsage(command, handler)}`);
                 return;
             }
-
-            req.body = {};
-            handler.params.forEach((x, i) => {
-                if (i < args.length) {
-                    req.body[x] = args[i];
-                }
-            });
+            try {
+                const val = templateParams[i].parse ? templateParams[i].parse(args[i]) : args[i];
+                req[templateParams[i].location || 'body'][templateParams[i].name] = val;
+            } catch {
+                await message.reply(`Could not parse param: '${templateParams[i].name}'. Usage: ${this.formatCommandUsage(command, handler)}`);
+                return;
+            }
         }
 
-        const res = await this.eventInterface.execute(req);
+        const res = await this.eventInterface.execute(
+            req,
+            /* istanbul ignore next */ (part) => message.reply(`\n${part.body}`),
+        );
 
         if (res.status >= 200 && res.status < 300) {
             // eslint-disable-next-line @typescript-eslint/no-base-to-string

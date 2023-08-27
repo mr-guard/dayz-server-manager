@@ -6,8 +6,9 @@ import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { Backups } from '../../src/services/backups';
 import { Hooks } from '../../src/services/hooks';
-import { FSAPI } from '../../src/util/apis';
+import { FSAPI, InjectionTokens } from '../../src/util/apis';
 import { HookTypeEnum } from '../../src/config/config';
+import { Paths } from '../../src/services/paths';
 
 describe('Test class MissionFiles', () => {
 
@@ -36,6 +37,8 @@ describe('Test class MissionFiles', () => {
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
         injector.register(Backups, stubClass(Backups), { lifecycle: Lifecycle.Singleton });
         injector.register(Hooks, stubClass(Hooks), { lifecycle: Lifecycle.Singleton });
+        injector.register(Paths, Paths, { lifecycle: Lifecycle.Singleton });
+        injector.register(InjectionTokens.childProcess, { useValue: {} }); // dependency of Paths
         
         fs = memfs({}, '/', injector);
 
@@ -61,15 +64,13 @@ describe('Test class MissionFiles', () => {
         );
 
         manager.getServerPath.returns('/testserver');
-        manager.config = {
-            serverCfg: {
+        manager.getServerCfg.resolves({
                 Missions: {
                     DayZ: {
                         template: 'dayz.chernarusplus',
                     },
                 },
-            },
-        } as any;
+            } as any);
 
         const files = injector.resolve(MissionFiles);
 
@@ -97,15 +98,13 @@ describe('Test class MissionFiles', () => {
         );
 
         manager.getServerPath.returns('/testserver');
-        manager.config = {
-            serverCfg: {
+        manager.getServerCfg.resolves({
                 Missions: {
                     DayZ: {
                         template: 'dayz.chernarusplus',
                     },
                 },
-            },
-        } as any;
+            } as any);
 
         const files = injector.resolve(MissionFiles);
 
@@ -120,15 +119,13 @@ describe('Test class MissionFiles', () => {
     it('MissionFiles-write', async () => {
 
         manager.getServerPath.returns('/testserver');
-        manager.config = {
-            serverCfg: {
+        manager.getServerCfg.resolves({
                 Missions: {
                     DayZ: {
                         template: 'dayz.chernarusplus',
                     },
                 },
-            },
-        } as any;
+            } as any);
 
         const files = injector.resolve(MissionFiles);
 

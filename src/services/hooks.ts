@@ -45,7 +45,10 @@ export class Hooks extends IService {
 
                     this.eventBus.emit(
                         InternalEventTypes.DISCORD_MESSAGE,
-                        msg,
+                        {
+                            type: 'admin',
+                            message: msg,
+                        },
                     );
                 }
             }

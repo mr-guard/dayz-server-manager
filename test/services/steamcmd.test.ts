@@ -4,15 +4,17 @@ import { expect } from '../expect';
 import { StubInstance, disableConsole, enableConsole, fakeChildProcess, fakeHttps, memfs, stubClass } from '../util';
 import * as path from 'path';
 import * as requestModule from '../../src/util/request';
-import { DAYZ_APP_ID, DAYZ_SERVER_APP_ID, PublishedFileDetail, SteamCMD, SteamMetaData } from '../../src/services/steamcmd';
+import { SteamCMD, SteamMetaData } from '../../src/services/steamcmd';
+import { DAYZ_APP_ID, DAYZ_SERVER_APP_ID, PublishedFileDetail } from '../../src/types/steamcmd';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Paths } from '../../src/services/paths';
 import { Manager } from '../../src/control/manager';
 import { Processes } from '../../src/services/processes';
-import { FSAPI, HTTPSAPI, InjectionTokens } from '../../src/util/apis';
+import { FSAPI, HTTPSAPI } from '../../src/util/apis';
 import { Downloader } from '../../src/services/download';
 import { Config } from '../../src/config/config';
 import { ImportMock } from 'ts-mock-imports';
+import { EventBus } from '../../src/control/event-bus';
 
 describe('Test class SteamMetaData', () => {
 
@@ -191,6 +193,7 @@ describe('Test class SteamCMD', () => {
     let fs: FSAPI;
     let download: StubInstance<Downloader>;
     let steamMeta: StubInstance<SteamMetaData>;
+    let eventBus: EventBus;
 
     before(() => {
         disableConsole();
@@ -209,6 +212,7 @@ describe('Test class SteamCMD', () => {
         injector.register(Processes, stubClass(Processes), { lifecycle: Lifecycle.Singleton });
         injector.register(Downloader, stubClass(Downloader), { lifecycle: Lifecycle.Singleton });
         injector.register(SteamMetaData, stubClass(SteamMetaData), { lifecycle: Lifecycle.Singleton });
+        injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
 
         fs = memfs({}, '/', injector);
         download = injector.resolve(Downloader) as any;
@@ -216,6 +220,7 @@ describe('Test class SteamCMD', () => {
         paths = injector.resolve(Paths) as any;
         processes = injector.resolve(Processes) as any;
         steamMeta = injector.resolve(SteamMetaData) as any;
+        eventBus = injector.resolve(EventBus);
     });
 
     it('SteamCmd-checkSteamCmd-cleanupDownloadFail', async () => {
