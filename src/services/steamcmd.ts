@@ -175,6 +175,7 @@ export class SteamCMD extends IService {
     private execMode: 'child_process' | 'pty' = 'pty';
 
     private progressRegex = /Update state \(0x\d+\) (?<step>.*), progress: (?<progress>\d+.\d+) \((?<current>\d+) \/ (?<total>\d+)\)$/;
+    private dlItemRegex = /Downloading item (?<item>\d+) \.\.\./;
 
     public constructor(
         loggerFactory: LoggerFactory,
@@ -371,6 +372,13 @@ export class SteamCMD extends IService {
                     opts?.listener?.({
                         type: 'retry',
                     } as SteamCmdRetryEvent);
+                } else if (e.status === 1 && e.stdout && /Success! App '\d+' fully installed/.test(e.stdout)) {
+                    opts?.listener?.({
+                        type: 'exit',
+                        success: true,
+                        status: 0,
+                    } as SteamCmdExitEvent);
+                    return true;
                 } else {
                     this.log.log(LogLevel.ERROR, `SteamCMD "${argsStr}" failed`, e);
                     if (!this.progressLog) {
@@ -546,6 +554,7 @@ export class SteamCMD extends IService {
 
                 if (event.type === 'exit') {
                     void (async () => {
+                        this.log.log(LogLevel.DEBUG, 'Mod Update Outcome:', event);
                         let isSuccess = null;
                         if (!(event as SteamCmdExitEvent).success) {
                             isSuccess = false;
@@ -561,30 +570,35 @@ export class SteamCMD extends IService {
                                         type: 'notification',
                                         message: `Successfully updated mods:`,
                                         embeds: modInfos.map((modInfo) => {
-                                            const embed = new RichEmbed({
-                                                color: 0x0099FF,
-                                                title: modInfo.title,
-                                                url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
-                                                fields: [
-                                                    {
+                                            const fields = [];
+                                            if (modInfo.title) {
+                                                if (modInfo.time_updated || modInfo.time_created) {
+                                                    fields.push({
                                                         name: 'Uploaded at',
-                                                        value: new Date((modInfo.time_updated || modInfo.time_created) * 1000)
+                                                        value: (new Date((modInfo.time_updated || modInfo.time_created) * 1000))
                                                             .toISOString()
                                                             .split(/[T\.]/)
                                                             .slice(0, 2)
                                                             .join(' ')
                                                             + ' UTC',
                                                         inline: true,
+                                                    });
+                                                }
+                                                const embed = new RichEmbed({
+                                                    color: 0x0099FF,
+                                                    title: modInfo.title,
+                                                    url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
+                                                    fields,
+                                                    thumbnail: { url: modInfo.preview_url || undefined },
+                                                    image: { url: modInfo.preview_url || undefined },
+                                                    footer: {
+                                                        text: 'Powered by DayZ Server Manager',
                                                     },
-                                                ],
-                                                thumbnail: { url: modInfo.preview_url },
-                                                image: { url: modInfo.preview_url },
-                                                footer: {
-                                                    text: 'Powered by DayZ Server Manager',
-                                                },
-                                            });
-                                            return embed;
-                                        }),
+                                                });
+                                                return embed;
+                                            }
+                                            return null;
+                                        }).filter((x) => !!x),
                                     },
                                 );
                             } else {
@@ -601,6 +615,13 @@ export class SteamCMD extends IService {
                 }
 
                 if (event.type === 'output') {
+                    const dlItem = this.dlItemRegex.exec((event as SteamCmdOutputEvent).text);
+                    if (dlItem?.length) {
+                        lastDetectedMod = dlItem.groups?.item;
+                        this.log.log(LogLevel.INFO, `Downloading mod: ${lastDetectedMod}`);
+                        return;
+                    }
+
                     const progress = this.progressRegex.exec((event as SteamCmdOutputEvent).text);
                     if (progress?.length) {
                         this.log.log(LogLevel.INFO, `Mod Update Progress: ${progress.groups?.step}: ${progress.groups?.progress}%`);

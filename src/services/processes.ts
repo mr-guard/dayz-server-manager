@@ -351,7 +351,7 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
 
     /* istanbul ignore next */
     public getProcessUptime(proc: ProcessEntry): number {
-        const start = new Date(proc.CreationDate).valueOf();
+        const start = new Date(proc.CreationDate).valueOf() || new Date().valueOf();
         const now = new Date().valueOf();
         return (now - start);
     }

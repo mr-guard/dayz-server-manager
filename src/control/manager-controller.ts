@@ -78,11 +78,6 @@ import { MetricsCollector } from '../services/metrics-collector';
     options: { lifecycle: Lifecycle.Singleton },
     },
     {
-    token: DiscordBot,
-    useClass: DiscordBot,
-    options: { lifecycle: Lifecycle.Singleton },
-    },
-    {
     token: MetricsCollector,
     useClass: MetricsCollector,
     options: { lifecycle: Lifecycle.Singleton },
@@ -122,6 +117,7 @@ export class ManagerController {
         private steamCmd: SteamCMD,
         private ingameReport: IngameReport,
         private requirements: Requirements,
+        private discord: DiscordBot,
     ) {
         this.log = loggerFactory.createLogger('Bootstrap');
     }
