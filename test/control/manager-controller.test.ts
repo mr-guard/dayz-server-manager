@@ -15,6 +15,7 @@ import { IngameReport } from '../../src/services/ingame-report';
 import { Requirements } from '../../src/services/requirements';
 import { IStatefulService } from '../../src/types/service';
 import { Config } from '../../src/config/config';
+import { DiscordBot } from '../../src/services/discord';
 
 class TestMonitor {
     public startCalled = false;
@@ -118,6 +119,7 @@ describe('Test class ManagerController', () => {
         injector.register(SteamCMD, stubClass(SteamCMD), { lifecycle: Lifecycle.Singleton });
         injector.register(IngameReport, stubClass(IngameReport), { lifecycle: Lifecycle.Singleton });
         injector.register(Requirements, stubClass(Requirements), { lifecycle: Lifecycle.Singleton });
+        injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
         
         configWatcher = injector.resolve(ConfigWatcher) as any;
         manager = injector.resolve(Manager) as any;
