@@ -130,7 +130,7 @@ export class ManagerController {
         this.log.log(
             LogLevel.DEBUG,
             'Currently Registered Services',
-            ([...((container as any)._registry).entries()].map((x) => x[0]?.name || x[0])),
+            ([...((container as any)._registry).entries()].map((x) => x[0]?.name || x[0]).filter((x) => typeof x === 'string')),
         );
         const statefulServices = [];
         for (const [token] of ((container as any)._registry).entries()) {
