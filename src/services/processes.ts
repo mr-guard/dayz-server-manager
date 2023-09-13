@@ -66,6 +66,8 @@ export interface IProcessSpawner {
 @injectable()
 export class ProcessSpawner extends IService implements IProcessSpawner {
 
+    private logCommands = false;
+
     public constructor(
         loggerFactory: LoggerFactory,
         @inject(InjectionTokens.childProcess) private childProcess: CHILDPROCESSAPI,
@@ -79,6 +81,15 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
         args?: string[],
         opts?: Partial<ProcessSpawnOpts>,
     ): Promise<SpawnOutput> {
+        if (this.logCommands) {
+            this.log.log(
+                LogLevel.DEBUG,
+                `Executing`,
+                [cmd, ...args].join(' '),
+                opts?.spawnOpts?.cwd || process.cwd(),
+            );
+        }
+
         if (opts?.pty) {
             return this.spawnForOutputPty(cmd, args, opts);
         }
