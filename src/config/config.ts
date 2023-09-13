@@ -48,13 +48,11 @@ export class ServerCfg {
     /**
      * Enable/disable whitelist (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public enableWhitelist: 0 | 1 = 0;
 
     /**
      * Use BattlEye
      */
-    @Reflect.metadata('config-range', [0, 1])
     public BattlEye: 0 | 1 = 1;
 
     /**
@@ -63,25 +61,21 @@ export class ServerCfg {
      * @required
      */
     @Reflect.metadata('config-required', true)
-    @Reflect.metadata('config-range', [0, 2])
     public verifySignatures: 0 | 1 | 2 = 2;
 
     /**
      * When enabled, the server will allow the connection only to clients with same the .exe revision as the server (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public forceSameBuild: 0 | 1 = 1;
 
     /**
      * Communication protocol used with game server (use only number 1)
      */
-    @Reflect.metadata('config-range', [1, 1])
     public guaranteedUpdates: 1 = 1;
 
     /**
      * if set to 1 it will enable connection of clients with "-filePatching" launch parameter enabled
      */
-    @Reflect.metadata('config-range', [0, 1])
     public allowFilePatching: 0 | 1 = 0;
 
     /**
@@ -98,7 +92,6 @@ export class ServerCfg {
     /**
      * enable speedhack detection, values 1-10 (1 strict, 10 benevolent, can be float)
      */
-    @Reflect.metadata('config-range', [1, 10])
     public speedhackDetection: number = 1;
 
     // VON
@@ -106,13 +99,11 @@ export class ServerCfg {
     /**
      * Enable/disable voice over network (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disableVoN: 0 | 1 = 0;
 
     /**
      * Voice over network codec quality, the higher the better (values 0-30)
      */
-    @Reflect.metadata('config-range', [0, 30])
     public vonCodecQuality: number = 20;
 
 
@@ -121,7 +112,6 @@ export class ServerCfg {
     /**
      * Toggles the 3rd person view for players (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disable3rdPerson: 0 | 1 = 0;
 
     /**
@@ -132,19 +122,16 @@ export class ServerCfg {
     /**
      * set to 1 to disable damage/destruction of fence and watchtower
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disableBaseDamage: 0 | 1 = 0;
 
     /**
      * set to 1 to disable damage/destruction of tents, barrels, wooden crate and seachest
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disableContainerDamage: 0 | 1 = 0;
 
     /**
      * set to 1 to disable the respawn dialog (new characters will be spawning as random)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disableRespawnDialog: 0 | 1 = 0;
 
     /**
@@ -155,7 +142,6 @@ export class ServerCfg {
     /**
      * shows info about the character using a debug window in a corner of the screen (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public enableDebugMonitor: 0 | 1 = 1;
 
 
@@ -164,14 +150,12 @@ export class ServerCfg {
     /**
      * Disables personal light for all clients connected to server
      */
-    @Reflect.metadata('config-range', [0, 1])
     public disablePersonalLight: 0 | 1 = 1;
 
     /**
      * 0 for brighter night setup
      * 1 for darker night setup
      */
-    @Reflect.metadata('config-range', [0, 1])
     public lightingConfig: 0 | 1 = 0;
 
     /**
@@ -199,7 +183,6 @@ export class ServerCfg {
      * Persistent Time (value 0-1)
      * The actual server time is saved to storage, so when active, the next server start will use the saved time value.
      */
-    @Reflect.metadata('config-range', [0, 1])
     public serverTimePersistent: 0 | 1 = 0;
 
 
@@ -225,7 +208,6 @@ export class ServerCfg {
      * enables multi-threaded processing of server's replication system
      * number of worker threads is derived by settings of jobsystem in dayzSettings.xml by "maxcores" and "reservedcores" parameters (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public multithreadedReplication: 0 | 1 = 1;
 
     /**
@@ -277,7 +259,6 @@ export class ServerCfg {
     /**
      * Checks if the persistence files are corrupted and replaces corrupted ones with empty ones (value 0-1)
      */
-    @Reflect.metadata('config-range', [0, 1])
     public storageAutoFix: 0 | 1 = 1;
 
 
@@ -311,25 +292,21 @@ export class ServerCfg {
     /**
      * 1 - log player hits only / 0 - log all hits ( animals/infected )
      */
-    @Reflect.metadata('config-range', [0, 1])
     public adminLogPlayerHitsOnly: 0 | 1 = 0;
 
     /**
      * 1 - log placement action ( traps, tents )
      */
-    @Reflect.metadata('config-range', [0, 1])
     public adminLogPlacement: 0 | 1 = 0;
 
     /**
      * 1 - log basebuilding actions ( build, dismantle, destroy )
      */
-    @Reflect.metadata('config-range', [0, 1])
     public adminLogBuildActions: 0 | 1 = 0;
 
     /**
      * 1 - log periodic player list with position every 5 minutes
      */
-    @Reflect.metadata('config-range', [0, 1])
     public adminLogPlayerList: 0 | 1 = 0;
 
 
@@ -355,7 +332,6 @@ export class ServerCfg {
     /**
      * 1 - enable cfgGameplayFile
      */
-    @Reflect.metadata('config-range', [0, 1])
     public enableCfgGameplayFile: 0 | 1 = 0;
 
 }
@@ -692,6 +668,14 @@ export class Config {
      * Time (in ms) between each server check
      */
     public serverProcessPollIntervall: number = 30000;
+
+    /**
+     * Disable the server stuck check.
+     * The server can enter a "idle state" when no players are connected and the CE idle mode is enabled.
+     * To the manager, this looks the same as if a error window is open or the server got stuck.
+     * This option can be used to prevent stuck messages on low population servers.
+     */
+    public disableStuckCheck: boolean = false;
 
     // /////////////////////////// Backups ////////////////////////////////////////
     /**

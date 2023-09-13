@@ -192,7 +192,7 @@ export class Monitor extends IStatefulService {
 
                 // give the server a minute to start up
                 this.skipLoop(60000);
-            } else {
+            } else if (!this.manager.config.disableStuckCheck) {
                 await this.checkPossibleStuckState();
             }
         } catch (e) {
