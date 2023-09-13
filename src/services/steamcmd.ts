@@ -310,8 +310,8 @@ export class SteamCMD extends IService {
         },
     ): Promise<SpawnOutput> {
         const defaultCommands = [
-            '@ShutdownOnFailedCommand 1',
-            '@NoPromptForPassword 1',
+            // '@ShutdownOnFailedCommand 1',
+            // '@NoPromptForPassword 1',
         ];
         return this.processes.spawnForOutput(
             this.getCmdPath(),
@@ -568,37 +568,51 @@ export class SteamCMD extends IService {
                                     InternalEventTypes.DISCORD_MESSAGE,
                                     {
                                         type: 'notification',
-                                        message: `Successfully updated mods:`,
-                                        embeds: modInfos.map((modInfo) => {
-                                            const fields = [];
-                                            if (modInfo.title) {
-                                                if (modInfo.time_updated || modInfo.time_created) {
-                                                    fields.push({
-                                                        name: 'Uploaded at',
-                                                        value: (new Date((modInfo.time_updated || modInfo.time_created) * 1000))
-                                                            .toISOString()
-                                                            .split(/[T\.]/)
-                                                            .slice(0, 2)
-                                                            .join(' ')
-                                                            + ' UTC',
-                                                        inline: true,
+                                        message: '',
+                                        embeds: modIds
+                                            .map((modId) => {
+                                                return modInfos.find((modInfo) => modInfo?.publishedfileid === modId) || modId;
+                                            })
+                                            .map((modInfo) => {
+                                                const fields = [];
+                                                if (typeof modInfo !== 'string' && modInfo?.title) {
+                                                    if (modInfo.time_updated || modInfo.time_created) {
+                                                        fields.push({
+                                                            name: 'Uploaded at',
+                                                            value: (new Date((modInfo.time_updated || modInfo.time_created) * 1000))
+                                                                .toISOString()
+                                                                .split(/[T\.]/)
+                                                                .slice(0, 2)
+                                                                .join(' ')
+                                                                + ' UTC',
+                                                            inline: true,
+                                                        });
+                                                    }
+                                                    const embed = new RichEmbed({
+                                                        color: 0x0099FF,
+                                                        title: `Successfully updated: ${modInfo.title}`,
+                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
+                                                        fields,
+                                                        thumbnail: { url: modInfo.preview_url || undefined },
+                                                        image: { url: modInfo.preview_url || undefined },
+                                                        footer: {
+                                                            text: 'Powered by DayZ Server Manager',
+                                                        },
+                                                    });
+                                                    return embed;
+                                                } else if (typeof modInfo === 'string') {
+                                                    return new RichEmbed({
+                                                        color: 0x0099FF,
+                                                        title: `Successfully updated: ${modInfo}`,
+                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo}`,
+                                                        footer: {
+                                                            text: 'Powered by DayZ Server Manager',
+                                                        },
                                                     });
                                                 }
-                                                const embed = new RichEmbed({
-                                                    color: 0x0099FF,
-                                                    title: modInfo.title,
-                                                    url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
-                                                    fields,
-                                                    thumbnail: { url: modInfo.preview_url || undefined },
-                                                    image: { url: modInfo.preview_url || undefined },
-                                                    footer: {
-                                                        text: 'Powered by DayZ Server Manager',
-                                                    },
-                                                });
-                                                return embed;
-                                            }
-                                            return null;
-                                        }).filter((x) => !!x),
+                                                return null;
+                                            })
+                                            .filter((x) => !!x),
                                     },
                                 );
                             } else {

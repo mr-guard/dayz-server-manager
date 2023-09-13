@@ -125,10 +125,12 @@ export class DiscordBot extends IStatefulService {
             }).array() || [];
         for (const x of matching) {
             try {
-                await (x as TextChannel).send(message.message);
+                if (message.message) {
+                    await (x as TextChannel).send(message.message);
+                }
                 if (message.embeds?.length) {
                     for (const embed of message.embeds) {
-                        await (x as TextChannel).send(embed);
+                        await (x as TextChannel).sendEmbed(embed);
                     }
                 }
             } catch (e) {
