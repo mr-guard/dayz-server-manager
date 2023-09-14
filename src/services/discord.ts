@@ -20,6 +20,8 @@ export class DiscordBot extends IStatefulService {
     public client: Client | undefined;
     private ready = false;
 
+    private msgQueue: DiscordMessage[] = [];
+
     public debug: boolean = false;
 
     public constructor(
@@ -63,6 +65,7 @@ export class DiscordBot extends IStatefulService {
         try {
             await client.login(this.manager.config.discordBotToken);
             this.client = client;
+            this.sendQueuedMessage();
         } catch (e) {
             this.log.log(LogLevel.WARN, 'Not starting discord bot, login failed', e);
         }
@@ -71,6 +74,17 @@ export class DiscordBot extends IStatefulService {
     private onReady(): void {
         this.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
         this.ready = true;
+        this.sendQueuedMessage();
+    }
+
+    private sendQueuedMessage(): void {
+        setTimeout(() => {
+            const msgQueue = this.msgQueue;
+            this.msgQueue = [];
+            for (const msg of msgQueue) {
+                void this.sendMessage(msg);
+            }
+        }, 1000);
     }
 
     private onMessage(message: Message): void {
@@ -98,7 +112,8 @@ export class DiscordBot extends IStatefulService {
     public async sendMessage(message: DiscordMessage): Promise<void> {
 
         if (!this.client || !this.ready) {
-            this.log.log(LogLevel.WARN, `Not sending message because client did not start or is not yet ready`);
+            this.log.log(LogLevel.WARN, `Queueing message because client did not start or is not yet ready`, this.ready);
+            this.msgQueue.push(message);
             return;
         }
 
@@ -110,10 +125,12 @@ export class DiscordBot extends IStatefulService {
             }).array() || [];
         for (const x of matching) {
             try {
-                await (x as TextChannel).send(message.message);
+                if (message.message) {
+                    await (x as TextChannel).send(message.message);
+                }
                 if (message.embeds?.length) {
                     for (const embed of message.embeds) {
-                        await (x as TextChannel).send(embed);
+                        await (x as TextChannel).sendEmbed(embed);
                     }
                 }
             } catch (e) {

@@ -23,7 +23,7 @@ export class Logger {
     public static readonly LOG_LEVELS: { [context: string]: LogLevel } = {};
 
     public static defaultLogLevel: LogLevel = LogLevel.INFO;
-    public static defaultLogFile: string = 'server-manager.log';
+    public static defaultLogFile: string = Logger.getDefaultLogFileName();
 
     private static lastWrite: Promise<any> = Promise.resolve();
 
@@ -62,6 +62,11 @@ export class Logger {
     ];
 
     public readonly MAX_CONTEXT_LENGTH = 12;
+
+    private static getDefaultLogFileName(): string {
+        const time = new Date();
+        return `server-manager-${time.getFullYear()}-${time.getMonth() + 1}-${time.getDate()}-${time.getHours()}-${time.getMinutes()}-${time.getSeconds()}.log`;
+    }
 
     public constructor(
         private context: string,

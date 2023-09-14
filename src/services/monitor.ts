@@ -192,7 +192,7 @@ export class Monitor extends IStatefulService {
 
                 // give the server a minute to start up
                 this.skipLoop(60000);
-            } else {
+            } else if (!this.manager.config.disableStuckCheck) {
                 await this.checkPossibleStuckState();
             }
         } catch (e) {
@@ -222,6 +222,7 @@ export class Monitor extends IStatefulService {
                 avg += usage;
             }
             avg /= this.lastServerUsages.length;
+            this.log.log(LogLevel.DEBUG, `Dertermined server usage (avg, last 5): ${avg}, [${this.lastServerUsages.join(', ')}]`);
             // if the process spends very little cpu time, it probably got stuck
             if (this.lastServerUsages.every((x) => (Math.abs(avg - x) < 3))) {
                 const msg = 'WARNING: Server possibly got stuck!';
