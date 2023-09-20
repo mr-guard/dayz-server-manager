@@ -1,6 +1,6 @@
 import * as path from 'path';
+import * as commentJson from 'comment-json';
 import { LogLevel } from '../util/logger';
-import { merge } from '../util/merge';
 import { Paths } from '../services/paths';
 import { Config } from './config';
 import { generateConfigTemplate } from './config-template';
@@ -47,13 +47,14 @@ export class ConfigFileHelper extends IService {
     }
 
     public readConfig(): Config | null {
+        let fileContent: string;
         try {
             const cfgPath = this.getConfigFilePath();
             this.log.log(LogLevel.IMPORTANT, `Trying to read config at: ${cfgPath}`);
-            const fileContent = this.getConfigFileContent(cfgPath);
+            fileContent = this.getConfigFileContent(cfgPath);
 
             // apply defaults
-            const parsed = merge(
+            const parsed = commentJson.assign(
                 new Config(),
                 parseConfigFileContent(fileContent),
             );
@@ -75,8 +76,8 @@ export class ConfigFileHelper extends IService {
 
     public writeConfig(config: Config): void {
         // apply defaults
-        config = merge(
-            new Config(),
+        config = commentJson.assign(
+            this.readConfig() || commentJson.parse(generateConfigTemplate(configschema)) as any as Config,
             config,
         );
 
@@ -87,7 +88,7 @@ export class ConfigFileHelper extends IService {
 
         try {
             this.writeConfigFile(
-                generateConfigTemplate(configschema, config),
+                commentJson.stringify(config),
             );
         } catch (e) {
             throw [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
