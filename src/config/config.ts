@@ -851,6 +851,66 @@ export class Config {
      * https://crontab.guru/
      * https://www.freeformatter.com/cron-expression-generator-quartz.html
      * https://cronjob.xyz/
+     *
+     * Complete example (4h restart with server lock + kick):
+     * ```
+     * "events": [
+     *      {
+     *          "name": "Restart every 4 hours",
+     *          "type": "restart",
+     *          "cron": "0 0,4,8,12,16,20 * * *"
+     *      },
+     *      {
+     *          "name": "Restart Notification (1h)",
+     *          "type": "message",
+     *          "cron": "0 0,3,7,11,15,19 * * *",
+     *          "params": [
+     *              "Server restart in 60 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (30m)",
+     *          "type": "message",
+     *          "cron": "30 0,3,7,11,15,19 * * *",
+     *          "params": [
+     *              "Server restart in 30 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (15m)",
+     *          "type": "message",
+     *          "cron": "45 0,3,7,11,15,19 * * *",
+     *          "params": [
+     *              "Server restart in 15 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (10m)",
+     *          "type": "message",
+     *          "cron": "50 0,3,7,11,15,19 * * *",
+     *          "params": [
+     *              "Server restart in 10 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (5m)",
+     *          "type": "message",
+     *          "cron": "55 0,3,7,11,15,19 * * *",
+     *          "params": [
+     *              "Server restart in 5 minutes. The server is now locked. Please log out."
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Lock (5m)",
+     *          "type": "lock",
+     *          "cron": "55 0,3,7,11,15,19 * * *"
+     *      },
+     *      {
+     *          "name": "Restart Kick (2m)",
+     *          "type": "kickAll",
+     *          "cron": "58 0,3,7,11,15,19 * * *"
+     *      }
+     *  ],
      */
     public events: Event[] = [];
 
