@@ -20,7 +20,6 @@ import { IngameReport } from '../../src/services/ingame-report';
 import { Hooks } from '../../src/services/hooks';
 import { EventBus } from '../../src/control/event-bus';
 import { InternalEventTypes } from '../../src/types/events';
-import { DiscordMessage } from '../../src/types/discord';
 
 describe('Test class ServerDetector', () => {
 
