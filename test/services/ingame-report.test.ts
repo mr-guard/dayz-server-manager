@@ -75,10 +75,7 @@ describe('Test class IngameReport', () => {
             injector,
         );
 
-        manager.getServerPath.returns('/testserver');
-        manager.config = {
-            profilesPath: 'profiles',
-        } as any;
+        manager.getProfilesPath.returns('/testserver/profiles');
         
         const ingameReport = injector.resolve(IngameReport);
 

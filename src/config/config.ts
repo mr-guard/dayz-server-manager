@@ -501,7 +501,8 @@ export class Config {
     /**
      * The port of the web interface and REST API
      *
-     * if -1 or 0 it will be serverport + 11
+     * If -1 or 0 it will be serverport + 11
+     * So if your server runs on 2302, the webport will be 2313
      */
     @Reflect.metadata('config-range', [-1, 65535])
     public webPort: number = 0;
@@ -518,6 +519,47 @@ export class Config {
      * (because this app wont provide HTTPS capabilities)
      */
     public publishWebServer: boolean = false;
+
+    /**
+     * The port of the ingame REST API
+     *
+     * If -1 or 0 it will be serverport + 10
+     * So if your server runs on 2302, the webport will be 2312
+     */
+    @Reflect.metadata('config-range', [-1, 65535])
+    public ingameApiPort: number = 0;
+
+    /**
+     * Whether or not to publish the Ingame Rest API
+     *
+     * Same as publish webport but for the Ingame REST API.
+     * Can be used for shared hives / provide the api for external servers.
+     */
+    public publishIngameApi: boolean = false;
+
+    /**
+     * Alternative host for the Ingame Rest API.
+     *
+     * Can be used for shared hives.
+     * Provide "ip:port" to make the addon connect to another Ingame API.
+     */
+    public ingameApiHostOverride: string | null = null;
+
+    /**
+     * Api key for the ingame API.
+     * This should be changed as it is the "password" for the ingame API.
+     * If you do not set this, it will be randomised on every server manager restart.
+     *
+     * Only use "a-z", "A-Z", "0-9" and "-".
+     * Good: ASDF-1234-asdf-98761234
+     * BAD: *asd123!!87928jk,sdf3$
+     */
+    public ingameApiKey: string = '';
+
+    /**
+     * Enable Syberia compatibility.
+     */
+    public syberiaCompat: boolean = false;
 
     /**
      * URL to load the map images from.
@@ -760,9 +802,14 @@ export class Config {
     public steamMetaPath: string = 'SteamMeta';
 
     /**
-     * List of Mod IDs (workshop id, not modname!) the server should use
+     * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as mods.
      */
     public steamWsMods: (string | WorkshopMod)[] = [];
+
+    /**
+     * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as server mods.
+     */
+    public steamWsServerMods: (string | WorkshopMod)[] = [];
 
     /**
      * Whether or not to check for mod updates on each server restart
@@ -987,6 +1034,18 @@ export class Config {
      * Can be disabled if no additional mods should be installed or the mod breaks.
      */
     public ingameReportExpansionCompat: boolean = true;
+
+    /**
+     * Send ingame reports via REST
+     *
+     * Only enable this, if you know what you are doing.
+     */
+    public ingameReportViaRest: boolean = false;
+
+    /**
+     * Ingame Report Interval.
+     */
+    public ingameReportIntervall: number = 30.0;
 
     // /////////////////////////// ServerCfg ///////////////////////////////////////
     /**

@@ -501,12 +501,18 @@ export class SteamCMD extends IService {
             ?.replace(/\\/g, '-')
             ?.replace(/ /g, '-')
             ?.replace(/[^a-zA-Z0-9\-_]/g, '')
+            ?.replace(/-+/g, '-')
             || '';
         return modName ? `@${modName}` : '';
     }
 
     public buildWsModParams(): string[] {
         return this.manager.getModIdList()
+            .map((x) => this.getWsModName(x));
+    }
+
+    public buildWsServerModParams(): string[] {
+        return this.manager.getServerModIdList()
             .map((x) => this.getWsModName(x));
     }
 
@@ -556,14 +562,14 @@ export class SteamCMD extends IService {
                             isSuccess = true;
                         }
                         if (isSuccess !== null) {
-                                this.eventBus.emit(
+                            this.eventBus.emit(
                                 InternalEventTypes.MOD_UPDATED,
                                 {
                                     success: isSuccess,
                                     modIds,
-                                    },
-                                );
-                            }
+                                },
+                            );
+                        }
                     })();
                 }
 
@@ -632,9 +638,9 @@ export class SteamCMD extends IService {
         listener?: SteamCmdEventListener,
     }): Promise<boolean> {
         const modIds = opts?.force
-            ?  this.manager.getModIdList()
+            ?  this.manager.getCombinedModIdList()
             : await this.metaData.modNeedsUpdate(
-                this.manager.getModIdList(),
+                this.manager.getCombinedModIdList(),
             );
 
         const modsMeta = (await this.metaData.getModsMetaData(modIds)) || [];
@@ -762,7 +768,7 @@ export class SteamCMD extends IService {
     }
 
     public async installMods(): Promise<boolean> {
-        const modIds = this.manager.getModIdList();
+        const modIds = this.manager.getCombinedModIdList();
 
         const installed = Promise.all(modIds.map((modId) => this.installMod(modId)));
         if (!await installed) {
@@ -800,7 +806,7 @@ export class SteamCMD extends IService {
 
     public async checkMods(): Promise<boolean> {
         const wsPath = this.getWsPath();
-        return this.manager.getModIdList()
+        return this.manager.getCombinedModIdList()
             .every((modId) => {
                 const modDir = path.join(wsPath, modId);
                 if (!this.fs.existsSync(modDir)) {

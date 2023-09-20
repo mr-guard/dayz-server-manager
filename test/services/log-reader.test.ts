@@ -72,10 +72,7 @@ describe('Test class LogReader', () => {
         });
 
         
-        manager.config = {
-            profilesPath: 'profs',
-        } as any;
-        manager.getServerPath.returns('/testserver');
+        manager.getProfilesPath.returns('/testserver/profs');
 
         const logReader = injector.resolve(LogReader);
         logReader.initDelay = 10;

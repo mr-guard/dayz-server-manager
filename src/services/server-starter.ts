@@ -11,7 +11,6 @@ import { delay, inject, injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { RCON } from './rcon';
 import { SteamCMD } from './steamcmd';
-import { IngameReport } from './ingame-report';
 import { Hooks } from './hooks';
 import { FSAPI, InjectionTokens } from '../util/apis';
 import { ServerDetector } from './server-detector';
@@ -29,7 +28,7 @@ export class ServerStarter extends IService {
         private serverDetector: ServerDetector,
         @inject(delay(() => RCON)) private rcon: RCON,
         private steamCmd: SteamCMD,
-        private ingameReport: IngameReport,
+        private eventBus: EventBus,
         private hooks: Hooks,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
@@ -82,8 +81,10 @@ export class ServerStarter extends IService {
 
     private async prepareServerStart(skipPrep?: boolean): Promise<void> {
 
-        // ingame report
-        await this.ingameReport.installMod();
+        // install internal mods
+        await Promise.all(
+            await this.eventBus.request(InternalEventTypes.INTERNAL_MOD_INSTALL),
+        );
 
         // battleye / rcon
         await this.rcon?.createBattleyeConf();
@@ -136,7 +137,7 @@ export class ServerStarter extends IService {
         };
     }
 
-    private buildStartServerArgs(): string[] {
+    private async buildStartServerArgs(): Promise<string[]> {
         const args = [
             `-config=${this.manager.config.serverCfgPath}`,
             `-port=${this.manager.config.serverPort}`,
@@ -145,16 +146,22 @@ export class ServerStarter extends IService {
         const modList = [
             ...(this.steamCmd.buildWsModParams() ?? []),
             ...(this.manager.config.localMods ?? []),
-        ];
+        ].filter((x) => !!x);
         if (modList?.length) {
             args.push(`-mod=${modList.join(';')}`);
         }
 
-        // Ingame Reporting Addon
         const serverMods = [
-            ...(this.ingameReport.getServerMods()),
+            ...(
+                await Promise.all(
+                    await (this.eventBus.request(
+                        InternalEventTypes.GET_INTERNAL_MODS,
+                    ) as Promise<Promise<string[]>[]>),
+                )
+            ).flat(),
             ...(this.manager.config.serverMods ?? []),
-        ];
+            ...(this.steamCmd.buildWsServerModParams() ?? []),
+        ].filter((x) => !!x);
 
         if (serverMods.length) {
             args.push(`-servermod=${serverMods.join(';')}`);
@@ -200,9 +207,9 @@ export class ServerStarter extends IService {
 
         await this.hooks.executeHooks(HookTypeEnum.beforeStart);
 
+        const spawnCmd = this.buildServerSpawnCmd();
+        const args = await this.buildStartServerArgs();
         return new Promise<boolean>((res, rej) => {
-            const spawnCmd = this.buildServerSpawnCmd();
-            const args = this.buildStartServerArgs();
             try {
                 const sub = spawn(
                     spawnCmd.cmd,

@@ -1,29 +1,23 @@
-// #define DZSM_DEBUG
-
 class ServerManagerCallback: RestCallback
-{
-	void ServerManagerCallback()
-	{
-	}
-	
+{	
 	override void OnSuccess(string data, int dataSize)
 	{
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ OnSuccess: " + data);
+		Print("DZSM ~ OnSuccess Data: " + data);
 		#endif
 	}
 	
 	override void OnError(int errorCode)
 	{
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ OnError: " + errorCode);
+		Print("DZSM ~ OnError: " + errorCode);
 		#endif
 	}
 	
 	override void OnTimeout()
 	{
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ OnTimeout");
+		Print("DZSM ~ OnTimeout");
 		#endif
 	}
 };
@@ -72,35 +66,42 @@ class DayZServerManagerWatcher
 {
     private ref Timer m_Timer;
 	private ref Timer m_InitTimer;
+
+	private ref JsonSerializer m_jsonSerializer = new JsonSerializer;
 	
+	private RestApi m_RestApi;
+    private RestContext m_RestContext;
+
     void DayZServerManagerWatcher()
     {
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ DayZServerManagerWatcher()");
+		Print("DZSM ~ DayZServerManagerWatcher()");
 		#endif
-		
-        if (!GetGame().IsClient())
-		{
-			m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
-			m_InitTimer.Run(1.0 * 60.0, this, "init", null, false);
-        }
+
+        m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
+		m_InitTimer.Run(2.0 * 60.0, this, "init", null, false);
     }
 
 	void init()
 	{
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT");
+		Print("DZSM ~ DayZServerManagerWatcher() - INIT");
 		#endif
+
+		m_RestApi = CreateRestApi();
+        m_RestContext = m_RestApi.GetRestContext(GetDZSMApiOptions().host);
+		m_RestContext.SetHeader("application/json");
+        m_RestApi.EnableDebug(false);
 		
 		StartLoop();
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
+		Print("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
 		#endif
 	}
 
     float GetInterval()
 	{
-		return 30.0;
+		return GetDZSMApiOptions().reportInterval;
 	}
 
     void StartLoop()
@@ -124,7 +125,7 @@ class DayZServerManagerWatcher
 	void Tick()
 	{
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ TICK");
+		Print("DZSM ~ TICK");
 		#endif
 		int i;
 		
@@ -186,18 +187,35 @@ class DayZServerManagerWatcher
 				playerEntry.id = player.GetID();
 				playerEntry.speed = player.GetSpeed().ToString(false);
 				playerEntry.position = player.GetPosition().ToString(false);
-		
+
 				container.players.Insert(playerEntry);
 			}
 		}
 
-		JsonFileLoader<ref ServerManagerEntryContainer>.JsonSaveFile("$profile:DZSM-TICK.json", container);
+		DZSMApiOptions apiOptions = GetDZSMApiOptions();
+		if (apiOptions.useApiForReport)
+		{
+			#ifdef DZSM_DEBUG
+			Print("DZSM ~ API TICK");
+			#endif
 
-		#ifdef DZSM_DEBUG		
-		PrintToRPT("DZSM ~ Cleanup");
+			// RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
+			// restContext.SetHeader("application/json");
+			// restContext.POST_now("/ingamereport?key=" + apiOptions.key, JsonFileLoader<ref ServerManagerEntryContainer>.JsonMakeData(container));
+			m_RestContext.POST(new ServerManagerCallback(), string.Format("/ingamereport?key=%1", apiOptions.key), JsonFileLoader<ref ServerManagerEntryContainer>.JsonMakeData(container));
+		}
+		else
+		{
+			JsonFileLoader<ref ServerManagerEntryContainer>.JsonSaveFile("$profile:DZSM-TICK.json", container);
+		}
+
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ Cleanup");
 		#endif
 		delete container;
-		
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ Cleanup Done");
+		#endif
 	}
 
 }
@@ -209,8 +227,29 @@ modded class MissionServer
     void MissionServer()
     {
 		#ifdef DZSM_DEBUG
-		PrintToRPT("DZSM ~ MissionServer");
+		Print("DZSM ~ MissionServer");
 		#endif
-        m_dayZServerManagerWatcher = new DayZServerManagerWatcher();
     }
+
+	override void OnInit()
+	{
+		super.OnInit();
+		
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ MissionServer.OnInit");
+		#endif
+	}
+
+	override void OnMissionStart()
+	{
+		super.OnMissionStart();
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ MissionServer.OnMissionStart");
+		#endif
+
+		if (!GetGame().IsClient())
+		{
+        	m_dayZServerManagerWatcher = new DayZServerManagerWatcher();
+		}
+	}
 };
