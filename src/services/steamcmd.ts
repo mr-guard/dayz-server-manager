@@ -435,19 +435,13 @@ export class SteamCMD extends IService {
                 if (event.type === 'exit') {
                     if (!(event as SteamCmdExitEvent).success) {
                         this.eventBus.emit(
-                            InternalEventTypes.DISCORD_MESSAGE,
-                            {
-                                type: 'admin',
-                                message: 'Failed to update server!',
-                            },
+                            InternalEventTypes.GAME_UPDATED,
+                            { success: false },
                         );
                     } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
                         this.eventBus.emit(
-                            InternalEventTypes.DISCORD_MESSAGE,
-                            {
-                                type: 'notification',
-                                message: 'Successfully updated server!',
-                            },
+                            InternalEventTypes.GAME_UPDATED,
+                            { success: true },
                         );
                     }
                 }
@@ -562,69 +556,14 @@ export class SteamCMD extends IService {
                             isSuccess = true;
                         }
                         if (isSuccess !== null) {
-                            if (isSuccess) {
-                                const modInfos = await this.metaData.getModsMetaData(modIds);
                                 this.eventBus.emit(
-                                    InternalEventTypes.DISCORD_MESSAGE,
-                                    {
-                                        type: 'notification',
-                                        message: '',
-                                        embeds: modIds
-                                            .map((modId) => {
-                                                return modInfos.find((modInfo) => modInfo?.publishedfileid === modId) || modId;
-                                            })
-                                            .map((modInfo) => {
-                                                const fields = [];
-                                                if (typeof modInfo !== 'string' && modInfo?.title) {
-                                                    if (modInfo.time_updated || modInfo.time_created) {
-                                                        fields.push({
-                                                            name: 'Uploaded at',
-                                                            value: (new Date((modInfo.time_updated || modInfo.time_created) * 1000))
-                                                                .toISOString()
-                                                                .split(/[T\.]/)
-                                                                .slice(0, 2)
-                                                                .join(' ')
-                                                                + ' UTC',
-                                                            inline: true,
-                                                        });
-                                                    }
-                                                    const embed = new RichEmbed({
-                                                        color: 0x0099FF,
-                                                        title: `Successfully updated: ${modInfo.title}`,
-                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
-                                                        fields,
-                                                        thumbnail: { url: modInfo.preview_url || undefined },
-                                                        image: { url: modInfo.preview_url || undefined },
-                                                        footer: {
-                                                            text: 'Powered by DayZ Server Manager',
-                                                        },
-                                                    });
-                                                    return embed;
-                                                } else if (typeof modInfo === 'string') {
-                                                    return new RichEmbed({
-                                                        color: 0x0099FF,
-                                                        title: `Successfully updated: ${modInfo}`,
-                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo}`,
-                                                        footer: {
-                                                            text: 'Powered by DayZ Server Manager',
-                                                        },
-                                                    });
-                                                }
-                                                return null;
-                                            })
-                                            .filter((x) => !!x),
-                                    },
-                                );
-                            } else {
-                                this.eventBus.emit(
-                                    InternalEventTypes.DISCORD_MESSAGE,
-                                    {
-                                        type: 'admin',
-                                        message: `Failed to update mods: ${modIds.join('\n')}`,
+                                InternalEventTypes.MOD_UPDATED,
+                                {
+                                    success: isSuccess,
+                                    modIds,
                                     },
                                 );
                             }
-                        }
                     })();
                 }
 

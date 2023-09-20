@@ -15,6 +15,8 @@ import { IngameReport } from './ingame-report';
 import { Hooks } from './hooks';
 import { FSAPI, InjectionTokens } from '../util/apis';
 import { ServerDetector } from './server-detector';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()

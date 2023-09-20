@@ -551,12 +551,6 @@ export class Config {
     // /////////////////////////// DayZ ///////////////////////////////////////
 
     /**
-     * Use the experimental server or not
-     * Default is false
-     */
-    public experimentalServer: boolean = false;
-
-    /**
      * Path to server
      * Default is current directory (PWD / CWD) + DayZServer
      */
@@ -676,6 +670,34 @@ export class Config {
      * This option can be used to prevent stuck messages on low population servers.
      */
     public disableStuckCheck: boolean = false;
+
+    /**
+     * Disable the server monitoring.
+     * This option can be used if you start/stop/monitor the server with another program,
+     * but also want to use the server manager features such as the WebUI, events, etc.
+     */
+    public disableServerMonitoring: boolean = false;
+
+    /**
+     * Prevents the monitor from restarting the server when its offline.
+     * Same logic as locking the sevrer restart from WebUI or via lock file.
+     * Can be used to do maintenance without stopping the server manager.
+     * Can also be used to include the monitoring features such as stuck check
+     * but still using external tools to start/stop/restart the server
+     */
+    public lockServerRestart: boolean = false;
+
+    /**
+     * Prevents the from logging that the sevrer is locked.
+     * Enable this if the logs are annoying you or the logfile grows too much.
+     */
+    public disableServerLockLogs: boolean = false;
+
+    /**
+     * Use the experimental server or not
+     * Default is false
+     */
+    public experimentalServer: boolean = false;
 
     // /////////////////////////// Backups ////////////////////////////////////////
     /**
