@@ -932,7 +932,7 @@ export class Config {
      *      {
      *          "name": "Restart Notification (1h)",
      *          "type": "message",
-     *          "cron": "0 0,3,7,11,15,19 * * *",
+     *          "cron": "0 3,7,11,15,19,23 * * *",
      *          "params": [
      *              "Server restart in 60 minutes"
      *          ]
@@ -940,7 +940,7 @@ export class Config {
      *      {
      *          "name": "Restart Notification (30m)",
      *          "type": "message",
-     *          "cron": "30 0,3,7,11,15,19 * * *",
+     *          "cron": "30 3,7,11,15,19,23 * * *",
      *          "params": [
      *              "Server restart in 30 minutes"
      *          ]
@@ -948,7 +948,7 @@ export class Config {
      *      {
      *          "name": "Restart Notification (15m)",
      *          "type": "message",
-     *          "cron": "45 0,3,7,11,15,19 * * *",
+     *          "cron": "45 3,7,11,15,19,23 * * *",
      *          "params": [
      *              "Server restart in 15 minutes"
      *          ]
@@ -956,7 +956,7 @@ export class Config {
      *      {
      *          "name": "Restart Notification (10m)",
      *          "type": "message",
-     *          "cron": "50 0,3,7,11,15,19 * * *",
+     *          "cron": "50 3,7,11,15,19,23 * * *",
      *          "params": [
      *              "Server restart in 10 minutes"
      *          ]
@@ -964,7 +964,7 @@ export class Config {
      *      {
      *          "name": "Restart Notification (5m)",
      *          "type": "message",
-     *          "cron": "55 0,3,7,11,15,19 * * *",
+     *          "cron": "55 0,3,7,11,15,19,23 * * *",
      *          "params": [
      *              "Server restart in 5 minutes. The server is now locked. Please log out."
      *          ]
@@ -972,12 +972,12 @@ export class Config {
      *      {
      *          "name": "Restart Lock (5m)",
      *          "type": "lock",
-     *          "cron": "55 0,3,7,11,15,19 * * *"
+     *          "cron": "55 3,7,11,15,19,23 * * *"
      *      },
      *      {
      *          "name": "Restart Kick (2m)",
      *          "type": "kickAll",
-     *          "cron": "58 0,3,7,11,15,19 * * *"
+     *          "cron": "58 3,7,11,15,19,23 * * *"
      *      }
      *  ],
      */
