@@ -791,7 +791,7 @@ export class SteamCMD extends IService {
         const modName = this.getWsModName(modId);
         const modDir = path.join(this.getWsPath(), modId);
         this.log.log(LogLevel.DEBUG, `Searching keys for ${modName}`);
-        const keys = await this.paths.findFilesInDir(modDir, /.*\.bikey/g);
+        const keys = await this.paths.findFilesInDir(modDir, /.*\.bikey/);
         for (const key of keys) {
             const keyName = path.basename(key);
             this.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
