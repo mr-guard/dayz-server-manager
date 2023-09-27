@@ -14,7 +14,6 @@
                                 [columnDefs]="typesColumnDefs"
                                 [defaultColDef]="defaultColDef"
                                 [rowData]="file.content.types.type"
-                                [headerHeight]="150"
                                 [floatingFiltersHeight]="50"
                                 [groupHeaderHeight]="75"
                                 style="width: 100%; height: 100%;"
@@ -28,6 +27,10 @@
             </ul>
         </div>
         <div class="card-body" *ngIf="!loading">
+            <div>
+                <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
+                <input type="checkbox" [(ngModel)]="lockedWidth">
+            </div>
             <ngb-alert  *ngIf="outcomeBadge"
                         [type]="outcomeBadge.success ? 'success' : 'danger'"
             >

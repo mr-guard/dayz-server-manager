@@ -1,4 +1,4 @@
-import { Config, ServerCfg, UserLevel } from '../config/config';
+import { Config, ServerCfg, UserLevel, WorkshopMod } from '../config/config';
 import { Paths } from '../services/paths';
 import * as path from 'path';
 import { Logger, LogLevel } from '../util/logger';
@@ -58,6 +58,20 @@ export class Manager {
         return path.join(this.getServerPath(), (this.config?.serverExe ?? 'DayZServer_x64.exe'));
     }
 
+    public getProfilesPath(): string {
+        const baseDir = this.getServerPath();
+        const profiles = this.config.profilesPath;
+        if (profiles) {
+            if (this.paths.isAbsolute(profiles)) {
+                return profiles;
+            } else {
+                return path.join(baseDir, profiles);
+            }
+        } else {
+            return path.join(baseDir, 'profiles');
+        }
+    }
+
     public getUserLevel(userId: string): UserLevel {
         return this.config?.admins?.find((x) => x.userId === userId)?.userLevel ?? null;
     }
@@ -103,8 +117,8 @@ export class Manager {
         };
     }
 
-    public getModIdList(): string[] {
-        return (this.config?.steamWsMods ?? [])
+    private normalizeModList(mods: (string | WorkshopMod)[]): string[] {
+        return (mods ?? [])
             .filter((x) => {
                 if (typeof x === 'string') {
                     return !!x;
@@ -119,6 +133,21 @@ export class Manager {
 
                 return x.workshopId;
             });
+    }
+
+    public getModIdList(): string[] {
+        return this.normalizeModList(this.config?.steamWsMods ?? []);
+    }
+
+    public getServerModIdList(): string[] {
+        return this.normalizeModList(this.config?.steamWsServerMods ?? []);
+    }
+
+    public getCombinedModIdList(): string[] {
+        return this.normalizeModList([
+            ...(this.config?.steamWsMods ?? []),
+            ...(this.config?.steamWsServerMods ?? []),
+        ]);
     }
 
 }

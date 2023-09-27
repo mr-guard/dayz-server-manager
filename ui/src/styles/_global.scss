@@ -76,29 +76,29 @@ body {
     flex-grow: 1;
 }
 
-.ag-cell-label-container {
-  /* Necessary to allow for text to grow vertically */
-  // height: 100%;
-  flex-direction: column;
-}
+// .ag-cell-label-container {
+//   /* Necessary to allow for text to grow vertically */
+//   // height: 100%;
+//   flex-direction: column;
+// }
 
-.ag-header-cell-label {
-  /* Necessary to allow for text to grow vertically */
-  height: 100%;
-  padding: 0 !important;
-}
+// .ag-header-cell-label {
+//   /* Necessary to allow for text to grow vertically */
+// //   height: 100%;
+//   padding: 0 !important;
+// }
 
-.ag-header-cell-label .ag-header-cell-text {
-  text-overflow: unset;
-  overflow: visible;
-  /* Force the width corresponding at how much width
-  we need once the text is laid out vertically */
-  width: 30px;
-  transform: rotate(90deg);
-  margin-top: -75px;
-  /* Since we are rotating a span */
-  display: inline-block;
-}
+// .ag-header-cell-label .ag-header-cell-text {
+//   text-overflow: unset;
+//   overflow: visible;
+//   /* Force the width corresponding at how much width
+//   we need once the text is laid out vertically */
+// //   width: 30px;
+// //   transform: rotate(90deg);
+// //   margin-top: -75px;
+//   /* Since we are rotating a span */
+// //   display: inline-block;
+// }
 
 .ag-floating-filter-body input {
   height: 49px;

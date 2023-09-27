@@ -140,4 +140,70 @@ describe('Test class MissionFiles', () => {
 
     });
 
+    it('MissionFiles-read-profile', async () => {
+
+        fs = memfs(
+            {
+                'testserver': {
+                    'profile': {
+                        'test.txt': 'test',
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+        manager.getProfilesPath.returns('/testserver/profile');
+
+        const files = injector.resolve(MissionFiles);
+
+        const content = await files.readProfileFile('test.txt');
+
+        expect(content).to.equal('test');
+
+    });
+
+    it('MissionFiles-readDir-profile', async () => {
+
+        fs = memfs(
+            {
+                'testserver': {
+                    'profile': {
+                        'test': {},
+                        'testfile': 'testcontent',
+                    },
+                },
+            },
+            '/',
+            injector,
+        );
+        manager.getProfilesPath.returns('/testserver/profile');
+
+        const files = injector.resolve(MissionFiles);
+
+        const content = await files.readProfileDir('/');
+
+        expect(content.length).to.equal(2);
+        expect(content).to.include('test/');
+        expect(content).to.include('testfile');
+
+    });
+
+    it('MissionFiles-write-profile', async () => {
+
+        manager.getProfilesPath.returns('/testserver/profile');
+
+        const files = injector.resolve(MissionFiles);
+
+        await files.writeProfileFile('test.txt', 'test');
+
+        const expectedPath = '/testserver/profile/test.txt';
+        expect(fs.existsSync(expectedPath)).to.be.true;
+        expect(fs.readFileSync(expectedPath) + '').to.equal('test');
+
+        expect(hooks.executeHooks.callCount).to.equal(1);
+        expect(hooks.executeHooks.firstCall.args[0]).to.equal(HookTypeEnum.missionChanged);
+
+    });
+
 });

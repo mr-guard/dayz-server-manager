@@ -64,8 +64,11 @@ export class Logger {
     public readonly MAX_CONTEXT_LENGTH = 12;
 
     private static getDefaultLogFileName(): string {
+        if (!fs.existsSync('server-manager-logs')) {
+            fs.mkdirSync('server-manager-logs');
+        }
         const time = new Date();
-        return `server-manager-${time.getFullYear()}-${time.getMonth() + 1}-${time.getDate()}-${time.getHours()}-${time.getMinutes()}-${time.getSeconds()}.log`;
+        return `server-manager-logs/server-manager-${time.getFullYear()}-${time.getMonth() + 1}-${time.getDate()}-${time.getHours()}-${time.getMinutes()}-${time.getSeconds()}.log`;
     }
 
     public constructor(

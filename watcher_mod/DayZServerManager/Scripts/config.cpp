@@ -27,7 +27,7 @@ class CfgMods
 		author = "DayZServerManager";
 		authorID = "";
 		dependencies[] = {
-            // "Game",
+            "Game",
             "World",
             "Mission"
         };

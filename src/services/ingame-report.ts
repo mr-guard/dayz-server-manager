@@ -9,6 +9,8 @@ import { inject, injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { Metrics } from './metrics';
 import { FSAPI, InjectionTokens } from '../util/apis';
+import { EventBus } from '../control/event-bus';
+import { InternalEventTypes } from '../types/events';
 
 @singleton()
 @injectable()
@@ -19,6 +21,7 @@ export class IngameReport extends IStatefulService {
     public readonly TICK_FILE = 'DZSM-TICK.json';
 
     public readonly EXPANSION_VEHICLES_MOD_ID = '2291785437';
+    public readonly EXPANSION_BUNDLE_MOD_ID = '2572331007';
 
     public intervalTimeout: number = 1000;
     public readTimeout: number = 1000;
@@ -30,22 +33,27 @@ export class IngameReport extends IStatefulService {
         private manager: Manager,
         private metrics: Metrics,
         private paths: Paths,
+        private eventBus: EventBus,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('IngameReport'));
+
+        this.eventBus.on(
+            InternalEventTypes.INTERNAL_MOD_INSTALL,
+            /* istanbul ignore next */ () => this.installMod(),
+        );
+        this.eventBus.on(
+            InternalEventTypes.GET_INTERNAL_MODS,
+            /* istanbul ignore next */ async () => this.getServerMods(),
+        );
     }
 
     public async start(): Promise<void> {
 
-        const baseDir = this.manager.getServerPath();
-        const profiles = this.manager.config.profilesPath;
-        if (profiles) {
-            if (path.isAbsolute(profiles)) {
-                this.tickFilePath = path.join(profiles, this.TICK_FILE);
-            } else {
-                this.tickFilePath = path.join(baseDir, profiles, this.TICK_FILE);
-            }
-        }
+        this.tickFilePath = path.join(
+            this.manager.getProfilesPath(),
+            this.TICK_FILE,
+        );
 
         this.timers.addInterval('scanTick', () => {
             void this.scanTick();
@@ -57,6 +65,9 @@ export class IngameReport extends IStatefulService {
     }
 
     private async scanTick(): Promise<void> {
+        if (this.manager.config.ingameReportViaRest) {
+            return;
+        }
         try {
             if (this.fs.existsSync(this.tickFilePath)) {
                 const stat = this.fs.statSync(this.tickFilePath);
@@ -137,7 +148,10 @@ export class IngameReport extends IStatefulService {
 
         const mods = [this.MOD_NAME];
         if (
-            this.manager.getModIdList().includes(this.EXPANSION_VEHICLES_MOD_ID)
+            (
+                this.manager.getModIdList().includes(this.EXPANSION_VEHICLES_MOD_ID)
+                || this.manager.getModIdList().includes(this.EXPANSION_BUNDLE_MOD_ID)
+            )
             && this.manager.config.ingameReportExpansionCompat !== false
         ) {
             mods.push(this.MOD_NAME_EXPANSION);

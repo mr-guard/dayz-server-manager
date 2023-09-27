@@ -1,23 +1,24 @@
 import 'reflect-metadata';
 import * as cron from 'cron-parser';
+import * as commentJson from 'comment-json';
 import { Config, EventTypeEnum } from './config';
 
 export const parseConfigFileContent = (fileContent: string): any => {
 
     if (fileContent) {
-
-        // remove comments
-        const stripped = fileContent
-            .replace(/\r/g, '')
-            .replace(/\/\/(.*)/g, '')
-            .replace(/(\/\*(.|\n)*?\*\/)/g, '');
-
         try {
-            return JSON.parse(stripped);
+            return commentJson.parse(fileContent);
         } catch (e) {
-            throw new Error(`Parsing config failed: ${e.message}`);
-        }
 
+            const jsonErrorPosStr = /JSON at position (?<position>\d+)/g.exec(`${e?.message}`) as any;
+            if (jsonErrorPosStr?.groups?.position) {
+                const jsonErrorPos = Number(jsonErrorPosStr?.groups?.position);
+                throw new Error(`Parsing config failed: ${e.message}\nError is around here: ${ fileContent.slice(Math.max(jsonErrorPos - 20, 0), Math.min(jsonErrorPos + 20, fileContent.length - 1)) }`);
+            }
+
+            throw new Error(`Parsing config failed: ${e.message}`);
+
+        }
     }
     throw new Error('Config file is empty');
 };

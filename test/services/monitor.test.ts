@@ -20,7 +20,6 @@ import { IngameReport } from '../../src/services/ingame-report';
 import { Hooks } from '../../src/services/hooks';
 import { EventBus } from '../../src/control/event-bus';
 import { InternalEventTypes } from '../../src/types/events';
-import { DiscordMessage } from '../../src/types/discord';
 
 describe('Test class ServerDetector', () => {
 
@@ -391,12 +390,6 @@ describe('Test class Monitor', () => {
 
     it('Monitor-stateChange', async () => {
         
-        let sentMsg: DiscordMessage;
-        eventBus.on(
-            InternalEventTypes.DISCORD_MESSAGE,
-            async (message) => {sentMsg = message},
-        );
-
         const monitor = injector.resolve(Monitor);
         
         // mock started server
@@ -415,7 +408,6 @@ describe('Test class Monitor', () => {
         // await async listeners
         await sleep(10);
 
-        expect(sentMsg!).to.be.not.undefined;
         expect(monitor.serverState).to.equal(ServerState.STOPPED);
         expect(listenerCalled).to.be.true;
 

@@ -7,6 +7,11 @@ import { container } from 'tsyringe';
 void (async () => {
 
     process.on('unhandledRejection', (reason) => {
+        if ((reason as any)?.message?.includes('Config missing or invalid')) {
+            console.error((reason as any).message);
+            return;
+        }
+
         console.error(
             'Unhandled Rejection:',
             reason,

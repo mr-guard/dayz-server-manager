@@ -501,7 +501,8 @@ export class Config {
     /**
      * The port of the web interface and REST API
      *
-     * if -1 or 0 it will be serverport + 11
+     * If -1 or 0 it will be serverport + 11
+     * So if your server runs on 2302, the webport will be 2313
      */
     @Reflect.metadata('config-range', [-1, 65535])
     public webPort: number = 0;
@@ -518,6 +519,47 @@ export class Config {
      * (because this app wont provide HTTPS capabilities)
      */
     public publishWebServer: boolean = false;
+
+    /**
+     * The port of the ingame REST API
+     *
+     * If -1 or 0 it will be serverport + 10
+     * So if your server runs on 2302, the webport will be 2312
+     */
+    @Reflect.metadata('config-range', [-1, 65535])
+    public ingameApiPort: number = 0;
+
+    /**
+     * Whether or not to publish the Ingame Rest API
+     *
+     * Same as publish webport but for the Ingame REST API.
+     * Can be used for shared hives / provide the api for external servers.
+     */
+    public publishIngameApi: boolean = false;
+
+    /**
+     * Alternative host for the Ingame Rest API.
+     *
+     * Can be used for shared hives.
+     * Provide "ip:port" to make the addon connect to another Ingame API.
+     */
+    public ingameApiHostOverride: string | null = null;
+
+    /**
+     * Api key for the ingame API.
+     * This should be changed as it is the "password" for the ingame API.
+     * If you do not set this, it will be randomised on every server manager restart.
+     *
+     * Only use "a-z", "A-Z", "0-9" and "-".
+     * Good: ASDF-1234-asdf-98761234
+     * BAD: *asd123!!87928jk,sdf3$
+     */
+    public ingameApiKey: string = '';
+
+    /**
+     * Enable Syberia compatibility.
+     */
+    public syberiaCompat: boolean = false;
 
     /**
      * URL to load the map images from.
@@ -549,12 +591,6 @@ export class Config {
     }[] = [];
 
     // /////////////////////////// DayZ ///////////////////////////////////////
-
-    /**
-     * Use the experimental server or not
-     * Default is false
-     */
-    public experimentalServer: boolean = false;
 
     /**
      * Path to server
@@ -677,6 +713,34 @@ export class Config {
      */
     public disableStuckCheck: boolean = false;
 
+    /**
+     * Disable the server monitoring.
+     * This option can be used if you start/stop/monitor the server with another program,
+     * but also want to use the server manager features such as the WebUI, events, etc.
+     */
+    public disableServerMonitoring: boolean = false;
+
+    /**
+     * Prevents the monitor from restarting the server when its offline.
+     * Same logic as locking the sevrer restart from WebUI or via lock file.
+     * Can be used to do maintenance without stopping the server manager.
+     * Can also be used to include the monitoring features such as stuck check
+     * but still using external tools to start/stop/restart the server
+     */
+    public lockServerRestart: boolean = false;
+
+    /**
+     * Prevents the from logging that the sevrer is locked.
+     * Enable this if the logs are annoying you or the logfile grows too much.
+     */
+    public disableServerLockLogs: boolean = false;
+
+    /**
+     * Use the experimental server or not
+     * Default is false
+     */
+    public experimentalServer: boolean = false;
+
     // /////////////////////////// Backups ////////////////////////////////////////
     /**
      * Path where backups are stored
@@ -738,9 +802,14 @@ export class Config {
     public steamMetaPath: string = 'SteamMeta';
 
     /**
-     * List of Mod IDs (workshop id, not modname!) the server should use
+     * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as mods.
      */
     public steamWsMods: (string | WorkshopMod)[] = [];
+
+    /**
+     * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as server mods.
+     */
+    public steamWsServerMods: (string | WorkshopMod)[] = [];
 
     /**
      * Whether or not to check for mod updates on each server restart
@@ -851,6 +920,66 @@ export class Config {
      * https://crontab.guru/
      * https://www.freeformatter.com/cron-expression-generator-quartz.html
      * https://cronjob.xyz/
+     *
+     * Complete example (4h restart with server lock + kick):
+     * ```
+     * "events": [
+     *      {
+     *          "name": "Restart every 4 hours",
+     *          "type": "restart",
+     *          "cron": "0 0,4,8,12,16,20 * * *"
+     *      },
+     *      {
+     *          "name": "Restart Notification (1h)",
+     *          "type": "message",
+     *          "cron": "0 3,7,11,15,19,23 * * *",
+     *          "params": [
+     *              "Server restart in 60 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (30m)",
+     *          "type": "message",
+     *          "cron": "30 3,7,11,15,19,23 * * *",
+     *          "params": [
+     *              "Server restart in 30 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (15m)",
+     *          "type": "message",
+     *          "cron": "45 3,7,11,15,19,23 * * *",
+     *          "params": [
+     *              "Server restart in 15 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (10m)",
+     *          "type": "message",
+     *          "cron": "50 3,7,11,15,19,23 * * *",
+     *          "params": [
+     *              "Server restart in 10 minutes"
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Notification (5m)",
+     *          "type": "message",
+     *          "cron": "55 0,3,7,11,15,19,23 * * *",
+     *          "params": [
+     *              "Server restart in 5 minutes. The server is now locked. Please log out."
+     *          ]
+     *      },
+     *      {
+     *          "name": "Restart Lock (5m)",
+     *          "type": "lock",
+     *          "cron": "55 3,7,11,15,19,23 * * *"
+     *      },
+     *      {
+     *          "name": "Restart Kick (2m)",
+     *          "type": "kickAll",
+     *          "cron": "58 3,7,11,15,19,23 * * *"
+     *      }
+     *  ],
      */
     public events: Event[] = [];
 
@@ -905,6 +1034,18 @@ export class Config {
      * Can be disabled if no additional mods should be installed or the mod breaks.
      */
     public ingameReportExpansionCompat: boolean = true;
+
+    /**
+     * Send ingame reports via REST
+     *
+     * Only enable this, if you know what you are doing.
+     */
+    public ingameReportViaRest: boolean = false;
+
+    /**
+     * Ingame Report Interval.
+     */
+    public ingameReportIntervall: number = 30.0;
 
     // /////////////////////////// ServerCfg ///////////////////////////////////////
     /**

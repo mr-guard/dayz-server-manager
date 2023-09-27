@@ -17,19 +17,20 @@ export class MaintenanceService {
     }
 
     public execute(action: string, body?: any): Promise<boolean> {
-        return this.httpClient.post<any>(
+        return this.httpClient.post(
             `/api/${action}`,
             body,
             {
                 headers: this.auth.getAuthHeaders(),
                 observe: 'response',
+                responseType: 'text',
                 withCredentials: true,
             },
         ).pipe(
             map((x: HttpResponse<any>) => {
                 return !!x?.ok;
             }),
-            catchError(() => of(false)),
+            catchError((e) => {console.log(e); return of(false)}),
         ).toPromise();
     }
 
@@ -65,5 +66,16 @@ export class MaintenanceService {
         return this.execute('restart', { force });
     }
 
+    public async shutdown(): Promise<boolean> {
+        return this.execute('shutdown');
+    }
+
+    public async kickAll(): Promise<boolean> {
+        return this.execute('kickall');
+    }
+
+    public async sendMessage(message: string): Promise<boolean> {
+        return this.execute('global', { message });
+    }
 
 }

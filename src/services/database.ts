@@ -51,6 +51,25 @@ export class Sqlite3Wrapper {
         return stmt.all(params);
     }
 
+    /**
+     * all raw results as columns
+     * @param sql the query
+     * @param params the params
+     */
+    public allRaw(sql: string, ...params: any[]): any[] {
+        const stmt = this.db.prepare(sql);
+        return stmt.raw().all(params);
+    }
+
+    /**
+     * all results
+     * @param sql the query
+     * @param params the params
+     */
+    public transaction(fn: (db: sqlite3.Database) => any): any[] {
+        return this.db.transaction(fn)(this.db);
+    }
+
     public close(): void {
         this.db.close();
     }
@@ -108,11 +127,19 @@ export class Database extends IStatefulService {
     public getDatabase(type: DatabaseTypes): Sqlite3Wrapper {
 
         if (!this.databases.has(type)) {
+            const dbConfig = this.dbConfigs.get(type)
+                || {
+                    file: `${type}.db`,
+                    opts: {
+                        readonly: false,
+                    },
+                };
+
             this.databases.set(
                 type,
                 new Sqlite3Wrapper(
-                    this.dbConfigs.get(type).file,
-                    this.dbConfigs.get(type).opts,
+                    dbConfig.file,
+                    dbConfig.opts,
                 ),
             );
         }

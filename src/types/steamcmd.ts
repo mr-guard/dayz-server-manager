@@ -110,3 +110,12 @@ export type SteamCmdEventListener = (event: SteamCmdEvent) => any;
 export interface LocalMetaData {
     lastDownloaded?: number;
 }
+
+export interface ModUpdatedStatus {
+    modIds: string[];
+    success: boolean;
+}
+
+export interface GameUpdatedStatus {
+    success: boolean;
+}

@@ -75,19 +75,8 @@ export class LogReader extends IStatefulService {
         }
     }
 
-    private getProfilesDir(): string {
-        const profiles = this.manager.config.profilesPath;
-        if (!path.isAbsolute(profiles)) {
-            return path.join(
-                this.manager.getServerPath(),
-                profiles,
-            );
-        }
-        return profiles;
-    }
-
     private async findLatestFiles(): Promise<void> {
-        const profiles = this.getProfilesDir();
+        const profiles = this.manager.getProfilesPath();
         const files = await this.fs.promises.readdir(profiles);
 
         const makeFileDescriptor = async (file: string): Promise<FileDescriptor> => {

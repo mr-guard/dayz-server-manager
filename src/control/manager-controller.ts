@@ -26,6 +26,9 @@ import { Interface } from '../interface/interface';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
 import { REST } from '../interface/rest';
 import { MetricsCollector } from '../services/metrics-collector';
+import { IngameREST } from '../interface/ingame-rest';
+import { SyberiaCompat } from '../services/syberia-compat';
+import { DiscordEventConverter } from '../services/discord-event-converter';
 
 @singleton()
 @registry([
@@ -97,6 +100,21 @@ import { MetricsCollector } from '../services/metrics-collector';
     {
     token: REST,
     useClass: REST,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: IngameREST,
+    useClass: IngameREST,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: SyberiaCompat,
+    useClass: SyberiaCompat,
+    options: { lifecycle: Lifecycle.Singleton },
+    },
+    {
+    token: DiscordEventConverter,
+    useClass: DiscordEventConverter,
     options: { lifecycle: Lifecycle.Singleton },
     },
 ]) // eslint-disable-line @typescript-eslint/indent

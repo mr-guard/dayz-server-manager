@@ -62,41 +62,6 @@ export class Monitor extends IStatefulService {
             return;
         }
 
-        // msg about server startup
-        if (
-            state === ServerState.STARTED
-            && (
-                this.$internalServerState === ServerState.STARTING
-            )
-        ) {
-            this.eventBus.emit(
-                InternalEventTypes.DISCORD_MESSAGE,
-                {
-                    type: 'notification',
-                    message: 'Server start sucessful',
-                },
-            );
-        }
-
-        // handle stop after running
-        if (
-            state === ServerState.STOPPED
-            && (
-                this.$internalServerState === ServerState.STARTING
-                || this.$internalServerState === ServerState.STARTED
-            )
-        ) {
-            const msg = 'Detected possible server crash. Restarting...';
-            this.log.log(LogLevel.WARN, msg);
-            this.eventBus.emit(
-                InternalEventTypes.DISCORD_MESSAGE,
-                {
-                    type: 'notification',
-                    message: msg,
-                },
-            );
-        }
-
         const previousState = this.$internalServerState;
         this.$internalServerState = state;
         this.eventBus.emit(
@@ -158,18 +123,34 @@ export class Monitor extends IStatefulService {
     }
 
     private async tick(): Promise<void> {
+        if (this.manager.config.disableServerMonitoring) {
+            return;
+        }
+
         try {
             let needsRestart = true;
 
             // User locked the server manually
+            if (needsRestart && this.manager.config.lockServerRestart) {
+                if (!this.manager.config.disableServerLockLogs) {
+                    this.log.log(LogLevel.IMPORTANT, 'Detected server lock in config. Skipping server check');
+                }
+                needsRestart = false;
+            }
+
+            // User locked the server manually via file
             if (needsRestart && this.fs.existsSync(this.lockPath)) {
-                this.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
+                if (!this.manager.config.disableServerLockLogs) {
+                    this.log.log(LogLevel.IMPORTANT, 'Detected manual server lockfile. Skipping server check');
+                }
                 needsRestart = false;
             }
 
             // restart locked
             if (needsRestart && this.restartLock) {
-                this.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
+                if (!this.manager.config.disableServerLockLogs) {
+                    this.log.log(LogLevel.IMPORTANT, 'Detected server restart lock state. Skipping server check');
+                }
                 needsRestart = false;
             }
 

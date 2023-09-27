@@ -71,6 +71,12 @@ export class Interface extends IService {
                 level: 'view',
                 action: this.getBans,
             })],
+            ['shutdown', RequestTemplate.build({
+                method: 'post',
+                level: 'manage',
+                noResponse: true,
+                action: () => this.rcon.shutdown(),
+            })],
             ['lock', RequestTemplate.build({
                 method: 'post',
                 level: 'moderate',
@@ -261,6 +267,32 @@ export class Interface extends IService {
                 disableDiscord: true,
                 params: [{ name: 'dir', location: 'query' }],
                 action: async (req, params) => this.missionFiles.readMissionDir(params.dir),
+            })],
+            ['writeprofilefile', RequestTemplate.build({
+                method: 'post',
+                level: 'manage',
+                disableDiscord: true,
+                params: [{ name: 'file' }, { name: 'content' }, { name: 'createBackup', optional: true, parse: parseBoolean }],
+                noResponse: true,
+                action: (req, params) => this.missionFiles.writeProfileFile(
+                    params.file,
+                    params.content,
+                    params.createBackup,
+                ),
+            })],
+            ['readprofilefile', RequestTemplate.build({
+                method: 'get',
+                level: 'manage',
+                disableDiscord: true,
+                params: [{ name: 'file', location: 'query' }],
+                action: (req, params) => this.missionFiles.readProfileFile(params.file),
+            })],
+            ['readprofiledir', RequestTemplate.build({
+                method: 'get',
+                level: 'manage',
+                disableDiscord: true,
+                params: [{ name: 'dir', location: 'query' }],
+                action: async (req, params) => this.missionFiles.readProfileDir(params.dir),
             })],
             ['serverinfo', RequestTemplate.build({
                 method: 'get',

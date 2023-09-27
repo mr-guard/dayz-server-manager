@@ -152,4 +152,52 @@ export class MaintenanceComponent implements OnInit {
         }
     }
 
+    public async kickAll(): Promise<void> {
+        const success = await this.maintenance.kickAll();
+        if (success) {
+            this.outcomeBadge = {
+                message: 'Successfully kicked all players',
+                success: true,
+            };
+        } else {
+            this.outcomeBadge = {
+                message: 'Failed to kick all players',
+                success: false,
+            };
+        }
+    }
+
+    public async shutdown(): Promise<void> {
+        const success = await this.maintenance.shutdown();
+        if (success) {
+            this.outcomeBadge = {
+                message: 'Successfully executed RCON shutdown',
+                success: true,
+            };
+        } else {
+            this.outcomeBadge = {
+                message: 'Failed to execute RCON shutdown',
+                success: false,
+            };
+        }
+    }
+
+    public async sendMessage(msg: string): Promise<void> {
+        if (!msg?.trim()) {
+            return;
+        }
+        const success = await this.maintenance.sendMessage(msg.trim());
+        if (success) {
+            this.outcomeBadge = {
+                message: 'Successfully sent global message',
+                success: true,
+            };
+        } else {
+            this.outcomeBadge = {
+                message: 'Failed to send global message',
+                success: false,
+            };
+        }
+    }
+
 }

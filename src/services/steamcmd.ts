@@ -435,19 +435,13 @@ export class SteamCMD extends IService {
                 if (event.type === 'exit') {
                     if (!(event as SteamCmdExitEvent).success) {
                         this.eventBus.emit(
-                            InternalEventTypes.DISCORD_MESSAGE,
-                            {
-                                type: 'admin',
-                                message: 'Failed to update server!',
-                            },
+                            InternalEventTypes.GAME_UPDATED,
+                            { success: false },
                         );
                     } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
                         this.eventBus.emit(
-                            InternalEventTypes.DISCORD_MESSAGE,
-                            {
-                                type: 'notification',
-                                message: 'Successfully updated server!',
-                            },
+                            InternalEventTypes.GAME_UPDATED,
+                            { success: true },
                         );
                     }
                 }
@@ -507,12 +501,18 @@ export class SteamCMD extends IService {
             ?.replace(/\\/g, '-')
             ?.replace(/ /g, '-')
             ?.replace(/[^a-zA-Z0-9\-_]/g, '')
+            ?.replace(/-+/g, '-')
             || '';
         return modName ? `@${modName}` : '';
     }
 
     public buildWsModParams(): string[] {
         return this.manager.getModIdList()
+            .map((x) => this.getWsModName(x));
+    }
+
+    public buildWsServerModParams(): string[] {
+        return this.manager.getServerModIdList()
             .map((x) => this.getWsModName(x));
     }
 
@@ -562,68 +562,13 @@ export class SteamCMD extends IService {
                             isSuccess = true;
                         }
                         if (isSuccess !== null) {
-                            if (isSuccess) {
-                                const modInfos = await this.metaData.getModsMetaData(modIds);
-                                this.eventBus.emit(
-                                    InternalEventTypes.DISCORD_MESSAGE,
-                                    {
-                                        type: 'notification',
-                                        message: '',
-                                        embeds: modIds
-                                            .map((modId) => {
-                                                return modInfos.find((modInfo) => modInfo?.publishedfileid === modId) || modId;
-                                            })
-                                            .map((modInfo) => {
-                                                const fields = [];
-                                                if (typeof modInfo !== 'string' && modInfo?.title) {
-                                                    if (modInfo.time_updated || modInfo.time_created) {
-                                                        fields.push({
-                                                            name: 'Uploaded at',
-                                                            value: (new Date((modInfo.time_updated || modInfo.time_created) * 1000))
-                                                                .toISOString()
-                                                                .split(/[T\.]/)
-                                                                .slice(0, 2)
-                                                                .join(' ')
-                                                                + ' UTC',
-                                                            inline: true,
-                                                        });
-                                                    }
-                                                    const embed = new RichEmbed({
-                                                        color: 0x0099FF,
-                                                        title: `Successfully updated: ${modInfo.title}`,
-                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
-                                                        fields,
-                                                        thumbnail: { url: modInfo.preview_url || undefined },
-                                                        image: { url: modInfo.preview_url || undefined },
-                                                        footer: {
-                                                            text: 'Powered by DayZ Server Manager',
-                                                        },
-                                                    });
-                                                    return embed;
-                                                } else if (typeof modInfo === 'string') {
-                                                    return new RichEmbed({
-                                                        color: 0x0099FF,
-                                                        title: `Successfully updated: ${modInfo}`,
-                                                        url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo}`,
-                                                        footer: {
-                                                            text: 'Powered by DayZ Server Manager',
-                                                        },
-                                                    });
-                                                }
-                                                return null;
-                                            })
-                                            .filter((x) => !!x),
-                                    },
-                                );
-                            } else {
-                                this.eventBus.emit(
-                                    InternalEventTypes.DISCORD_MESSAGE,
-                                    {
-                                        type: 'admin',
-                                        message: `Failed to update mods: ${modIds.join('\n')}`,
-                                    },
-                                );
-                            }
+                            this.eventBus.emit(
+                                InternalEventTypes.MOD_UPDATED,
+                                {
+                                    success: isSuccess,
+                                    modIds,
+                                },
+                            );
                         }
                     })();
                 }
@@ -693,9 +638,9 @@ export class SteamCMD extends IService {
         listener?: SteamCmdEventListener,
     }): Promise<boolean> {
         const modIds = opts?.force
-            ?  this.manager.getModIdList()
+            ?  this.manager.getCombinedModIdList()
             : await this.metaData.modNeedsUpdate(
-                this.manager.getModIdList(),
+                this.manager.getCombinedModIdList(),
             );
 
         const modsMeta = (await this.metaData.getModsMetaData(modIds)) || [];
@@ -823,7 +768,7 @@ export class SteamCMD extends IService {
     }
 
     public async installMods(): Promise<boolean> {
-        const modIds = this.manager.getModIdList();
+        const modIds = this.manager.getCombinedModIdList();
 
         const installed = Promise.all(modIds.map((modId) => this.installMod(modId)));
         if (!await installed) {
@@ -846,7 +791,7 @@ export class SteamCMD extends IService {
         const modName = this.getWsModName(modId);
         const modDir = path.join(this.getWsPath(), modId);
         this.log.log(LogLevel.DEBUG, `Searching keys for ${modName}`);
-        const keys = await this.paths.findFilesInDir(modDir, /.*\.bikey/g);
+        const keys = await this.paths.findFilesInDir(modDir, /.*\.bikey/);
         for (const key of keys) {
             const keyName = path.basename(key);
             this.log.log(LogLevel.INFO, `Copying ${modName} key ${keyName}`);
@@ -861,7 +806,7 @@ export class SteamCMD extends IService {
 
     public async checkMods(): Promise<boolean> {
         const wsPath = this.getWsPath();
-        return this.manager.getModIdList()
+        return this.manager.getCombinedModIdList()
             .every((modId) => {
                 const modDir = path.join(wsPath, modId);
                 if (!this.fs.existsSync(modDir)) {

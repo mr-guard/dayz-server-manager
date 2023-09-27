@@ -31,19 +31,30 @@ export class MissionFiles extends IService {
             'mpmissions',
             (await this.manager.getServerCfg()).Missions.DayZ.template,
         );
+        return this.getCheckedPath(missionPath, ...(subPath || []));
+    }
+
+    public async getProfilePath(...subPath: string[]): Promise<string> {
+        const profilePath = this.paths.resolve(
+            this.manager.getProfilesPath(),
+        );
+        return this.getCheckedPath(profilePath, ...(subPath || []));
+    }
+
+    private async getCheckedPath(basePath: string, ...subPath: string[]): Promise<string> {
         if (!subPath?.length) {
-            return missionPath;
+            return basePath;
         }
         let normalizedSubPath = path.normalize(path.join(...subPath));
         if (normalizedSubPath.startsWith('/') || normalizedSubPath.startsWith('\\')) {
             normalizedSubPath = normalizedSubPath.slice(1);
         }
         if (!normalizedSubPath.length) {
-            return missionPath;
+            return basePath;
         }
-        const totalPath = this.paths.resolve(missionPath, normalizedSubPath);
+        const totalPath = this.paths.resolve(basePath, normalizedSubPath);
         if (
-            !totalPath.startsWith(missionPath)
+            !totalPath.startsWith(basePath)
             || totalPath.includes('..')
             || totalPath.includes('\0')
         ) {
@@ -53,26 +64,61 @@ export class MissionFiles extends IService {
         return totalPath;
     }
 
-    public async readMissionFile(file: string): Promise<string> {
-        const filePath = await this.getMissionPath(file);
+    private async readFile(filePath: string): Promise<string> {
         if (!filePath) {
             return null;
         }
         return String(await this.fs.promises.readFile(filePath, { encoding: 'utf-8' }));
     }
 
-    public async readMissionDir(dir: string): Promise<string[]> {
-        const filePath = await this.getMissionPath(dir);
-        if (!filePath) {
+    public async readMissionFile(file: string): Promise<string> {
+        const filePath = await this.getMissionPath(file);
+        return this.readFile(filePath);
+    }
+
+    public async readProfileFile(file: string): Promise<string> {
+        const filePath = await this.getProfilePath(file);
+        return this.readFile(filePath);
+    }
+
+    private async readDir(dirPath: string): Promise<string[]> {
+        if (!dirPath) {
             return [];
         }
-        return (await (this.fs.promises.readdir(filePath, { withFileTypes: true })))
+        return (await (this.fs.promises.readdir(dirPath, { withFileTypes: true })))
             .map((x) => {
                 if (x.isDirectory() && !x.name.endsWith('/')) {
                     return `${x.name}/`;
                 }
                 return x.name;
             });
+    }
+
+    public async readMissionDir(dir: string): Promise<string[]> {
+        const dirPath = await this.getMissionPath(dir);
+        return this.readDir(dirPath);
+    }
+
+    public async readProfileDir(dir: string): Promise<string[]> {
+        const dirPath = await this.getProfilePath(dir);
+        return this.readDir(dirPath);
+    }
+
+    private async writeFile(
+        filePath: string,
+        content: string,
+        createBackup?: boolean,
+    ): Promise<void> {
+        if (!filePath || !content) {
+            return;
+        }
+        if (createBackup) {
+            await this.backup.createBackup();
+        }
+        await this.fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+        await this.fs.promises.writeFile(filePath, content);
+
+        await this.hooks.executeHooks(HookTypeEnum.missionChanged);
     }
 
     public async writeMissionFile(
@@ -84,16 +130,19 @@ export class MissionFiles extends IService {
             return;
         }
         const filePath = await this.getMissionPath(file);
-        if (!filePath) {
-            return null;
-        }
-        if (createBackup) {
-            await this.backup.createBackup();
-        }
-        await this.fs.promises.mkdir(path.dirname(filePath), { recursive: true });
-        await this.fs.promises.writeFile(filePath, content);
+        return this.writeFile(filePath, content, createBackup);
+    }
 
-        await this.hooks.executeHooks(HookTypeEnum.missionChanged);
+    public async writeProfileFile(
+        file: string,
+        content: string,
+        createBackup?: boolean,
+    ): Promise<void> {
+        if (!file || !content) {
+            return;
+        }
+        const filePath = await this.getProfilePath(file);
+        return this.writeFile(filePath, content, createBackup);
     }
 
 }
