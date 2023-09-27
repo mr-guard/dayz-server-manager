@@ -83,7 +83,7 @@
                     </button>
                 </div>
             </div>
-            <strong>Server</strong>
+            <strong>RCON</strong>
             <hr>
             <div class="row spaced">
                 <div class="col-md-3">
@@ -94,6 +94,26 @@
                 <div class="col-md-3">
                     <button class="btn btn-primary" (click)="unlockServer()">
                         UnLock Server
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary" (click)="kickAll()">
+                        Kick All
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary" (click)="shutdown()">
+                        Shutdown
+                    </button>
+                </div>
+            </div>
+            <div class="row spaced">
+                <div class="col-md-9">
+                    <input class="form-control form-control" #globalMessageInput>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary" (click)="sendMessage(globalMessageInput.value); globalMessageInput.value = '';">
+                        Send Global Message
                     </button>
                 </div>
             </div>

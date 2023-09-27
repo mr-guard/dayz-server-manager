@@ -123,7 +123,7 @@ export class ValueRenderer extends CategoryRenderer implements ICellRendererAngu
         for (let i = 1; i <= 15; i++) {
             this.dropdownList.push({
                 name: `Tier${i}`,
-                label: (i <= 4 ? `Tier${i}` : `Tier${i} (custom maps only)`),
+                label: (i <= 4 ? `Tier${i}` : `Tier${i}*`),
             });
         }
     }
@@ -214,6 +214,16 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
 })
 export class TypesComponent implements OnInit {
 
+    public _lockedWidth = false;
+
+    public set lockedWidth(locked: boolean) {
+        this._lockedWidth = locked;
+        this.setCols();
+    }
+    public get lockedWidth(): boolean {
+        return this._lockedWidth;
+    }
+
     public loading = false;
     public submitting = false;
 
@@ -248,265 +258,279 @@ export class TypesComponent implements OnInit {
         resizable: true,
     };
 
-    public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [
-        {
-            headerName: 'Name',
-            valueGetter: (params) => {
-                return params.data?.$.name;
-            },
-            valueSetter: (params) => {
-                params.data.$.name = params.newValue;
-                return true;
-            },
-            minWidth: 150,
-            headerTooltip: 'Class Name of the item',
-        },
-        {
-            headerName: 'Categories',
-            valueGetter: (params) => {
-                return params.data?.category?.map((x) => ({
-                    name: x.$.name,
-                })) ?? [];
-            },
-            valueSetter: (params) => {
-                console.log(params);
-                params.data.category = params.newValue.map((x) => ({
-                    $: {
-                        name: x.name,
-                    },
-                }));
-                return true;
-            },
-            cellRenderer: CategoryRenderer,
-            editable: false,
-            filter: false,
-            minWidth: 175,
-            headerTooltip: 'Categories of this item. Used to determine general usage (Must exist in area map)',
-        },
-        {
-            headerName: 'Values',
-            valueGetter: (params) => {
-                return params.data?.value?.map((x) => ({
-                    name: x.$.name,
-                })) ?? [];
-            },
-            valueSetter: (params) => {
-                console.log(params);
-                params.data.value = params.newValue.map((x) => ({
-                    $: {
-                        name: x.name,
-                    },
-                }));
-                return true;
-            },
-            cellRenderer: ValueRenderer,
-            editable: false,
-            filter: false,
-            minWidth: 175,
-            headerTooltip: 'Tiers of the item (defines the quality that places new to have to spawn this item) (Must exist in area map)',
-        },
-        {
-            headerName: 'Usages',
-            valueGetter: (params) => {
-                return params.data?.usage?.map((x) => ({
-                    name: x.$.name,
-                })) ?? [];
-            },
-            valueSetter: (params) => {
-                console.log(params);
-                params.data.usage = params.newValue.map((x) => ({
-                    $: {
-                        name: x.name,
-                    },
-                }));
-                return true;
-            },
-            cellRenderer: UsageRenderer,
-            editable: false,
-            filter: false,
-            minWidth: 175,
-            headerTooltip: 'The categories of places to spawn this item (Must exist in area map)',
-        },
-        {
-            headerName: 'Nominal',
-            valueGetter: (params) => Number(params.data?.nominal[0]),
-            valueSetter: (params) => {
-                params.data.nominal[0] = String(params.newValue);
-
-                // auto validate min <= nominal
-                if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
-                    // eslint-disable-next-line prefer-destructuring
-                    params.data.min[0] = params.data.nominal[0];
-                }
-
-                return true;
-            },
-            minWidth: 75,
-            headerTooltip: 'The targeted amount of items to be spawned in world/inventories/players (must be higher or equal to min)',
-        },
-        {
-            headerName: 'LifeTime',
-            valueGetter: (params) => Number(params.data?.lifetime[0]),
-            valueSetter: (params) => {
-                params.data.lifetime[0] = String(params.newValue);
-                return true;
-            },
-            minWidth: 100,
-            headerTooltip: 'Despawn time of this item',
-        },
-        {
-            headerName: 'Restock',
-            valueGetter: (params) => Number(params.data?.restock[0]),
-            valueSetter: (params) => {
-                params.data.restock[0] = String(params.newValue);
-                return true;
-            },
-            minWidth: 75,
-            headerTooltip: 'If the minimum amount of this item is reached, the CE will wait this amount of time until its respawning again.',
-        },
-        {
-            headerName: 'Min',
-            valueGetter: (params) => Number(params.data?.min[0]),
-            valueSetter: (params) => {
-                params.data.min[0] = String(params.newValue);
-
-                // auto validate min <= nominal
-                if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
-                    // eslint-disable-next-line prefer-destructuring
-                    params.data.nominal[0] = params.data.min[0];
-                }
-
-                return true;
-            },
-            minWidth: 50,
-            headerTooltip: 'Minimum amount of this item in the world',
-        },
-        {
-            headerName: 'QuantMin',
-            valueGetter: (params) => Number(params.data?.quantmin[0]),
-            valueSetter: (params) => {
-                params.data.quantmin[0] = String(params.newValue);
-
-                // auto validate both min and max either -1 or some value
-                if (params.data.quantmin[0] === '-1' && params.data.quantmax[0] !== '-1') {
-                    params.data.quantmax[0] = '-1';
-                // auto validate min <= max
-                } else if (params.data.quantmin[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
-                    // eslint-disable-next-line prefer-destructuring
-                    params.data.quantmax[0] = params.data.quantmin[0];
-                }
-
-                return true;
-            },
-            headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
-        },
-        {
-            headerName: 'QuantMax',
-            valueGetter: (params) => Number(params.data?.quantmax[0]),
-            valueSetter: (params) => {
-                params.data.quantmax[0] = String(params.newValue);
-
-                // auto validate both min and max either -1 or some value
-                if (params.data.quantmax[0] === '-1' && params.data.quantmin[0] !== '-1') {
-                    params.data.quantmin[0] = '-1';
-                // auto validate min <= max
-                } else if (params.data.quantmax[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
-                    // eslint-disable-next-line prefer-destructuring
-                    params.data.quantmin[0] = params.data.quantmax[0];
-                }
-
-                return true;
-            },
-            headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
-        },
-        {
-            headerName: 'Cost',
-            valueGetter: (params) => Number(params.data?.cost[0]),
-            valueSetter: (params) => {
-                params.data.cost[0] = String(params.newValue);
-                return true;
-            },
-            minWidth: 50,
-            headerTooltip: 'Priority in the spawn queue. Pretty much always 100 unless you want to make items less likely to spawn',
-        },
-        {
-            headerName: 'Count in Cargo',
-            valueGetter: (params) => params.data?.flags[0].$.count_in_cargo === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.count_in_cargo = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether the total amount of this item includes items in crates, containers, vehicles, backpacks etc',
-        },
-        {
-            headerName: 'Count in Hoarder',
-            valueGetter: (params) => params.data?.flags[0].$.count_in_hoarder === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.count_in_hoarder = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether the total amount of this item includes items in stashes, tents, barrels etc',
-        },
-        {
-            headerName: 'Count in Map',
-            valueGetter: (params) => params.data?.flags[0].$.count_in_map === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.count_in_map = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether the total amount of this item includes items in buildings',
-        },
-        {
-            headerName: 'Count in Player',
-            valueGetter: (params) => params.data?.flags[0].$.count_in_player === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.count_in_player = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether the total amount of this item includes items in player inventories',
-        },
-        {
-            headerName: 'crafted',
-            valueGetter: (params) => params.data?.flags[0].$.crafted === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.crafted = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether this item is made by crafting',
-        },
-        {
-            headerName: 'deloot',
-            valueGetter: (params) => params.data?.flags[0].$.deloot === '1',
-            valueSetter: (params) => {
-                params.data.flags[0].$.deloot = params.newValue ? '1' : '0';
-                return true;
-            },
-            sortable: false,
-            filter: false,
-            cellRenderer: CheckboxRenderer,
-            headerTooltip: 'Wether this item is spawned at dynamic events',
-        },
-    ];
+    public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [];
 
     public constructor(
         public appCommon: AppCommonService,
         public maintenance: MaintenanceService,
-    ) {}
+    ) {
+        this.setCols();
+    }
+
+    private setCols(): void {
+        this.typesColumnDefs = [
+            {
+                headerName: 'Name',
+                valueGetter: (params) => {
+                    return params.data?.$.name;
+                },
+                valueSetter: (params) => {
+                    params.data.$.name = params.newValue;
+                    return true;
+                },
+                minWidth: this.minWidth(150),
+                headerTooltip: 'Class Name of the item',
+            },
+            {
+                headerName: 'Categories',
+                valueGetter: (params) => {
+                    return params.data?.category?.map((x) => ({
+                        name: x.$.name,
+                    })) ?? [];
+                },
+                valueSetter: (params) => {
+                    console.log(params);
+                    params.data.category = params.newValue.map((x) => ({
+                        $: {
+                            name: x.name,
+                        },
+                    }));
+                    return true;
+                },
+                cellRenderer: CategoryRenderer,
+                editable: false,
+                filter: false,
+                minWidth: this.minWidth(175),
+                headerTooltip: 'Categories of this item. Used to determine general usage (Must exist in area map)',
+            },
+            {
+                headerName: 'Values',
+                valueGetter: (params) => {
+                    return params.data?.value?.map((x) => ({
+                        name: x.$.name,
+                    })) ?? [];
+                },
+                valueSetter: (params) => {
+                    console.log(params);
+                    params.data.value = params.newValue.map((x) => ({
+                        $: {
+                            name: x.name,
+                        },
+                    }));
+                    return true;
+                },
+                cellRenderer: ValueRenderer,
+                editable: false,
+                filter: false,
+                minWidth: this.minWidth(175),
+                headerTooltip: 'Tiers of the item (defines the quality that places new to have to spawn this item). Must exist in area map. * = custom maps only.',
+            },
+            {
+                headerName: 'Usages',
+                valueGetter: (params) => {
+                    return params.data?.usage?.map((x) => ({
+                        name: x.$.name,
+                    })) ?? [];
+                },
+                valueSetter: (params) => {
+                    console.log(params);
+                    params.data.usage = params.newValue.map((x) => ({
+                        $: {
+                            name: x.name,
+                        },
+                    }));
+                    return true;
+                },
+                cellRenderer: UsageRenderer,
+                editable: false,
+                filter: false,
+                minWidth: this.minWidth(175),
+                headerTooltip: 'The categories of places to spawn this item (Must exist in area map)',
+            },
+            {
+                headerName: 'Nominal',
+                valueGetter: (params) => Number(params.data?.nominal[0]),
+                valueSetter: (params) => {
+                    params.data.nominal[0] = String(params.newValue);
+
+                    // auto validate min <= nominal
+                    if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
+                        // eslint-disable-next-line prefer-destructuring
+                        params.data.min[0] = params.data.nominal[0];
+                    }
+
+                    return true;
+                },
+                minWidth: this.minWidth(75),
+                headerTooltip: 'The targeted amount of items to be spawned in world/inventories/players (must be higher or equal to min)',
+            },
+            {
+                headerName: 'LifeTime',
+                valueGetter: (params) => Number(params.data?.lifetime[0]),
+                valueSetter: (params) => {
+                    params.data.lifetime[0] = String(params.newValue);
+                    return true;
+                },
+                minWidth: this.minWidth(100),
+                headerTooltip: 'Despawn time of this item',
+            },
+            {
+                headerName: 'Restock',
+                valueGetter: (params) => Number(params.data?.restock[0]),
+                valueSetter: (params) => {
+                    params.data.restock[0] = String(params.newValue);
+                    return true;
+                },
+                minWidth: this.minWidth(75),
+                headerTooltip: 'If the minimum amount of this item is reached, the CE will wait this amount of time until its respawning again.',
+            },
+            {
+                headerName: 'Min',
+                valueGetter: (params) => Number(params.data?.min[0]),
+                valueSetter: (params) => {
+                    params.data.min[0] = String(params.newValue);
+
+                    // auto validate min <= nominal
+                    if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
+                        // eslint-disable-next-line prefer-destructuring
+                        params.data.nominal[0] = params.data.min[0];
+                    }
+
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                headerTooltip: 'Minimum amount of this item in the world',
+            },
+            {
+                headerName: 'QuantMin',
+                valueGetter: (params) => Number(params.data?.quantmin[0]),
+                valueSetter: (params) => {
+                    params.data.quantmin[0] = String(params.newValue);
+
+                    // auto validate both min and max either -1 or some value
+                    if (params.data.quantmin[0] === '-1' && params.data.quantmax[0] !== '-1') {
+                        params.data.quantmax[0] = '-1';
+                    // auto validate min <= max
+                    } else if (params.data.quantmin[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
+                        // eslint-disable-next-line prefer-destructuring
+                        params.data.quantmax[0] = params.data.quantmin[0];
+                    }
+
+                    return true;
+                },
+                minWidth: this.minWidth(25),
+                headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
+            },
+            {
+                headerName: 'QuantMax',
+                valueGetter: (params) => Number(params.data?.quantmax[0]),
+                valueSetter: (params) => {
+                    params.data.quantmax[0] = String(params.newValue);
+
+                    // auto validate both min and max either -1 or some value
+                    if (params.data.quantmax[0] === '-1' && params.data.quantmin[0] !== '-1') {
+                        params.data.quantmin[0] = '-1';
+                    // auto validate min <= max
+                    } else if (params.data.quantmax[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
+                        // eslint-disable-next-line prefer-destructuring
+                        params.data.quantmin[0] = params.data.quantmax[0];
+                    }
+
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
+            },
+            {
+                headerName: 'Cost',
+                valueGetter: (params) => Number(params.data?.cost[0]),
+                valueSetter: (params) => {
+                    params.data.cost[0] = String(params.newValue);
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                headerTooltip: 'Priority in the spawn queue. Pretty much always 100 unless you want to make items less likely to spawn',
+            },
+            {
+                headerName: 'Count in Cargo',
+                valueGetter: (params) => params.data?.flags[0].$.count_in_cargo === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.count_in_cargo = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether the total amount of this item includes items in crates, containers, vehicles, backpacks etc',
+            },
+            {
+                headerName: 'Count in Hoarder',
+                valueGetter: (params) => params.data?.flags[0].$.count_in_hoarder === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.count_in_hoarder = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether the total amount of this item includes items in stashes, tents, barrels etc',
+            },
+            {
+                headerName: 'Count in Map',
+                valueGetter: (params) => params.data?.flags[0].$.count_in_map === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.count_in_map = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether the total amount of this item includes items in buildings',
+            },
+            {
+                headerName: 'Count in Player',
+                valueGetter: (params) => params.data?.flags[0].$.count_in_player === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.count_in_player = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether the total amount of this item includes items in player inventories',
+            },
+            {
+                headerName: 'crafted',
+                valueGetter: (params) => params.data?.flags[0].$.crafted === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.crafted = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether this item is made by crafting',
+            },
+            {
+                headerName: 'deloot',
+                valueGetter: (params) => params.data?.flags[0].$.deloot === '1',
+                valueSetter: (params) => {
+                    params.data.flags[0].$.deloot = params.newValue ? '1' : '0';
+                    return true;
+                },
+                minWidth: this.minWidth(50),
+                sortable: false,
+                filter: false,
+                cellRenderer: CheckboxRenderer,
+                headerTooltip: 'Wether this item is spawned at dynamic events',
+            },
+        ];
+    }
 
     public async onSubmit(): Promise<void> {
         if (this.loading || this.submitting) return;
@@ -574,12 +598,25 @@ export class TypesComponent implements OnInit {
             }
 
             this.files = ((await Promise.all(typesFiles.map(async (x) => {
-                return {
-                    file: x,
-                    content: await xml.parseStringPromise(
-                        await this.appCommon.fetchMissionFile(x).toPromise(),
-                    ),
-                };
+                try {
+                    const fileContent = await this.appCommon.fetchMissionFile(x).toPromise();
+                    return {
+                        file: x,
+                        content: await xml.parseStringPromise(fileContent),
+                    };
+                } catch (e) {
+                    console.error(`Failed to load file: ${x}`, e);
+                    this.outcomeBadge = {
+                        success: false,
+                        message: `Failed to load file: ${x}`,
+                    };
+                    return {
+                        file: x,
+                        content: {
+                            types: { type: [] },
+                        },
+                    };
+                }
             }))) as {
                 file: string;
                 content: TypesXml;
@@ -675,6 +712,10 @@ export class TypesComponent implements OnInit {
             document.body.removeChild(elem);
         }
         /* eslint-enable no-undef */
+    }
+
+    private minWidth(width: number): number {
+        return this.lockedWidth ? width * 2 : width;
     }
 
 }
