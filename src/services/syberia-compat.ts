@@ -1,3 +1,6 @@
+/* istanbul ignore file */
+/* No tests because it is experimental and changes a lot */
+
 import { inject, injectable, singleton } from 'tsyringe';
 import { IStatefulService } from '../types/service';
 import { LoggerFactory } from './loggerfactory';

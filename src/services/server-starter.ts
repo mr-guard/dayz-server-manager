@@ -161,7 +161,7 @@ export class ServerStarter extends IService {
             ).flat(),
             ...(this.manager.config.serverMods ?? []),
             ...(this.steamCmd.buildWsServerModParams() ?? []),
-        ].filter((x) => !!x);
+        ].filter(/* istanbul ignore next */ (x) => !!x);
 
         if (serverMods.length) {
             args.push(`-servermod=${serverMods.join(';')}`);

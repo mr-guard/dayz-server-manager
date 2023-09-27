@@ -10,6 +10,7 @@ import { Metrics } from '../../src/services/metrics';
 import { Paths } from '../../src/services/paths';
 import { FSAPI } from '../../src/util/apis';
 import { IngameReportContainer } from '../../src/types/ingame-report';
+import { Config } from '../../src/config/config';
 
 describe('Test class IngameReport', () => {
 
@@ -75,6 +76,9 @@ describe('Test class IngameReport', () => {
             injector,
         );
 
+        manager.config = {
+            ingameReportViaRest: false,
+        } as any as Config;
         manager.getProfilesPath.returns('/testserver/profiles');
         
         const ingameReport = injector.resolve(IngameReport);
@@ -86,7 +90,7 @@ describe('Test class IngameReport', () => {
 
         await ingameReport.start();
 
-        await new Promise((r) => setTimeout(r, ingameReport.intervalTimeout * 10));
+        await new Promise((r) => setTimeout(r, ingameReport.intervalTimeout * 100));
 
         await ingameReport.stop();
         

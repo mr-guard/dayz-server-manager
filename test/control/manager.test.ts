@@ -70,6 +70,18 @@ describe('Test class Manager', () => {
         expect(resultDef).to.equal(path.join(process.cwd(), 'DayZServer'));
     });
 
+    it('Manager-getProfilesPath', () => {
+        const manager = getConfiguredManager();
+        const result = manager.getProfilesPath();
+
+        manager.config.serverPath = null!;
+        const resultDef = manager.getProfilesPath();
+
+        // Expect result
+        expect(result).to.equal(path.join(process.cwd(), 'DayZServer', 'profiles'));
+        expect(resultDef).to.equal(path.join(process.cwd(), 'DayZServer', 'profiles'));
+    });
+
     it('Manager-getServerExePath-abs', () => {
         const manager = getConfiguredManager();
 
@@ -202,6 +214,42 @@ describe('Test class Manager', () => {
         expect(result).to.lengthOf(2);
         expect(result).to.contain('mod1');
         expect(result).to.contain('mod2');
+    });
+
+    it('Manager-getServerModList', () => {
+        const manager = getConfiguredManager();
+        manager.config.steamWsServerMods = [
+            'mod1',
+            {
+                workshopId: 'mod2'
+            },
+            ''
+        ];
+        const result = manager.getServerModIdList();
+
+        // Expect result
+        expect(result).to.lengthOf(2);
+        expect(result).to.contain('mod1');
+        expect(result).to.contain('mod2');
+    });
+
+    
+    it('Manager-getCombinedModList', () => {
+        const manager = getConfiguredManager();
+        manager.config.steamWsServerMods = [
+            'mod-server',
+            ''
+        ];
+        manager.config.steamWsMods = [
+            'mod',
+            ''
+        ];
+        const result = manager.getCombinedModIdList();
+
+        // Expect result
+        expect(result).to.lengthOf(2);
+        expect(result).to.contain('mod-server');
+        expect(result).to.contain('mod');
     });
 
 });

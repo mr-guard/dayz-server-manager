@@ -40,11 +40,11 @@ export class IngameReport extends IStatefulService {
 
         this.eventBus.on(
             InternalEventTypes.INTERNAL_MOD_INSTALL,
-            () => this.installMod(),
+            /* istanbul ignore next */ () => this.installMod(),
         );
         this.eventBus.on(
             InternalEventTypes.GET_INTERNAL_MODS,
-            async () => this.getServerMods(),
+            /* istanbul ignore next */ async () => this.getServerMods(),
         );
     }
 

@@ -252,6 +252,18 @@ describe('Test Interface', () => {
         expect(response.body).to.equal('test');
     });
 
+    it('execute-shutdown', async () => {
+        const handler = injector.resolve(Interface);
+        const request = {
+            resource: 'shutdown',
+            user: 'admin',
+        } as any as Request;
+        const response = await handler.execute(request);
+
+        expect(response.status).to.equal(200);
+        expect(rcon.shutdown.called).to.be.true;
+    });
+
     it('execute-lock', async () => {
         const handler = injector.resolve(Interface);
         const request = {
@@ -627,6 +639,52 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
         expect(response.status).to.equal(200);
         expect(missionFiles.readMissionDir.called).to.be.true;
+    });
+
+    it('execute-writeprofilefile', async () => {
+        const handler = injector.resolve(Interface);
+        const request = {
+            resource: 'writeprofilefile',
+            user: 'admin',
+            body: {
+                file: 'test',
+                content: 'test'
+            }
+        } as any as Request;
+        const response = await handler.execute(request);
+
+        expect(response.status).to.equal(200);
+        expect(missionFiles.writeProfileFile.called).to.be.true;
+    });
+
+    it('execute-readprofilefile', async () => {
+        missionFiles.readProfileFile.resolves('test-content');
+        const handler = injector.resolve(Interface);
+        const request = {
+            resource: 'readprofilefile',
+            user: 'admin',
+            query: {
+                file: 'test',
+            }
+        } as any as Request;
+        const response = await handler.execute(request);
+        expect(response.status).to.equal(200);
+        expect(missionFiles.readProfileFile.called).to.be.true;
+    });
+
+    it('execute-readprofiledir', async () => {
+        missionFiles.readProfileDir.resolves([]);
+        const handler = injector.resolve(Interface);
+        const request = {
+            resource: 'readprofiledir',
+            user: 'admin',
+            query: {
+                dir: '/'
+            }
+        } as any as Request;
+        const response = await handler.execute(request);
+        expect(response.status).to.equal(200);
+        expect(missionFiles.readProfileDir.called).to.be.true;
     });
 
     it('execute-serverinfo', async () => {

@@ -1,3 +1,6 @@
+/* istanbul ignore file */
+/* No tests because its experimental and changes a lot */
+
 import * as express from 'express';
 import * as path from 'path';
 import { loggerMiddleware } from '../middleware/logger';

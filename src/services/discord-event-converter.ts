@@ -1,3 +1,6 @@
+/* istanbul ignore file */
+/* Not unit testing this class because it is purely integration */
+
 import { injectable, singleton } from "tsyringe";
 import { IService } from "../types/service";
 import { LoggerFactory } from "./loggerfactory";

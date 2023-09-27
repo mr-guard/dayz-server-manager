@@ -433,6 +433,9 @@ describe('Test class SteamCMD', () => {
                         '1234567': {
                             'meta.cpp': 'name = "Test Mod"',
                         },
+                        '5678901': {
+                            'meta.cpp': 'name = "Server Test Mod"',
+                        },
                     },
                 },
             },
@@ -445,13 +448,16 @@ describe('Test class SteamCMD', () => {
             steamWorkshopPath: 'testwspath'
         } as any;
         manager.getModIdList.returns(['1234567']);
+        manager.getServerModIdList.returns(['5678901']);
         manager.getServerPath.returns('testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
         
         const res = steamCmd.buildWsModParams();
+        const resServer = steamCmd.buildWsServerModParams();
 
         expect(res).to.include('@Test-Mod');
+        expect(resServer).to.include('@Server-Test-Mod');
     });
 
     
@@ -487,7 +493,7 @@ describe('Test class SteamCMD', () => {
             steamWorkshopPath: 'testwspath',
             updateModsMaxBatchSize: 2,
         } as any;
-        manager.getModIdList.returns(modList);
+        manager.getCombinedModIdList.returns(modList);
         manager.getServerPath.returns('testserver');
         steamMeta.modNeedsUpdate.callsFake(async (mods) => mods.filter((x) => x !== '3333333'));
         steamMeta.getModsMetaData.resolves([
@@ -563,7 +569,7 @@ describe('Test class SteamCMD', () => {
         manager.config = {
             steamWorkshopPath: 'testwspath'
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
@@ -593,7 +599,7 @@ describe('Test class SteamCMD', () => {
         manager.config = {
             steamWorkshopPath: 'testwspath'
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
@@ -625,7 +631,7 @@ describe('Test class SteamCMD', () => {
         manager.config = {
             steamWorkshopPath: 'testwspath'
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
@@ -660,7 +666,7 @@ describe('Test class SteamCMD', () => {
         manager.config = {
             steamWorkshopPath: 'testwspath'
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
@@ -700,7 +706,7 @@ describe('Test class SteamCMD', () => {
             steamWorkshopPath: 'testwspath',
             linkModDirs: false,
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
@@ -742,7 +748,7 @@ describe('Test class SteamCMD', () => {
             steamWorkshopPath: 'testwspath',
             linkModDirs: true,
         } as any;
-        manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
         const steamCmd = injector.resolve(SteamCMD);
