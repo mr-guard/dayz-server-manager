@@ -14,6 +14,7 @@ import { inject, injectable, singleton } from 'tsyringe';
 import { Database } from '../services/database';
 import { IngameReport } from '../services/ingame-report';
 import { FSAPI, InjectionTokens } from '../util/apis';
+import { Paths } from '../services/paths';
 
 interface IngameConfig {
     host: string;
@@ -37,6 +38,7 @@ export class IngameREST extends IStatefulService {
         private manager: Manager,
         private db: Database,
         private ingameReport: IngameReport,
+        private paths: Paths,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('IngameREST'));
@@ -58,6 +60,7 @@ export class IngameREST extends IStatefulService {
 
         this.host = this.manager.config.publishIngameApi ? '0.0.0.0' : '127.0.0.1';
 
+        this.fs.mkdirSync(this.manager.getProfilesPath(), { recursive: true });
         const ingameConfigPath = path.join(this.manager.getProfilesPath(), 'DZSMApiOptions.json');
         this.fs.writeFileSync(
             ingameConfigPath,
