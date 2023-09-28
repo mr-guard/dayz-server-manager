@@ -18,6 +18,7 @@
                                 [groupHeaderHeight]="75"
                                 style="width: 100%; height: 100%;"
                                 class="ag-theme-alpine"
+                                #dataGrid
                             >
                             </ag-grid-angular>
 
@@ -27,27 +28,29 @@
             </ul>
         </div>
         <div class="card-body" *ngIf="!loading">
-            <div>
-                <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
-                <input type="checkbox" [(ngModel)]="lockedWidth">
-            </div>
-            <ngb-alert  *ngIf="outcomeBadge"
-                        [type]="outcomeBadge.success ? 'success' : 'danger'"
-            >
-                {{ outcomeBadge.message }}
-            </ngb-alert>
-            <ngb-alert  *ngIf="validationErrors?.length"
-                        type="danger"
-            >
+            <div class="d-flex flex-row justify-content-between">
                 <div>
-                    Errors:
-                    <ul style="max-height: 10vh; overflow-y: scroll;">
-                        <li *ngFor="let error of validationErrors">
-                            {{ error }}
-                        </li>
-                    </ul>
+                    <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
+                    <input type="checkbox" [(ngModel)]="lockedWidth">
                 </div>
-            </ngb-alert>
+                <ngb-alert  *ngIf="outcomeBadge"
+                            [type]="outcomeBadge.success ? 'success' : 'danger'"
+                >
+                    {{ outcomeBadge.message }}
+                </ngb-alert>
+                <ngb-alert  *ngIf="validationErrors?.length"
+                            type="danger"
+                >
+                    <div>
+                        Errors:
+                        <ul style="max-height: 10vh; overflow-y: scroll;">
+                            <li *ngFor="let error of validationErrors">
+                                {{ error }}
+                            </li>
+                        </ul>
+                    </div>
+                </ngb-alert>
+            </div>
             <form (ngSubmit)="onSubmit()" #configForm="ngForm">
 
                 <div [ngbNavOutlet]="nav"></div>
@@ -61,20 +64,39 @@
                     </button>
                     <div class="d-flex flex-row">
                         <div class="d-flex flex-row btn-group">
+                            <input #absoluteChangeInput style="margin-right: -2px;">
+                            <select #absoluteAttrChangeInput>
+                                <option *ngFor="let item of absoluteAttrs; let idx = index"
+                                        [ngValue]="item.value"
+                                        [value]="item.value"
+                                        [selected]="idx === 0"
+                                >
+                                    {{ item.label }}
+                                </option>
+                            </select>
+                            <button type="button" class="btn btn-success"
+                                    (click)="setAttr(absoluteAttrChangeInput.value, absoluteChangeInput.value)"
+                                    title="Set the value to the given value"
+                            >
+                                Set
+                            </button>
+                        </div>
+                        <div class="d-flex flex-row btn-group" style="margin-left: 15px;">
                             <input type="number" #percentChangeInput [value]="100" style="margin-right: -2px;">
                             <select #attrChangeInput>
-                                <option value="nominal" selected>Nominal</option>
-                                <option value="lifetime">Lifetime</option>
-                                <option value="restock">Restock</option>
-                                <option value="min">Min</option>
-                                <option value="quantmin">Quant Min</option>
-                                <option value="quantmax">Quant Max</option>
-                                <option value="cost">Cost</option>
+                                <option *ngFor="let item of percentAttrs; let idx = index"
+                                        [ngValue]="item.value"
+                                        [value]="item.value"
+                                        [selected]="idx === 0"
+                                >
+                                    {{ item.label }}
+                                </option>
                             </select>
                             <button type="button" class="btn btn-success"
                                     (click)="changeAttrInPercent(attrChangeInput.value, percentChangeInput.value)"
+                                    title="Adjusts the values to by the given percentage. Enter 200 to double the value, enter 50 to turn it half"
                             >
-                                Multiply
+                                Multiply (%)
                             </button>
                         </div>
                         <div class="d-flex flex-row" style="margin-left: 15px;">
@@ -95,7 +117,7 @@
 
 
                         <div class="d-flex flex-row" style="align-items: center;">
-                            <label class="form-label">Create Backup</label>
+                            <label class="form-label" style="white-space: nowrap;">Create Backup</label>
                             <input type="checkbox" class="form-control form-control-sm mx-1"
                                    [(ngModel)]="withBackup"
                                    [ngModelOptions]="{standalone: true}"
@@ -103,7 +125,7 @@
                             >
                         </div>
                         <div class="d-flex flex-row" style="align-items: center;">
-                            <label class="form-label">Restart Server</label>
+                            <label class="form-label" style="white-space: nowrap;">Restart Server</label>
                             <input type="checkbox" class="form-control form-control-sm mx-1"
                                    [(ngModel)]="withRestart"
                                    [ngModelOptions]="{standalone: true}"

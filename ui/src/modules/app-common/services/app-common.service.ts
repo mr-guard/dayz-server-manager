@@ -401,4 +401,47 @@ export class AppCommonService {
         );
     }
 
+    public fetchProfileFile(file: string): Observable<string> {
+        return this.httpClient.get(
+            `/api/readprofilefile`,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                params: {
+                    file,
+                },
+                responseType: 'text',
+            },
+        );
+    }
+
+    public fetchProfileDir(dir: string): Observable<string[]> {
+        return this.httpClient.get<string[]>(
+            `/api/readprofiledir`,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                params: {
+                    dir,
+                },
+            },
+        );
+    }
+
+    public updateProfileFile(file: string, content: string, withBackup?: boolean): Observable<any> {
+        return this.httpClient.post(
+            `/api/writeprofilefile`,
+            {
+                file,
+                content,
+                withBackup,
+            },
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                responseType: 'text',
+            },
+        );
+    }
+
 }

@@ -285,6 +285,14 @@ export class RCON extends IStatefulService {
         } catch (e) {
             if (typeof e === 'object' && (e?.message as string)?.includes('Server connection timed out')) {
                 this.log.log(LogLevel.ERROR, 'Error while executing RCON command: Server connection timed out');
+            } else if (
+                typeof e === 'object'
+                && (
+                    e?.message?.includes('Packet Error: Cleanup')
+                    || e?.message?.includes('PacketCleanupError')
+                )
+            ) {
+                this.log.log(LogLevel.WARN, 'Error while executing RCON command: Message dropped');
             } else {
                 this.log.log(LogLevel.ERROR, 'Error while executing RCON command', e);
             }
