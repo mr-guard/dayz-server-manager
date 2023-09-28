@@ -88,7 +88,7 @@ export class ConfigFileHelper extends IService {
 
         try {
             this.writeConfigFile(
-                commentJson.stringify(config),
+                commentJson.stringify(config, null, 2),
             );
         } catch (e) {
             throw [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
