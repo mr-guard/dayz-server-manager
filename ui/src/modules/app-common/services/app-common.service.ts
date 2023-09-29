@@ -138,12 +138,17 @@ export class AppCommonService {
     private timer: Subscription | undefined;
     private lastUpdate$: number = 0;
 
-    private refreshRate$ = 30;
+    private refreshRate$: number = 30;
 
     public constructor(
         private httpClient: HttpClient,
         private auth: AuthService,
     ) {
+        const savedRefreshRate = localStorage.getItem('DZSM_REFRESH_RATE');
+        if (savedRefreshRate) {
+            this.refreshRate$ = Number(savedRefreshRate) || 30;
+        }
+
         (Object.keys(LogTypeEnum) as LogType[]).forEach(
             (x) => {
                 this.apiFetchers.set(
@@ -184,6 +189,7 @@ export class AppCommonService {
 
     public adjustRefreshRate(rate: number): void {
         this.refreshRate$ = rate;
+        localStorage.setItem('DZSM_REFRESH_RATE', String(rate));
 
         if (this.timer && !this.timer.closed) {
             this.timer.unsubscribe();

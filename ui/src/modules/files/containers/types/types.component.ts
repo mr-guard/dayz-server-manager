@@ -3,7 +3,7 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
 import { AgGridAngular, ICellRendererAngularComp } from 'ag-grid-angular';
-import { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { ColDef, ICellRendererParams, IRowNode } from 'ag-grid-community';
 
 import * as xml from 'xml2js';
 
@@ -225,6 +225,13 @@ export const ExcludesFilter = {
     },
 };
 
+export interface AttributeOperation {
+    operation: (attr: string, value: string | number, node: IRowNode<any>) => void;
+    listOperation?: boolean;
+    numericOperation?: boolean;
+    valueModifier?: (value: string | number, attr: string) => any,
+}
+
 @Component({
     selector: 'sb-types',
     templateUrl: './types.component.html',
@@ -281,7 +288,7 @@ export class TypesComponent implements OnInit {
 
     public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [];
 
-    public absoluteAttrs = [
+    public attrs = [
         { value: "nominal", label: "Nominal" },
         { value: "lifetime", label: "Lifetime" },
         { value: "restock", label: "Restock" },
@@ -289,17 +296,101 @@ export class TypesComponent implements OnInit {
         { value: "quantmin", label: "Quant Min" },
         { value: "quantmax", label: "Quant Max" },
         { value: "cost", label: "Cost" },
+        { value: "value", label: "Value" },
+        { value: "category", label: "Category" },
+        { value: "usage", label: "Usage" },
     ];
 
-    public percentAttrs = [
-        { value: "nominal", label: "Nominal" },
-        { value: "lifetime", label: "Lifetime" },
-        { value: "restock", label: "Restock" },
-        { value: "min", label: "Min" },
-        { value: "quantmin", label: "Quant Min" },
-        { value: "quantmax", label: "Quant Max" },
-        { value: "cost", label: "Cost" },
+    public listAttrs = [
+        'value',
+        'category',
+        'usage',
     ];
+    public numericAttrs = [
+        "nominal",
+        "lifetime",
+        "restock",
+        "min",
+        "quantmin",
+        "quantmax",
+        "cost",
+    ];
+
+    public attrOperations: Record<string, AttributeOperation> = {
+        multiply: {
+            numericOperation: true,
+            operation: (attr, value, node) => {
+                try {
+                    const num = Number(node.data[attr][0]);
+                    if (num && num > 0) {
+                        node.data[attr][0] = String(Math.round(num * (value as number)));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+            valueModifier: (value) => {
+                return Number(value);
+            },
+        },
+        "multiply-percent": {
+            numericOperation: true,
+            operation: (attr, value, node) => {
+                try {
+                    const num = Number(node.data[attr][0]);
+                    if (num && num > 0) {
+                        node.data[attr][0] = String(Math.round(num * (value as number)));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+            valueModifier: (value) => {
+                return Number(value) / 100.0;
+            },
+        },
+        set: {
+            operation: (attr, value, node) => {
+                node.data[attr][0] = value;
+            },
+            valueModifier: (value, attr) => {
+                if (this.numericAttrs.includes(attr)) return Number(value);
+                return String(value);
+            },
+        },
+        add: {
+            numericOperation: true,
+            listOperation: true,
+            operation: (attr, value, node) => {
+                if (this.listAttrs.includes(attr)) {
+                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
+                    if (idx === -1) {
+                        node.data[attr].push({
+                            $: {
+                                name: value,
+                            },
+                        });
+                    }
+                } else {
+                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) + (Number(value) || 0)
+                }
+            },
+        },
+        remove: {
+            numericOperation: true,
+            listOperation: true,
+            operation: (attr, value, node) => {
+                if (this.listAttrs.includes(attr)) {
+                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
+                    if (idx > -1) {
+                        node.data[attr].splice(idx, 1);
+                    }
+                } else {
+                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) - (Number(value) || 0)
+                }
+            },
+        },
+    };
 
     public constructor(
         public appCommon: AppCommonService,
@@ -609,6 +700,9 @@ export class TypesComponent implements OnInit {
     }
 
     public async onSubmit(): Promise<void> {
+        if (!confirm('Submit?')) {
+            return;
+        }
         if (this.loading || this.submitting) return;
         this.submitting = true;
         this.outcomeBadge = undefined;
@@ -642,6 +736,12 @@ export class TypesComponent implements OnInit {
 
     public ngOnInit(): void {
         void this.reset();
+    }
+
+    public resetClicked(): void {
+        if (confirm('Reset?')) {
+            void this.reset();
+        }
     }
 
     public async reset(): Promise<void> {
@@ -708,38 +808,24 @@ export class TypesComponent implements OnInit {
         this.loading = false;
     }
 
-    public setAttr(attr: string, value: string | number): void {
+    public changeAttr(operation: string, attr: string, value: string | number): void {
         if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
             return;
         }
 
-        for (const type of this.files[this.activeTab].content.types.type) {
-            try {
-                type[attr][0] = String(value);
-            } catch (e) {}
-        }
+        const op = this.attrOperations[operation];
+        if (!op) return;
 
-        // trigger change detection
-        this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
-    }
+        if (op.listOperation && !this.listAttrs.includes(attr)) return;
+        else if (op.numericOperation && !this.numericAttrs.includes(attr)) return;
 
-    public changeAttrInPercent(attr: string, percent: string | number): void {
-        if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
-            return;
-        }
-        const multiplier = Number(percent) / 100.0;
+        if (value === undefined || value === null || (typeof value === 'string' && !value)) return;
+        const prepedValue = op.valueModifier ? op.valueModifier(value, attr) : value;
+        if (prepedValue === null || prepedValue === undefined) return;
+
         this.agGrid.api.forEachNodeAfterFilter((x) => {
-            console.warn(x, x.data, attr, x.data[attr])
-            try {
-                const num = Number(x.data[attr][0]);
-                if (num && num > 0) {
-                    x.data[attr][0] = String(num * multiplier);
-                }
-            } catch (e) {
-                console.error(e);
-            }
+            op.operation(attr, prepedValue, x);
         });
-        // this.agGrid.api.redrawRows();
 
         // trigger change detection
         this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
@@ -802,7 +888,7 @@ export class TypesComponent implements OnInit {
     }
 
     protected minWidth(width: number): number {
-        return this.lockedWidth ? width * 2 : width;
+        return this.lockedWidth ? width : width * 2;
     }
 
 }

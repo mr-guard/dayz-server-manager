@@ -13,7 +13,7 @@ import { PlayersModule } from '../players/players.module';
 import { CategoryRenderer, CheckboxRenderer, TypesComponent, UsageRenderer, ValueRenderer } from './containers/types/types.component';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { TypesExpansionComponent } from './containers/types/types-expansion.component';
+import { RarityRenderer, TypesExpansionComponent } from './containers/types/types-expansion.component';
 
 @NgModule({
     imports: [
@@ -37,6 +37,7 @@ import { TypesExpansionComponent } from './containers/types/types-expansion.comp
         ValueRenderer,
         UsageRenderer,
         CheckboxRenderer,
+        RarityRenderer,
         TypesComponent,
         TypesExpansionComponent,
     ],
@@ -45,6 +46,7 @@ import { TypesExpansionComponent } from './containers/types/types-expansion.comp
         ValueRenderer,
         UsageRenderer,
         CheckboxRenderer,
+        RarityRenderer,
         TypesComponent,
         TypesExpansionComponent,
     ],
