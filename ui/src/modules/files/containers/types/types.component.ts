@@ -892,7 +892,6 @@ export class TypesComponent implements OnInit {
     }
 
     public getRowStyle = (params): any => {
-        console.warn(params);
         if (params.data?.nominal?.[0] === '0' || params.data?.nominal?.[0] === 0) {
             return { background: 'lightgrey' };
         }
