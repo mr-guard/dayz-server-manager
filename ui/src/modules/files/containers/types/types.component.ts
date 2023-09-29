@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
-import { ICellRendererAngularComp } from 'ag-grid-angular';
-import { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { AgGridAngular, ICellRendererAngularComp } from 'ag-grid-angular';
+import { ColDef, ICellRendererParams, IRowNode } from 'ag-grid-community';
 
 import * as xml from 'xml2js';
 
-interface TypesName {
+export interface TypesName {
     $: {name: string};
 }
 
-interface TypesFlags {
+export interface TypesFlags {
     $: {
         count_in_cargo: '0' | '1';
         count_in_hoarder: '0' | '1';
@@ -22,7 +22,7 @@ interface TypesFlags {
     };
 }
 
-interface TypesXmlEntry extends TypesName {
+export interface TypesXmlEntry extends TypesName {
     category: TypesName[];
     usage: TypesName[];
     value: TypesName[];
@@ -37,7 +37,7 @@ interface TypesXmlEntry extends TypesName {
     cost: [string];
 }
 
-interface TypesXml {
+export interface TypesXml {
     types: { type: TypesXmlEntry[] };
 }
 
@@ -205,6 +205,32 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
 
 }
 
+export const IncludesFilter = {
+    displayKey: 'includes',
+    displayName: 'includes',
+    predicate: ([filter], cellValue) => {
+        if (!filter) return false;
+        if (!cellValue?.length) return false;
+        return cellValue.some((x) => x?.name?.toLowerCase() === filter?.toLowerCase());
+    },
+};
+
+export const ExcludesFilter = {
+    displayKey: 'excludes',
+    displayName: 'excludes',
+    predicate: ([filter], cellValue) => {
+        if (!filter) return true;
+        if (!cellValue?.length) return true;
+        return !cellValue.some((x) => x?.name?.toLowerCase() === filter?.toLowerCase());
+    },
+};
+
+export interface AttributeOperation {
+    operation: (attr: string, value: string | number, node: IRowNode<any>) => void;
+    listOperation?: boolean;
+    numericOperation?: boolean;
+    valueModifier?: (value: string | number, attr: string) => any,
+}
 
 @Component({
     selector: 'sb-types',
@@ -213,6 +239,8 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
     encapsulation: ViewEncapsulation.None,
 })
 export class TypesComponent implements OnInit {
+
+    @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
 
     public _lockedWidth = false;
 
@@ -237,7 +265,7 @@ export class TypesComponent implements OnInit {
         success: boolean;
     };
 
-    private coreXml: any;
+    protected coreXml: any;
     public files: { file: string; content: TypesXml }[] = [];
 
     public activeTab = 0;
@@ -260,6 +288,110 @@ export class TypesComponent implements OnInit {
 
     public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [];
 
+    public attrs = [
+        { value: "nominal", label: "Nominal" },
+        { value: "lifetime", label: "Lifetime" },
+        { value: "restock", label: "Restock" },
+        { value: "min", label: "Min" },
+        { value: "quantmin", label: "Quant Min" },
+        { value: "quantmax", label: "Quant Max" },
+        { value: "cost", label: "Cost" },
+        { value: "value", label: "Value" },
+        { value: "category", label: "Category" },
+        { value: "usage", label: "Usage" },
+    ];
+
+    public listAttrs = [
+        'value',
+        'category',
+        'usage',
+    ];
+    public numericAttrs = [
+        "nominal",
+        "lifetime",
+        "restock",
+        "min",
+        "quantmin",
+        "quantmax",
+        "cost",
+    ];
+
+    public attrOperations: Record<string, AttributeOperation> = {
+        multiply: {
+            numericOperation: true,
+            operation: (attr, value, node) => {
+                try {
+                    const num = Number(node.data[attr][0]);
+                    if (num && num > 0) {
+                        node.data[attr][0] = String(Math.round(num * (value as number)));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+            valueModifier: (value) => {
+                return Number(value);
+            },
+        },
+        "multiply-percent": {
+            numericOperation: true,
+            operation: (attr, value, node) => {
+                try {
+                    const num = Number(node.data[attr][0]);
+                    if (num && num > 0) {
+                        node.data[attr][0] = String(Math.round(num * (value as number)));
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+            valueModifier: (value) => {
+                return Number(value) / 100.0;
+            },
+        },
+        set: {
+            operation: (attr, value, node) => {
+                node.data[attr][0] = value;
+            },
+            valueModifier: (value, attr) => {
+                if (this.numericAttrs.includes(attr)) return Number(value);
+                return String(value);
+            },
+        },
+        add: {
+            numericOperation: true,
+            listOperation: true,
+            operation: (attr, value, node) => {
+                if (this.listAttrs.includes(attr)) {
+                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
+                    if (idx === -1) {
+                        node.data[attr].push({
+                            $: {
+                                name: value,
+                            },
+                        });
+                    }
+                } else {
+                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) + (Number(value) || 0)
+                }
+            },
+        },
+        remove: {
+            numericOperation: true,
+            listOperation: true,
+            operation: (attr, value, node) => {
+                if (this.listAttrs.includes(attr)) {
+                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
+                    if (idx > -1) {
+                        node.data[attr].splice(idx, 1);
+                    }
+                } else {
+                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) - (Number(value) || 0)
+                }
+            },
+        },
+    };
+
     public constructor(
         public appCommon: AppCommonService,
         public maintenance: MaintenanceService,
@@ -267,7 +399,7 @@ export class TypesComponent implements OnInit {
         this.setCols();
     }
 
-    private setCols(): void {
+    protected setCols(): void {
         this.typesColumnDefs = [
             {
                 headerName: 'Name',
@@ -299,7 +431,15 @@ export class TypesComponent implements OnInit {
                 },
                 cellRenderer: CategoryRenderer,
                 editable: false,
-                filter: false,
+                filter: true,
+                filterParams: {
+                    filterOptions: [
+                        IncludesFilter,
+                        ExcludesFilter,
+                    ],
+                    trimInput: true,
+                    debounceMs: 1000,
+                },
                 minWidth: this.minWidth(175),
                 headerTooltip: 'Categories of this item. Used to determine general usage (Must exist in area map)',
             },
@@ -321,7 +461,15 @@ export class TypesComponent implements OnInit {
                 },
                 cellRenderer: ValueRenderer,
                 editable: false,
-                filter: false,
+                filter: true,
+                filterParams: {
+                    filterOptions: [
+                        IncludesFilter,
+                        ExcludesFilter,
+                    ],
+                    trimInput: true,
+                    debounceMs: 1000,
+                },
                 minWidth: this.minWidth(175),
                 headerTooltip: 'Tiers of the item (defines the quality that places new to have to spawn this item). Must exist in area map. * = custom maps only.',
             },
@@ -343,7 +491,15 @@ export class TypesComponent implements OnInit {
                 },
                 cellRenderer: UsageRenderer,
                 editable: false,
-                filter: false,
+                filter: true,
+                filterParams: {
+                    filterOptions: [
+                        IncludesFilter,
+                        ExcludesFilter,
+                    ],
+                    trimInput: true,
+                    debounceMs: 1000,
+                },
                 minWidth: this.minWidth(175),
                 headerTooltip: 'The categories of places to spawn this item (Must exist in area map)',
             },
@@ -418,7 +574,7 @@ export class TypesComponent implements OnInit {
 
                     return true;
                 },
-                minWidth: this.minWidth(25),
+                minWidth: this.minWidth(75),
                 headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
             },
             {
@@ -438,7 +594,7 @@ export class TypesComponent implements OnInit {
 
                     return true;
                 },
-                minWidth: this.minWidth(50),
+                minWidth: this.minWidth(75),
                 headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
             },
             {
@@ -458,7 +614,7 @@ export class TypesComponent implements OnInit {
                     params.data.flags[0].$.count_in_cargo = params.newValue ? '1' : '0';
                     return true;
                 },
-                minWidth: this.minWidth(50),
+                minWidth: this.minWidth(75),
                 sortable: false,
                 filter: false,
                 cellRenderer: CheckboxRenderer,
@@ -471,7 +627,7 @@ export class TypesComponent implements OnInit {
                     params.data.flags[0].$.count_in_hoarder = params.newValue ? '1' : '0';
                     return true;
                 },
-                minWidth: this.minWidth(50),
+                minWidth: this.minWidth(75),
                 sortable: false,
                 filter: false,
                 cellRenderer: CheckboxRenderer,
@@ -484,7 +640,7 @@ export class TypesComponent implements OnInit {
                     params.data.flags[0].$.count_in_map = params.newValue ? '1' : '0';
                     return true;
                 },
-                minWidth: this.minWidth(50),
+                minWidth: this.minWidth(75),
                 sortable: false,
                 filter: false,
                 cellRenderer: CheckboxRenderer,
@@ -497,7 +653,7 @@ export class TypesComponent implements OnInit {
                     params.data.flags[0].$.count_in_player = params.newValue ? '1' : '0';
                     return true;
                 },
-                minWidth: this.minWidth(50),
+                minWidth: this.minWidth(75),
                 sortable: false,
                 filter: false,
                 cellRenderer: CheckboxRenderer,
@@ -532,21 +688,28 @@ export class TypesComponent implements OnInit {
         ];
     }
 
+    protected async saveFiles(): Promise<void> {
+        for (const file of this.files) {
+            const xmlContent = new xml.Builder().buildObject(file.content);
+            await this.appCommon.updateMissionFile(
+                file.file,
+                xmlContent,
+                this.withBackup,
+            ).toPromise();
+        }
+    }
+
     public async onSubmit(): Promise<void> {
+        if (!confirm('Submit?')) {
+            return;
+        }
         if (this.loading || this.submitting) return;
         this.submitting = true;
         this.outcomeBadge = undefined;
 
         if (this.validate(false)) {
             try {
-                for (const file of this.files) {
-                    const xmlContent = new xml.Builder().buildObject(file.content);
-                    await this.appCommon.updateMissionFile(
-                        file.file,
-                        xmlContent,
-                        this.withBackup,
-                    ).toPromise();
-                }
+                await this.saveFiles();
                 if (this.withRestart) {
                     await this.maintenance.restartServer();
                 }
@@ -573,6 +736,12 @@ export class TypesComponent implements OnInit {
 
     public ngOnInit(): void {
         void this.reset();
+    }
+
+    public resetClicked(): void {
+        if (confirm('Reset?')) {
+            void this.reset();
+        }
     }
 
     public async reset(): Promise<void> {
@@ -639,20 +808,24 @@ export class TypesComponent implements OnInit {
         this.loading = false;
     }
 
-    public changeAttrInPercent(attr: string, percent: string | number): void {
+    public changeAttr(operation: string, attr: string, value: string | number): void {
         if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
             return;
         }
 
-        const multiplier = Number(percent) / 100.0;
-        for (const type of this.files[this.activeTab].content.types.type) {
-            try {
-                const num = Number(type[attr][0]);
-                if (num && num > 0) {
-                    type[attr][0] = String(num * multiplier);
-                }
-            } catch (e) {}
-        }
+        const op = this.attrOperations[operation];
+        if (!op) return;
+
+        if (op.listOperation && !this.listAttrs.includes(attr)) return;
+        else if (op.numericOperation && !this.numericAttrs.includes(attr)) return;
+
+        if (value === undefined || value === null || (typeof value === 'string' && !value)) return;
+        const prepedValue = op.valueModifier ? op.valueModifier(value, attr) : value;
+        if (prepedValue === null || prepedValue === undefined) return;
+
+        this.agGrid.api.forEachNodeAfterFilter((x) => {
+            op.operation(attr, prepedValue, x);
+        });
 
         // trigger change detection
         this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
@@ -714,8 +887,14 @@ export class TypesComponent implements OnInit {
         /* eslint-enable no-undef */
     }
 
-    private minWidth(width: number): number {
-        return this.lockedWidth ? width * 2 : width;
+    protected minWidth(width: number): number {
+        return this.lockedWidth ? width : width * 2;
     }
+
+    public getRowStyle = (params): any => {
+        if (params.data?.nominal?.[0] === '0' || params.data?.nominal?.[0] === 0) {
+            return { background: 'lightgrey' };
+        }
+    };
 
 }

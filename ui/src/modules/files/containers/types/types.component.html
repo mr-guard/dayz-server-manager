@@ -2,10 +2,29 @@
     <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
     <sb-card background="h-100 type-tabs">
         <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0;">
-            <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>
-            <div style="padding: 0 0.5rem;">Type Files:</div>
+            <div class="mr-3">
+                <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
+                <input type="checkbox" [(ngModel)]="lockedWidth">
+            </div>
 
-            <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+            <div ngbDropdown class="mb-2">
+                <button type="button"
+                        class="btn btn-outline-primary"
+                        id="dropdownFiles" ngbDropdownToggle>
+                    <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>
+                    Type Files
+                </button>
+                <div ngbDropdownMenu aria-labelledby="dropdownFiles">
+                    <button ngbDropdownItem
+                            *ngFor="let file of files; let i = index;"
+                            (click)="activeTab = i"
+                    >
+                        {{ file.file }}
+                    </button>
+                </div>
+            </div>
+
+            <ul style="display: none;" class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
                 <li *ngFor="let file of files; let i = index;" [ngbNavItem]="i">
                     <a ngbNavLink>{{ file.file }}</a>
                     <ng-template ngbNavContent>
@@ -14,10 +33,12 @@
                                 [columnDefs]="typesColumnDefs"
                                 [defaultColDef]="defaultColDef"
                                 [rowData]="file.content.types.type"
+                                [getRowStyle]="getRowStyle"
                                 [floatingFiltersHeight]="50"
                                 [groupHeaderHeight]="75"
                                 style="width: 100%; height: 100%;"
                                 class="ag-theme-alpine"
+                                #dataGrid
                             >
                             </ag-grid-angular>
 
@@ -27,94 +48,98 @@
             </ul>
         </div>
         <div class="card-body" *ngIf="!loading">
-            <div>
-                <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
-                <input type="checkbox" [(ngModel)]="lockedWidth">
+            <div class="d-flex flex-row justify-content-between">
+                <ngb-alert  *ngIf="outcomeBadge"
+                            [type]="outcomeBadge.success ? 'success' : 'danger'"
+                >
+                    {{ outcomeBadge.message }}
+                </ngb-alert>
+                <ngb-alert  *ngIf="validationErrors?.length"
+                            type="danger"
+                >
+                    <div>
+                        Errors:
+                        <ul style="max-height: 10vh; overflow-y: scroll;">
+                            <li *ngFor="let error of validationErrors">
+                                {{ error }}
+                            </li>
+                        </ul>
+                    </div>
+                </ngb-alert>
             </div>
-            <ngb-alert  *ngIf="outcomeBadge"
-                        [type]="outcomeBadge.success ? 'success' : 'danger'"
-            >
-                {{ outcomeBadge.message }}
-            </ngb-alert>
-            <ngb-alert  *ngIf="validationErrors?.length"
-                        type="danger"
-            >
-                <div>
-                    Errors:
-                    <ul style="max-height: 10vh; overflow-y: scroll;">
-                        <li *ngFor="let error of validationErrors">
-                            {{ error }}
-                        </li>
-                    </ul>
-                </div>
-            </ngb-alert>
             <form (ngSubmit)="onSubmit()" #configForm="ngForm">
 
                 <div [ngbNavOutlet]="nav"></div>
 
-                <div class="d-flex flex-row" style="justify-content: space-between;">
-                    <button type="button" class="btn btn-primary"
-                            (click)="reset()"
-                            [disabled]="submitting"
-                    >
-                        Reset
-                    </button>
+                <div class="d-flex flex-row" style="justify-content: space-between; flex-wrap: wrap; white-space: nowrap;">
                     <div class="d-flex flex-row">
-                        <div class="d-flex flex-row btn-group">
-                            <input type="number" #percentChangeInput [value]="100" style="margin-right: -2px;">
+                        <div class="d-flex flex-row btn-group ml-1 mr-1">
+                            <input #changeInput style="margin-right: -2px;">
                             <select #attrChangeInput>
-                                <option value="nominal" selected>Nominal</option>
-                                <option value="lifetime">Lifetime</option>
-                                <option value="restock">Restock</option>
-                                <option value="min">Min</option>
-                                <option value="quantmin">Quant Min</option>
-                                <option value="quantmax">Quant Max</option>
-                                <option value="cost">Cost</option>
+                                <option *ngFor="let item of attrs; let idx = index"
+                                        [ngValue]="item.value"
+                                        [value]="item.value"
+                                        [selected]="idx === 0"
+                                >
+                                    {{ item.label }}
+                                </option>
+                            </select>
+                            <select #attrChangeOperation>
+                                <option value="multiply" selected title="Multiply by factor">Multiply</option>
+                                <option value="multiply-percent" title="Multiply by percent">Multiply %</option>
+                                <option value="set" title="Set to a fixed value">Set</option>
+                                <option value="add" title="Add a fixed value or add it to the list">Add</option>
+                                <option value="remove" title="Remove a fixed value or remove it from the list">Remove</option>
                             </select>
                             <button type="button" class="btn btn-success"
-                                    (click)="changeAttrInPercent(attrChangeInput.value, percentChangeInput.value)"
+                                    (click)="changeAttr(attrChangeOperation.value, attrChangeInput.value, changeInput.value)"
+                                    title="Execute the operation"
                             >
-                                Multiply
-                            </button>
-                        </div>
-                        <div class="d-flex flex-row" style="margin-left: 15px;">
-                            <button type="button" class="btn btn-success"
-                                    (click)="validate(true)"
-                            >
-                                Validate
+                                Exec
                             </button>
                         </div>
                     </div>
                     <div class="d-flex flex-row">
-                        <button type="button" class="btn btn-success" style="margin-right: 1.5rem;"
+                        <button type="button" class="btn btn-success ml-1 mr-1"
+                                (click)="validate(true)"
+                        >
+                            Validate
+                        </button>
+                        <button type="button" class="btn btn-success ml-1 mr-1"
                                 [disabled]="!configForm.form.valid"
                                 (click)="saveCurrentFile()"
                         >
                             Download
                         </button>
-
-
-                        <div class="d-flex flex-row" style="align-items: center;">
-                            <label class="form-label">Create Backup</label>
+                    </div>
+                    <div class="d-flex flex-row">
+                        <div class="d-flex flex-row ml-1 mr-1" style="align-items: center;">
+                            <label class="form-label" style="white-space: nowrap;">Create Backup</label>
                             <input type="checkbox" class="form-control form-control-sm mx-1"
                                    [(ngModel)]="withBackup"
                                    [ngModelOptions]="{standalone: true}"
                                    [disabled]="submitting"
                             >
                         </div>
-                        <div class="d-flex flex-row" style="align-items: center;">
-                            <label class="form-label">Restart Server</label>
+                        <div class="d-flex flex-row ml-1 mr-1" style="align-items: center;">
+                            <label class="form-label" style="white-space: nowrap;">Restart Server</label>
                             <input type="checkbox" class="form-control form-control-sm mx-1"
                                    [(ngModel)]="withRestart"
                                    [ngModelOptions]="{standalone: true}"
                                    [disabled]="submitting"
                             >
                         </div>
-                        <button type="submit" class="btn btn-success"
+                        <button type="submit" class="btn btn-success ml-1 mr-1"
                                 [disabled]="!configForm.form.valid || submitting"
                         >
                             <fa-icon *ngIf="submitting" [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
                             Submit
+                        </button>
+                        <button type="button" class="btn btn-primary ml-1 mr-1"
+                                (click)="resetClicked()"
+                                [disabled]="submitting"
+                        >
+                            Reset
                         </button>
                     </div>
                 </div>

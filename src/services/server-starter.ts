@@ -79,6 +79,29 @@ export class ServerStarter extends IService {
         }
     }
 
+    public async adjustDayzSettingXml(): Promise<void> {
+        const settingPath = path.join(this.manager.getServerPath(), 'dayzsetting.xml');
+        if (this.fs.existsSync(settingPath)) {
+            let content = this.fs.readFileSync(settingPath, { encoding: 'utf-8' });
+            if (!content) return;
+
+            const globalQueue = this.manager.config.dayzsettingglobalqueue || 4096;
+            content = content.replace(/globalqueue="\d+"/g, `globalqueue="${globalQueue}"`);
+
+            const threadQueue = this.manager.config.dayzsettingthreadqueue || 1024;
+            content = content.replace(/threadqueue="\d+"/g, `threadqueue="${threadQueue}"`);
+
+            const maxcores = this.manager.config.dayzsettingpcmaxcores || 2;
+            content = content.replace(/maxcores="\d+"/g, `maxcores="${maxcores}"`);
+
+            const reservedcores = this.manager.config.dayzsettingpcmaxcores || 1;
+            content = content.replace(/reservedcores="\d+"/g, `reservedcores="${reservedcores}"`);
+
+            this.log.log(LogLevel.INFO, `Adjusting dayzsetting.xml`);
+            this.fs.writeFileSync(settingPath, content);
+        }
+    }
+
     private async prepareServerStart(skipPrep?: boolean): Promise<void> {
 
         // install internal mods
@@ -90,6 +113,8 @@ export class ServerStarter extends IService {
         await this.rcon?.createBattleyeConf();
 
         await this.writeServerCfg();
+
+        await this.adjustDayzSettingXml();
 
         if (!!skipPrep) {
             return;

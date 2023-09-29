@@ -696,6 +696,26 @@ export class Config {
     public cpuCount: number = -1;
 
     /**
+     * dayzsetting.xml pc maxcores
+     */
+    public dayzsettingpcmaxcores: number = 2;
+
+    /**
+     * dayzsetting.xml pc reservedcores
+     */
+    public dayzsettingreservedcores: number = 1;
+
+    /**
+     * dayzsetting.xml globalqueue
+     */
+    public dayzsettingglobalqueue: number = 4096;
+
+    /**
+     * dayzsetting.xml pc threadqueue
+     */
+    public dayzsettingthreadqueue: number = 1024;
+
+    /**
      * Server Startup Params (manual)
      */
     public serverLaunchParams: string[] = [];
