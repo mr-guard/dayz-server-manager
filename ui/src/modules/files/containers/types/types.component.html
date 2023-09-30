@@ -1,16 +1,18 @@
 <sb-layout-dashboard class="types-component">
     <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
     <sb-card background="h-100 type-tabs">
-        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0;">
-            <div class="mr-3">
-                <fa-icon class="mr-1" [icon]='["fas", "lock"]'></fa-icon>
+        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0.5rem; padding-top: 0.5rem;">
+            <div class="mr-3" title="Un/Lock the width of the table columns">
+                <fa-icon class="mr-1" [icon]='["fas", lockedWidth ? "lock" : "lock-open"]'></fa-icon>
                 <input type="checkbox" [(ngModel)]="lockedWidth">
             </div>
 
-            <div ngbDropdown class="mb-2">
+            <div ngbDropdown>
                 <button type="button"
                         class="btn btn-outline-primary"
-                        id="dropdownFiles" ngbDropdownToggle>
+                        id="dropdownFiles" ngbDropdownToggle
+                        style="padding: 0.25rem;"
+                >
                     <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>
                     Type Files
                 </button>
@@ -36,6 +38,9 @@
                                 [getRowStyle]="getRowStyle"
                                 [floatingFiltersHeight]="50"
                                 [groupHeaderHeight]="75"
+                                (rowDataUpdated)="filterChanged()"
+                                (firstDataRendered)="filterChanged()"
+                                (filterChanged)="filterChanged()"
                                 style="width: 100%; height: 100%;"
                                 class="ag-theme-alpine"
                                 #dataGrid
@@ -46,6 +51,12 @@
                     </ng-template>
                 </li>
             </ul>
+
+            <div class="d-flex ml-auto">
+                <fa-icon class="mr-2" [icon]='["fas", "info"]'></fa-icon>
+                <div class="mr-2">Shown: {{ shownTypesCount }}</div>
+                <div>Total Nominal: {{ totalNominal }}</div>
+            </div>
         </div>
         <div class="card-body" *ngIf="!loading">
             <div class="d-flex flex-row justify-content-between">

@@ -80,7 +80,15 @@ export class CategoryRenderer implements ICellRendererAngularComp {
 
     public agInit(params: any): void {
         this.params = params;
-        this.selectedItems = params.value.map((x) => x.name);
+        this.selectedItems = params.value.map((x) => {
+            if (!this.dropdownList.find((listed) => listed.name === x.name)) {
+                this.dropdownList.push({
+                    name: x.name,
+                    label: `${x.name}*`,
+                });
+            }
+            return x.name;
+        });
     }
 
     public checkedHandler(): void {
@@ -120,7 +128,7 @@ export class ValueRenderer extends CategoryRenderer implements ICellRendererAngu
     public constructor() {
         super();
         this.dropdownList = [];
-        for (let i = 1; i <= 15; i++) {
+        for (let i = 1; i <= 17; i++) {
             this.dropdownList.push({
                 name: `Tier${i}`,
                 label: (i <= 4 ? `Tier${i}` : `Tier${i}*`),
@@ -267,6 +275,9 @@ export class TypesComponent implements OnInit {
 
     protected coreXml: any;
     public files: { file: string; content: TypesXml }[] = [];
+
+    public shownTypesCount: number = 0;
+    public totalNominal: number = 0;
 
     public activeTab = 0;
     public validationErrors: string[] = [];
@@ -805,6 +816,7 @@ export class TypesComponent implements OnInit {
             console.error(e);
         }
 
+        this.filterChanged();
         this.loading = false;
     }
 
@@ -829,6 +841,10 @@ export class TypesComponent implements OnInit {
 
         // trigger change detection
         this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
+
+        if (attr === 'nominal') {
+            this.filterChanged();
+        }
     }
 
     public validate(showSuccess: boolean): boolean {
@@ -897,4 +913,15 @@ export class TypesComponent implements OnInit {
         }
     };
 
+    public filterChanged() {
+        let count = 0;
+        let countNominal = 0;
+        // there is not getFilteredNodes :(
+        this.agGrid?.api?.forEachNodeAfterFilter((x) => {
+            count++;
+            countNominal += Number(x.data.nominal[0]);
+        });
+        this.shownTypesCount = count;
+        this.totalNominal = countNominal;
+    }
 }

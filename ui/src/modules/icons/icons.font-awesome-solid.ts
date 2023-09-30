@@ -40,6 +40,7 @@ import {
     faCrosshairs,
     faPlane,
     faWrench,
+    faInfo,
 } from '@fortawesome/free-solid-svg-icons';
 
 export const fontAwesomeSolidIcons = {
@@ -82,4 +83,5 @@ export const fontAwesomeSolidIcons = {
     faCrosshairs,
     faPlane,
     faWrench,
+    faInfo,
 };

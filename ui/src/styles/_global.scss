@@ -132,3 +132,15 @@ ngb-alert > button {
         content: "\f00d";
     }
 }
+
+@media screen and (max-width: 1024px) {
+    .hide-page-header {
+      display: none;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    .hide-top-nav {
+      display: none;
+    }
+}
