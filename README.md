@@ -230,6 +230,7 @@ In a nutshell:
 * (Optional) Select an icon and enter a short description for your bot
 * In the left menu, select "Bot"
 * Click "Add Bot" and confirm
+* Scroll down and enable the "MESSAGE CONTENT INTENT" (allows the bot to parse the messages)
 * Under "Token" copy the token by clicking on "Copy" or reveal value and copy the text
 * paste the token inside the config file like so:
 ```json
