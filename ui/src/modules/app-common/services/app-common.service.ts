@@ -378,6 +378,20 @@ export class AppCommonService {
         );
     }
 
+    public fetchMissionFiles(files: string[]): Observable<string[]> {
+        return this.httpClient.post<string[]>(
+            `/api/readmissionfiles`,
+            {
+                files,
+            },
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                observe: 'body',
+            },
+        );
+    }
+
     public fetchMissionDir(dir: string): Observable<string[]> {
         return this.httpClient.get<string[]>(
             `/api/readmissiondir`,
@@ -417,6 +431,20 @@ export class AppCommonService {
                     file,
                 },
                 responseType: 'text',
+            },
+        );
+    }
+
+    public fetchProfileFiles(files: string[]): Observable<string[]> {
+        return this.httpClient.post<string[]>(
+            `/api/readprofilefiles`,
+            {
+                files,
+            },
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                observe: 'body',
             },
         );
     }

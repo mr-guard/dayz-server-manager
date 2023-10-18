@@ -1,45 +1,30 @@
 <sb-layout-dashboard class="types-component">
     <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
     <sb-card background="h-100 type-tabs">
-        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0.5rem; padding-top: 0.5rem;">
+        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0; padding-top: 0.5rem;">
             <div class="mr-3" title="Un/Lock the width of the table columns">
                 <fa-icon class="mr-1" [icon]='["fas", lockedWidth ? "lock" : "lock-open"]'></fa-icon>
                 <input type="checkbox" [(ngModel)]="lockedWidth">
             </div>
 
-            <div ngbDropdown>
-                <button type="button"
-                        class="btn btn-outline-primary"
-                        id="dropdownFiles" ngbDropdownToggle
-                        style="padding: 0.25rem;"
-                >
-                    <fa-icon class="mr-1" [icon]='["fas", "wrench"]'></fa-icon>
-                    Type Files
-                </button>
-                <div ngbDropdownMenu aria-labelledby="dropdownFiles">
-                    <button ngbDropdownItem
-                            *ngFor="let file of files; let i = index;"
-                            (click)="activeTab = i"
-                    >
-                        {{ file.file }}
-                    </button>
-                </div>
-            </div>
-
-            <ul style="display: none;" class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
-                <li *ngFor="let file of files; let i = index;" [ngbNavItem]="i">
-                    <a ngbNavLink>{{ file.file }}</a>
+            <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+                <li [ngbNavItem]="0">
+                    <a ngbNavLink>Types</a>
                     <ng-template ngbNavContent>
                         <div style="height: 100%; margin-bottom: 20px;">
                             <ag-grid-angular
+                                *ngIf="typesColumnDefs?.length"
                                 [columnDefs]="typesColumnDefs"
                                 [defaultColDef]="defaultColDef"
-                                [rowData]="file.content.types.type"
+                                [rowData]="combinedClasses"
                                 [getRowStyle]="getRowStyle"
                                 [floatingFiltersHeight]="50"
                                 [groupHeaderHeight]="75"
+                                (columnVisible)="saveGridState()"
+                                (columnResized)="saveGridState()"
+                                (columnMoved)="saveGridState()"
                                 (rowDataUpdated)="filterChanged()"
-                                (firstDataRendered)="filterChanged()"
+                                (firstDataRendered)="firstDataRendered()"
                                 (filterChanged)="filterChanged()"
                                 style="width: 100%; height: 100%;"
                                 class="ag-theme-alpine"
@@ -50,9 +35,40 @@
                         </div>
                     </ng-template>
                 </li>
+
+                <li [ngbNavItem]="1">
+                    <a ngbNavLink>Missing Types</a>
+                    <ng-template ngbNavContent>
+                        <div style="height: 100%">
+                            <ul>
+                                <li *ngFor="let classname of missingClasses">
+                                    {{ classname }}
+                                </li>
+                            </ul>
+                        </div>
+                    </ng-template>
+                </li>
             </ul>
 
-            <div class="d-flex ml-auto">
+            <div class="ml-auto mr-2">
+                <ng-select [items]="typesColumnDefs"
+                    [(ngModel)]="selectedCols"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Columns"
+                    appendTo="body"
+                    bindLabel="colId"
+                    [searchable]="false"
+                    [multiple]="true"
+                    (change)="setVisibleCols($event)"
+                >
+                    <ng-template ng-multi-label-tmp>
+                        <div class="ng-value">
+                            <span class="ng-value-label">{{selectedCols.length - 2}} selected...</span>
+                        </div>
+                    </ng-template>
+                </ng-select>
+            </div>
+            <div class="d-flex">
                 <fa-icon class="mr-2" [icon]='["fas", "info"]'></fa-icon>
                 <div class="mr-2">Shown: {{ shownTypesCount }}</div>
                 <div>Total Nominal: {{ totalNominal }}</div>
@@ -86,24 +102,42 @@
                     <div class="d-flex flex-row">
                         <div class="d-flex flex-row btn-group ml-1 mr-1">
                             <input #changeInput style="margin-right: -2px;">
-                            <select #attrChangeInput>
-                                <option *ngFor="let item of attrs; let idx = index"
-                                        [ngValue]="item.value"
-                                        [value]="item.value"
+                            <select [(ngModel)]="selectedOpertaionCol"
+                                    (ngModelChange)="selectedOpertaion = undefined"
+                                    [ngModelOptions]="{standalone: true}"
+                            >
+                                <option [disabled]="true" [ngValue]="undefined" *ngIf="selectedOpertaionCol === undefined">Select...</option>
+                                <option [disabled]="true" [ngValue]="null" *ngIf="selectedOpertaionCol === null">Select...</option>
+                                <option *ngFor="let item of typesColumnDefs || []; let idx = index"
+                                        [ngValue]="item"
                                         [selected]="idx === 0"
                                 >
-                                    {{ item.label }}
+                                    {{ item.colId }}
                                 </option>
                             </select>
-                            <select #attrChangeOperation>
-                                <option value="multiply" selected title="Multiply by factor">Multiply</option>
+                            <select [disabled]="!selectedOpertaionCol"
+                                    [(ngModel)]="selectedOpertaion"
+                                    [ngModelOptions]="{standalone: true}"
+                            >
+                                <option [disabled]="true" [ngValue]="undefined" *ngIf="selectedOpertaion === undefined">Select...</option>
+                                <option [disabled]="true" [ngValue]="null" *ngIf="selectedOpertaion === null">Select...</option>
+
+                                <option *ngFor="let item of selectedOpertaionCol?.operations || []; let idx = index"
+                                        [ngValue]="item"
+                                        [selected]="idx === 0"
+                                        [title]="item.title || ''"
+                                >
+                                    {{ item.label || '' }}
+                                </option>
+                                <!-- <option value="multiply" selected title="Multiply by factor">Multiply</option>
                                 <option value="multiply-percent" title="Multiply by percent">Multiply %</option>
                                 <option value="set" title="Set to a fixed value">Set</option>
                                 <option value="add" title="Add a fixed value or add it to the list">Add</option>
-                                <option value="remove" title="Remove a fixed value or remove it from the list">Remove</option>
+                                <option value="remove" title="Remove a fixed value or remove it from the list">Remove</option> -->
                             </select>
                             <button type="button" class="btn btn-success"
-                                    (click)="changeAttr(attrChangeOperation.value, attrChangeInput.value, changeInput.value)"
+                                    [disabled]="!selectedOpertaionCol || !selectedOpertaion"
+                                    (click)="changeAttr(changeInput.value)"
                                     title="Execute the operation"
                             >
                                 Exec
@@ -117,8 +151,13 @@
                             Validate
                         </button>
                         <button type="button" class="btn btn-success ml-1 mr-1"
+                                (click)="csvExport()"
+                        >
+                            CSV Export
+                        </button>
+                        <button type="button" class="btn btn-success ml-1 mr-1"
                                 [disabled]="!configForm.form.valid"
-                                (click)="saveCurrentFile()"
+                                (click)="downloadFiles()"
                         >
                             Download
                         </button>

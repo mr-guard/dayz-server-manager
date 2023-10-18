@@ -115,6 +115,7 @@ The goal was to break down the initial effort to a minimum while providing confi
 
 * A Windows (Root) Server with RDP/Shell access
   * hosted instances (like nitrado) cannot use this EXCEPT they can run arbitrary programs
+* To download mods: A steam account that owns DayZ and has SteamGuard DISABLED!
 * That's it!
 
 <br><a name="usage"></a>
@@ -129,6 +130,8 @@ The goal was to break down the initial effort to a minimum while providing confi
   * Other than that the defaults will probably fit your needs
   * You can also checkout the [configuration guides](#configuration)
 * Start the manager in the folder where the config is situated
+
+* You need to disable SteamGuard on the the account to use. It is recommended to create a separate Steam account which own DayZ.
 
 * Optionally you can add it as Windows Service instead of launching it manually
 * Make sure the "Execution Location" is the folder, where the config is located (this is not necessarily the folder where the manager executable is located)
@@ -467,6 +470,11 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
   
 <br><a name="limitations"></a>  
 ## Known Issues / Limitations <hr>  
+
+* SteamCMD Stuck:
+  * The integration with SteamCMD requires SteamGuard to be disabled.
+
+<br>
 
 * SteamCMD Timeouts:
   * SteamCMD sometimes fails to download large mods (usually > 1GB)

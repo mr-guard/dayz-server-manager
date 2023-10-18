@@ -1067,6 +1067,11 @@ export class Config {
      */
     public ingameReportIntervall: number = 30.0;
 
+    /**
+     * Dump data (weapon, ammo, clothing) as json on startup.
+     */
+    public dataDump: boolean = false;
+
     // /////////////////////////// ServerCfg ///////////////////////////////////////
     /**
      * serverCfg

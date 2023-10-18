@@ -2,243 +2,13 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
-import { AgGridAngular, ICellRendererAngularComp } from 'ag-grid-angular';
-import { ColDef, ICellRendererParams, IRowNode } from 'ag-grid-community';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef, ColumnState, RowClassParams, RowStyle } from 'ag-grid-community';
 
-import * as xml from 'xml2js';
-
-export interface TypesName {
-    $: {name: string};
-}
-
-export interface TypesFlags {
-    $: {
-        count_in_cargo: '0' | '1';
-        count_in_hoarder: '0' | '1';
-        count_in_map: '0' | '1';
-        count_in_player: '0' | '1';
-        crafted: '0' | '1';
-        deloot: '0' | '1';
-    };
-}
-
-export interface TypesXmlEntry extends TypesName {
-    category: TypesName[];
-    usage: TypesName[];
-    value: TypesName[];
-    flags: [TypesFlags];
-
-    nominal: [string];
-    lifetime: [string];
-    restock: [string];
-    min: [string];
-    quantmin: [string];
-    quantmax: [string];
-    cost: [string];
-}
-
-export interface TypesXml {
-    types: { type: TypesXmlEntry[] };
-}
-
-@Component({
-    selector: 'category-renderer',
-    template: `
-        <ng-select [items]="dropdownList"
-               bindLabel="label"
-               bindValue="name"
-               placeholder="Select item"
-               appendTo="body"
-               [searchable]="false"
-               [multiple]="true"
-               [(ngModel)]="selectedItems"
-               (change)="checkedHandler()"
-        >
-        </ng-select>
-    `,
-})
-export class CategoryRenderer implements ICellRendererAngularComp {
-
-    public static CATEGORY_LIST = [
-        'weapons',
-        'explosives',
-        'clothes',
-        'containers',
-        'tools',
-        'vehicleparts',
-        'food',
-    ];
-
-    public params: any;
-
-    public dropdownList = CategoryRenderer.CATEGORY_LIST.map((x) => ({
-        name: x,
-        label: x,
-    }));
-
-    public selectedItems = [];
-
-    public agInit(params: any): void {
-        this.params = params;
-        this.selectedItems = params.value.map((x) => {
-            if (!this.dropdownList.find((listed) => listed.name === x.name)) {
-                this.dropdownList.push({
-                    name: x.name,
-                    label: `${x.name}*`,
-                });
-            }
-            return x.name;
-        });
-    }
-
-    public checkedHandler(): void {
-        const { colId } = this.params.column;
-        this.params.node.setDataValue(colId, this.selectedItems.map((x) => ({ name: x })));
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public refresh(params: ICellRendererParams): boolean {
-        return true;
-    }
-
-    public isPopup(): boolean {
-        return false;
-    }
-
-}
-
-@Component({
-    selector: 'value-renderer',
-    template: `
-        <ng-select [items]="dropdownList"
-               bindLabel="label"
-               bindValue="name"
-               placeholder="Select item"
-               appendTo="body"
-               [searchable]="false"
-               [multiple]="true"
-               [(ngModel)]="selectedItems"
-               (change)="checkedHandler()"
-        >
-        </ng-select>
-    `,
-})
-export class ValueRenderer extends CategoryRenderer implements ICellRendererAngularComp {
-
-    public constructor() {
-        super();
-        this.dropdownList = [];
-        for (let i = 1; i <= 17; i++) {
-            this.dropdownList.push({
-                name: `Tier${i}`,
-                label: (i <= 4 ? `Tier${i}` : `Tier${i}*`),
-            });
-        }
-    }
-
-}
-
-@Component({
-    selector: 'usage-renderer',
-    template: `
-        <ng-select [items]="dropdownList"
-               bindLabel="name"
-               bindValue="name"
-               placeholder="Select item"
-               appendTo="body"
-               [searchable]="false"
-               [multiple]="true"
-               [(ngModel)]="selectedItems"
-               (change)="checkedHandler()"
-        >
-        </ng-select>
-    `,
-})
-export class UsageRenderer extends CategoryRenderer implements ICellRendererAngularComp {
-
-    public static USAGE_LIST = [
-        'Coast',
-        'Farm',
-        'Firefighter',
-        'Hunting',
-        'Industrial',
-        'Medic',
-        'Military',
-        'Office',
-        'Police',
-        'Prison',
-        'School',
-        'Town',
-        'Village',
-    ];
-
-    public constructor() {
-        super();
-        this.dropdownList = UsageRenderer.USAGE_LIST.map((x) => ({
-            name: x,
-            label: x,
-        }));
-    }
-
-}
-
-@Component({
-    selector: 'checkbox-renderer',
-    template: `
-      <input
-        type="checkbox"
-        (click)="checkedHandler($event)"
-        [checked]="params.value"
-      />
-    `,
-})
-export class CheckboxRenderer implements ICellRendererAngularComp {
-
-    public params: any;
-
-    public agInit(params: any): void {
-        this.params = params;
-    }
-
-    public checkedHandler(event): void {
-        const { checked } = event.target;
-        const { colId } = this.params.column;
-        this.params.node.setDataValue(colId, checked);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    public refresh(params: ICellRendererParams): boolean {
-        return true;
-    }
-
-}
-
-export const IncludesFilter = {
-    displayKey: 'includes',
-    displayName: 'includes',
-    predicate: ([filter], cellValue) => {
-        if (!filter) return false;
-        if (!cellValue?.length) return false;
-        return cellValue.some((x) => x?.name?.toLowerCase() === filter?.toLowerCase());
-    },
-};
-
-export const ExcludesFilter = {
-    displayKey: 'excludes',
-    displayName: 'excludes',
-    predicate: ([filter], cellValue) => {
-        if (!filter) return true;
-        if (!cellValue?.length) return true;
-        return !cellValue.some((x) => x?.name?.toLowerCase() === filter?.toLowerCase());
-    },
-};
-
-export interface AttributeOperation {
-    operation: (attr: string, value: string | number, node: IRowNode<any>) => void;
-    listOperation?: boolean;
-    numericOperation?: boolean;
-    valueModifier?: (value: string | number, attr: string) => any,
-}
+import { DZSMAmmoDumpEntry, DZSMBaseDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, TypesXmlEntry } from './types';
+import { AmmoDumpFileWrapper, ClothingDumpFileWrapper, CoreFileWrapper, FileWrapper, ItemDumpFileWrapper, MagDumpFileWrapper, SpawnableTypesFileWrapper, TypesFileWrapper, WeaponDumpFileWrapper } from './files';
+import { AttributeOperation } from './ops';
+import { ArmorFragCol, ArmorInfectedCol, ArmorMeleeCol, ArmorProjectileCol, BulletSpeedCol, CargoSizeCol, CategoryCol, ColBase, CostCol, CountInCargoCol, CountInHoarderCol, CountInMapCol, CountInPlayerCol, CraftedCol, DamageArmorCol, DamageBloodCol, DamageHPCol, DelootCol, DispersionCol, EstimatedNominalCol, HitpointsCol, IsolationCol, ItemInfoCol, LifeTimeCol, LootCategoryCol, LootTagCol, MaxCargoSizeCol, MaxMagSizeCol, MaxRangeCol, MinCol, NameCol, NominalCol, PistolSlotsCol, QuantMaxCol, QuantMinCol, RPMCol, RecoilCol, RestockCol, ScoreCol, StabilityCol, UsagesCol, ValuesCol, VisibilityCol, WeaponSlotsCol, WeightCol } from './columns';
 
 @Component({
     selector: 'sb-types',
@@ -248,10 +18,9 @@ export interface AttributeOperation {
 })
 export class TypesComponent implements OnInit {
 
-    @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
+    @ViewChild(AgGridAngular) agGrid!: AgGridAngular<string>;
 
     public _lockedWidth = false;
-
     public set lockedWidth(locked: boolean) {
         this._lockedWidth = locked;
         this.setCols();
@@ -260,36 +29,40 @@ export class TypesComponent implements OnInit {
         return this._lockedWidth;
     }
 
+    public activeTab = 0;
+
     public loading = false;
     public submitting = false;
 
     public withBackup = false;
     public withRestart = false;
 
-    public test: string = '';
-
     public outcomeBadge?: {
         message: string;
         success: boolean;
     };
 
-    protected coreXml: any;
-    public files: { file: string; content: TypesXml }[] = [];
+    public files: FileWrapper[] = [];
+    public coreXmlIdx: number = -1;
+
+    public combinedTypes: Record<string, TypesXmlEntry> = {};
+    public combinedSpawnableTypes: Record<string, TypesXmlEntry> = {};
+
+    public combinedClasses: string[] = [];
+    public missingClasses: string[] = [];
+
+    public weaponDataDump: Record<string, DZSMWeaponDumpEntry> = {};
+    public magDataDump: Record<string, DZSMMagDumpEntry> = {};
+    public ammoDataDump: Record<string, DZSMAmmoDumpEntry> = {};
+    public clothingDataDump: Record<string, DZSMClothingDumpEntry> = {};
+    public itemDataDump: Record<string, DZSMItemDumpEntry> = {};
 
     public shownTypesCount: number = 0;
     public totalNominal: number = 0;
 
-    public activeTab = 0;
     public validationErrors: string[] = [];
 
-    public frameworkComponents = {
-        checkboxRenderer: CheckboxRenderer,
-        categoryRenderer: CategoryRenderer,
-        valueRenderer: ValueRenderer,
-        usageRenderer: UsageRenderer,
-    };
-
-    public defaultColDef = {
+    public defaultColDef: ColDef = {
         editable: true,
         sortable: true,
         flex: 1,
@@ -297,111 +70,12 @@ export class TypesComponent implements OnInit {
         resizable: true,
     };
 
-    public typesColumnDefs: ColDef<TypesXmlEntry, any>[] = [];
+    public gridInitDone = false;
+    public selectedCols: ColBase[] = [];
+    public typesColumnDefs: ColBase[] = [];
 
-    public attrs = [
-        { value: "nominal", label: "Nominal" },
-        { value: "lifetime", label: "Lifetime" },
-        { value: "restock", label: "Restock" },
-        { value: "min", label: "Min" },
-        { value: "quantmin", label: "Quant Min" },
-        { value: "quantmax", label: "Quant Max" },
-        { value: "cost", label: "Cost" },
-        { value: "value", label: "Value" },
-        { value: "category", label: "Category" },
-        { value: "usage", label: "Usage" },
-    ];
-
-    public listAttrs = [
-        'value',
-        'category',
-        'usage',
-    ];
-    public numericAttrs = [
-        "nominal",
-        "lifetime",
-        "restock",
-        "min",
-        "quantmin",
-        "quantmax",
-        "cost",
-    ];
-
-    public attrOperations: Record<string, AttributeOperation> = {
-        multiply: {
-            numericOperation: true,
-            operation: (attr, value, node) => {
-                try {
-                    const num = Number(node.data[attr][0]);
-                    if (num && num > 0) {
-                        node.data[attr][0] = String(Math.round(num * (value as number)));
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            },
-            valueModifier: (value) => {
-                return Number(value);
-            },
-        },
-        "multiply-percent": {
-            numericOperation: true,
-            operation: (attr, value, node) => {
-                try {
-                    const num = Number(node.data[attr][0]);
-                    if (num && num > 0) {
-                        node.data[attr][0] = String(Math.round(num * (value as number)));
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            },
-            valueModifier: (value) => {
-                return Number(value) / 100.0;
-            },
-        },
-        set: {
-            operation: (attr, value, node) => {
-                node.data[attr][0] = value;
-            },
-            valueModifier: (value, attr) => {
-                if (this.numericAttrs.includes(attr)) return Number(value);
-                return String(value);
-            },
-        },
-        add: {
-            numericOperation: true,
-            listOperation: true,
-            operation: (attr, value, node) => {
-                if (this.listAttrs.includes(attr)) {
-                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
-                    if (idx === -1) {
-                        node.data[attr].push({
-                            $: {
-                                name: value,
-                            },
-                        });
-                    }
-                } else {
-                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) + (Number(value) || 0)
-                }
-            },
-        },
-        remove: {
-            numericOperation: true,
-            listOperation: true,
-            operation: (attr, value, node) => {
-                if (this.listAttrs.includes(attr)) {
-                    const idx = node.data[attr].findIndex((x) => x?.$?.name?.toLowerCase() === String(value).toLowerCase());
-                    if (idx > -1) {
-                        node.data[attr].splice(idx, 1);
-                    }
-                } else {
-                    node.data[attr][0] = (Number(node.data[attr][0]) || 0) - (Number(value) || 0)
-                }
-            },
-        },
-    };
+    public selectedOpertaionCol?: ColBase;
+    public selectedOpertaion?: AttributeOperation;
 
     public constructor(
         public appCommon: AppCommonService,
@@ -412,301 +86,87 @@ export class TypesComponent implements OnInit {
 
     protected setCols(): void {
         this.typesColumnDefs = [
-            {
-                headerName: 'Name',
-                valueGetter: (params) => {
-                    return params.data?.$.name;
-                },
-                valueSetter: (params) => {
-                    params.data.$.name = params.newValue;
-                    return true;
-                },
-                minWidth: this.minWidth(150),
-                headerTooltip: 'Class Name of the item',
-            },
-            {
-                headerName: 'Categories',
-                valueGetter: (params) => {
-                    return params.data?.category?.map((x) => ({
-                        name: x.$.name,
-                    })) ?? [];
-                },
-                valueSetter: (params) => {
-                    console.log(params);
-                    params.data.category = params.newValue.map((x) => ({
-                        $: {
-                            name: x.name,
-                        },
-                    }));
-                    return true;
-                },
-                cellRenderer: CategoryRenderer,
-                editable: false,
-                filter: true,
-                filterParams: {
-                    filterOptions: [
-                        IncludesFilter,
-                        ExcludesFilter,
-                    ],
-                    trimInput: true,
-                    debounceMs: 1000,
-                },
-                minWidth: this.minWidth(175),
-                headerTooltip: 'Categories of this item. Used to determine general usage (Must exist in area map)',
-            },
-            {
-                headerName: 'Values',
-                valueGetter: (params) => {
-                    return params.data?.value?.map((x) => ({
-                        name: x.$.name,
-                    })) ?? [];
-                },
-                valueSetter: (params) => {
-                    console.log(params);
-                    params.data.value = params.newValue.map((x) => ({
-                        $: {
-                            name: x.name,
-                        },
-                    }));
-                    return true;
-                },
-                cellRenderer: ValueRenderer,
-                editable: false,
-                filter: true,
-                filterParams: {
-                    filterOptions: [
-                        IncludesFilter,
-                        ExcludesFilter,
-                    ],
-                    trimInput: true,
-                    debounceMs: 1000,
-                },
-                minWidth: this.minWidth(175),
-                headerTooltip: 'Tiers of the item (defines the quality that places new to have to spawn this item). Must exist in area map. * = custom maps only.',
-            },
-            {
-                headerName: 'Usages',
-                valueGetter: (params) => {
-                    return params.data?.usage?.map((x) => ({
-                        name: x.$.name,
-                    })) ?? [];
-                },
-                valueSetter: (params) => {
-                    console.log(params);
-                    params.data.usage = params.newValue.map((x) => ({
-                        $: {
-                            name: x.name,
-                        },
-                    }));
-                    return true;
-                },
-                cellRenderer: UsageRenderer,
-                editable: false,
-                filter: true,
-                filterParams: {
-                    filterOptions: [
-                        IncludesFilter,
-                        ExcludesFilter,
-                    ],
-                    trimInput: true,
-                    debounceMs: 1000,
-                },
-                minWidth: this.minWidth(175),
-                headerTooltip: 'The categories of places to spawn this item (Must exist in area map)',
-            },
-            {
-                headerName: 'Nominal',
-                valueGetter: (params) => Number(params.data?.nominal[0]),
-                valueSetter: (params) => {
-                    params.data.nominal[0] = String(params.newValue);
+            new NameCol(this),
+            new CategoryCol(this),
+            new ValuesCol(this),
+            new UsagesCol(this),
+            new NominalCol(this),
+            new EstimatedNominalCol(this),
+            new ScoreCol(this),
+            new LifeTimeCol(this),
+            new RestockCol(this),
+            new MinCol(this),
+            new QuantMinCol(this),
+            new QuantMaxCol(this),
+            new CostCol(this),
+            new CountInCargoCol(this),
+            new CountInHoarderCol(this),
+            new CountInMapCol(this),
+            new CountInPlayerCol(this),
+            new CraftedCol(this),
+            new DelootCol(this),
 
-                    // auto validate min <= nominal
-                    if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
-                        // eslint-disable-next-line prefer-destructuring
-                        params.data.min[0] = params.data.nominal[0];
-                    }
+            // weapon stuff
+            new RPMCol(this),
+            new MaxMagSizeCol(this),
+            new DispersionCol(this),
+            new DamageBloodCol(this),
+            new DamageHPCol(this),
+            new DamageArmorCol(this),
+            new BulletSpeedCol(this),
+            new MaxRangeCol(this),
+            new RecoilCol(this),
+            new StabilityCol(this),
+            // new MaxRecoilUpCol(this),
+            // new MaxRfecoilLeftCol(this),
+            // new MaxRecoilRightCol(this),
 
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                headerTooltip: 'The targeted amount of items to be spawned in world/inventories/players (must be higher or equal to min)',
-            },
-            {
-                headerName: 'LifeTime',
-                valueGetter: (params) => Number(params.data?.lifetime[0]),
-                valueSetter: (params) => {
-                    params.data.lifetime[0] = String(params.newValue);
-                    return true;
-                },
-                minWidth: this.minWidth(100),
-                headerTooltip: 'Despawn time of this item',
-            },
-            {
-                headerName: 'Restock',
-                valueGetter: (params) => Number(params.data?.restock[0]),
-                valueSetter: (params) => {
-                    params.data.restock[0] = String(params.newValue);
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                headerTooltip: 'If the minimum amount of this item is reached, the CE will wait this amount of time until its respawning again.',
-            },
-            {
-                headerName: 'Min',
-                valueGetter: (params) => Number(params.data?.min[0]),
-                valueSetter: (params) => {
-                    params.data.min[0] = String(params.newValue);
+            // clothing stuff
+            new ArmorProjectileCol(this),
+            new ArmorFragCol(this),
+            new ArmorInfectedCol(this),
+            new ArmorMeleeCol(this),
 
-                    // auto validate min <= nominal
-                    if (Number(params.data.min[0]) > Number(params.data.nominal[0])) {
-                        // eslint-disable-next-line prefer-destructuring
-                        params.data.nominal[0] = params.data.min[0];
-                    }
+            new CargoSizeCol(this),
+            new WeaponSlotsCol(this),
+            new PistolSlotsCol(this),
+            new MaxCargoSizeCol(this),
+            new IsolationCol(this),
+            new VisibilityCol(this),
 
-                    return true;
-                },
-                minWidth: this.minWidth(50),
-                headerTooltip: 'Minimum amount of this item in the world',
-            },
-            {
-                headerName: 'QuantMin',
-                valueGetter: (params) => Number(params.data?.quantmin[0]),
-                valueSetter: (params) => {
-                    params.data.quantmin[0] = String(params.newValue);
-
-                    // auto validate both min and max either -1 or some value
-                    if (params.data.quantmin[0] === '-1' && params.data.quantmax[0] !== '-1') {
-                        params.data.quantmax[0] = '-1';
-                    // auto validate min <= max
-                    } else if (params.data.quantmin[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
-                        // eslint-disable-next-line prefer-destructuring
-                        params.data.quantmax[0] = params.data.quantmin[0];
-                    }
-
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The minimum percent this item is filled with items (i.e. bullets in a mag)',
-            },
-            {
-                headerName: 'QuantMax',
-                valueGetter: (params) => Number(params.data?.quantmax[0]),
-                valueSetter: (params) => {
-                    params.data.quantmax[0] = String(params.newValue);
-
-                    // auto validate both min and max either -1 or some value
-                    if (params.data.quantmax[0] === '-1' && params.data.quantmin[0] !== '-1') {
-                        params.data.quantmin[0] = '-1';
-                    // auto validate min <= max
-                    } else if (params.data.quantmax[0] !== '-1' && Number(params.data.quantmin[0]) > Number(params.data.quantmax[0])) {
-                        // eslint-disable-next-line prefer-destructuring
-                        params.data.quantmin[0] = params.data.quantmax[0];
-                    }
-
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                headerTooltip: 'Quantmin and Quantmax must either both be -1 or some value between 1 and 100 (Percents). The maximum percent this item is filled with items (i.e. bullets in a mag)',
-            },
-            {
-                headerName: 'Cost',
-                valueGetter: (params) => Number(params.data?.cost[0]),
-                valueSetter: (params) => {
-                    params.data.cost[0] = String(params.newValue);
-                    return true;
-                },
-                minWidth: this.minWidth(50),
-                headerTooltip: 'Priority in the spawn queue. Pretty much always 100 unless you want to make items less likely to spawn',
-            },
-            {
-                headerName: 'Count in Cargo',
-                valueGetter: (params) => params.data?.flags[0].$.count_in_cargo === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.count_in_cargo = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether the total amount of this item includes items in crates, containers, vehicles, backpacks etc',
-            },
-            {
-                headerName: 'Count in Hoarder',
-                valueGetter: (params) => params.data?.flags[0].$.count_in_hoarder === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.count_in_hoarder = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether the total amount of this item includes items in stashes, tents, barrels etc',
-            },
-            {
-                headerName: 'Count in Map',
-                valueGetter: (params) => params.data?.flags[0].$.count_in_map === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.count_in_map = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether the total amount of this item includes items in buildings',
-            },
-            {
-                headerName: 'Count in Player',
-                valueGetter: (params) => params.data?.flags[0].$.count_in_player === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.count_in_player = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(75),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether the total amount of this item includes items in player inventories',
-            },
-            {
-                headerName: 'crafted',
-                valueGetter: (params) => params.data?.flags[0].$.crafted === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.crafted = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(50),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether this item is made by crafting',
-            },
-            {
-                headerName: 'deloot',
-                valueGetter: (params) => params.data?.flags[0].$.deloot === '1',
-                valueSetter: (params) => {
-                    params.data.flags[0].$.deloot = params.newValue ? '1' : '0';
-                    return true;
-                },
-                minWidth: this.minWidth(50),
-                sortable: false,
-                filter: false,
-                cellRenderer: CheckboxRenderer,
-                headerTooltip: 'Wether this item is spawned at dynamic events',
-            },
+            // Common
+            new WeightCol(this),
+            new HitpointsCol(this),
+            new ItemInfoCol(this),
+            new LootTagCol(this),
+            new LootCategoryCol(this),
         ];
+    }
+
+    public setVisibleCols(cols: ColDef[]): void {
+        if (!this.gridInitDone) return;
+        const invisible = this.typesColumnDefs.filter((x) => !cols.includes(x));
+        this.agGrid?.columnApi?.setColumnsVisible(cols.map((x) => x.colId!), true);
+        this.agGrid?.columnApi?.setColumnsVisible(invisible.map((x) => x.colId), false);
     }
 
     protected async saveFiles(): Promise<void> {
         for (const file of this.files) {
-            const xmlContent = new xml.Builder().buildObject(file.content);
-            await this.appCommon.updateMissionFile(
-                file.file,
-                xmlContent,
-                this.withBackup,
-            ).toPromise();
+            if (file.skipSave) continue;
+            const fileContent = file.strinigfy();
+            if (file.location === 'mission') {
+                await this.appCommon.updateMissionFile(
+                    file.file,
+                    fileContent,
+                    this.withBackup,
+                ).toPromise();
+            } else {
+                await this.appCommon.updateProfileFile(
+                    (file as any).file, // TODO remove when profile files get saveable
+                    fileContent,
+                    this.withBackup,
+                ).toPromise();
+            }
         }
     }
 
@@ -746,122 +206,222 @@ export class TypesComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        void this.reset();
+        void this.resetWrapper();
     }
 
     public resetClicked(): void {
         if (confirm('Reset?')) {
-            void this.reset();
+            void this.resetWrapper();
         }
     }
 
-    public async reset(): Promise<void> {
+    public async resetWrapper(): Promise<void> {
 
         if (this.loading) return;
         this.loading = true;
 
-        try {
-            const core = await this.appCommon.fetchMissionFile('cfgEconomyCore.xml').toPromise();
-            this.coreXml = await xml.parseStringPromise(core);
-            const ceEntries = this.coreXml.economycore.ce || [];
-            const typesFiles: string[] = ['db/types.xml'];
-            for (const ceEntry of ceEntries) {
-                const folder = ceEntry.$.folder as string;
-                for (const file of ceEntry.file) {
-                    const fileName = file.$.name as string;
-                    const fileType = file.$.type as string;
-
-                    if (fileType === 'types') {
-                        typesFiles.push(`${folder}${folder.endsWith('/') ? '' : '/'}${fileName}`);
-                    }
-                }
-            }
-
-            this.files = ((await Promise.all(typesFiles.map(async (x) => {
-                try {
-                    const fileContent = await this.appCommon.fetchMissionFile(x).toPromise();
-                    return {
-                        file: x,
-                        content: await xml.parseStringPromise(fileContent),
-                    };
-                } catch (e) {
-                    console.error(`Failed to load file: ${x}`, e);
-                    this.outcomeBadge = {
-                        success: false,
-                        message: `Failed to load file: ${x}`,
-                    };
-                    return {
-                        file: x,
-                        content: {
-                            types: { type: [] },
-                        },
-                    };
-                }
-            }))) as {
-                file: string;
-                content: TypesXml;
-            }[]).map((file) => {
-                file.content.types.type = file.content.types.type.map((type) => {
-                    type.nominal = type.nominal ?? ['0'];
-                    type.restock = type.restock ?? ['1800'];
-                    type.min = type.min ?? ['0'];
-                    type.quantmin = type.quantmin ?? ['-1'];
-                    type.quantmax = type.quantmax ?? ['-1'];
-                    type.cost = type.cost ?? ['100'];
-                    return type;
-                });
-                return file;
-            });
-        } catch (e) {
-            console.error(e);
-        }
+        await this.reset();
 
         this.filterChanged();
         this.loading = false;
     }
 
-    public changeAttr(operation: string, attr: string, value: string | number): void {
-        if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
-            return;
+    protected async reset(): Promise<void> {
+
+        try {
+            const dumpFiles = [
+                new WeaponDumpFileWrapper('dzsm-weapondump.json'),
+                new AmmoDumpFileWrapper('dzsm-ammodump.json'),
+                new MagDumpFileWrapper('dzsm-magdump.json'),
+                new ClothingDumpFileWrapper('dzsm-clothingdump.json'),
+                new ItemDumpFileWrapper('dzsm-itemdump.json'),
+            ];
+            const dumpFilesContents = await this.appCommon.fetchProfileFiles(dumpFiles.map((x) => x.file)).toPromise();
+            for (let i = 0; i < dumpFilesContents.length; i++) {
+                const file = dumpFiles[i];
+                await file.parse(dumpFilesContents[i]);
+
+                if (file.content) {
+                    switch (file.type) {
+                        case 'itemdumpjson': {
+                            this.itemDataDump = {};
+                            file.content.forEach((x) => this.itemDataDump[x.classname.toLowerCase()] = x);
+                            break;
+                        }
+                        case 'weapondumpjson': {
+                            this.weaponDataDump = {};
+                            file.content.forEach((x) => this.weaponDataDump[x.classname.toLowerCase()] = x);
+                            break;
+                        }
+                        case 'ammodumpjson': {
+                            this.ammoDataDump = {};
+                            file.content.forEach((x) => this.ammoDataDump[x.classname.toLowerCase()] = x);
+                            break;
+                        }
+                        case 'magdumpjson': {
+                            this.magDataDump = {};
+                            file.content.forEach((x) => this.magDataDump[x.classname.toLowerCase()] = x);
+                            break;
+                        }
+                        case 'clothingdumpjson': {
+                            this.clothingDataDump = {};
+                            file.content.forEach((x) => this.clothingDataDump[x.classname.toLowerCase()] = x);
+                            break;
+                        }
+                    }
+                    this.files.push(file);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load data dump files', e);
         }
 
-        const op = this.attrOperations[operation];
-        if (!op) return;
+        try {
+            const core = new CoreFileWrapper('cfgEconomyCore.xml');
+            await core.parse(await this.appCommon.fetchMissionFile(core.file).toPromise());
+            this.files.push(core);
 
-        if (op.listOperation && !this.listAttrs.includes(attr)) return;
-        else if (op.numericOperation && !this.numericAttrs.includes(attr)) return;
+            const typesFiles: string[] = ['db/types.xml'];
+            const spawnableTypesFiles: string[] = ['cfgspawnabletypes.xml'];
+            for (const ceEntry of (core.content.economycore.ce || [])) {
+                const folder = ceEntry.$.folder;
+                for (const file of ceEntry.file) {
+                    const fileName = file.$.name;
+                    const fileType = file.$.type;
+
+                    if (fileType === 'types') {
+                        typesFiles.push(`${folder}${folder.endsWith('/') ? '' : '/'}${fileName}`);
+                    }
+                    if (fileType === 'spawnabletypes') {
+                        spawnableTypesFiles.push(`${folder}${folder.endsWith('/') ? '' : '/'}${fileName}`);
+                    }
+                }
+            }
+
+            const typesFilesContents = await this.appCommon.fetchMissionFiles(typesFiles).toPromise();
+            for (let i = 0; i < typesFiles.length; i++) {
+                const file = new TypesFileWrapper(typesFiles[i]);
+                await file.parse(typesFilesContents[i]);
+                this.files.push(file);
+            }
+
+            const spawnableTypesFilesContents = await this.appCommon.fetchMissionFiles(spawnableTypesFiles).toPromise();
+            for (let i = 0; i < spawnableTypesFiles.length; i++) {
+                const file = new SpawnableTypesFileWrapper(spawnableTypesFiles[i]);
+                await file.parse(spawnableTypesFilesContents[i]);
+                this.files.push(file);
+            }
+
+        } catch (e) {
+            console.error(`Failed to load types files`, e);
+            this.outcomeBadge = {
+                success: false,
+                message: `Failed to load types files`,
+            };
+        }
+
+        this.calcCombinedTypes();
+        this.filterChanged();
+    }
+
+    protected calcCombinedTypes(): void {
+        this.combinedTypes = {};
+        this.files
+            ?.map((x) => {
+                if (x.type === 'typesxml') {
+                    return x.content.types.type;
+                }
+                return [];
+            })
+            ?.flat()
+            ?.forEach((x) => {
+                this.combinedTypes[x.$.name.toLowerCase()] = x;
+            });
+        this.combinedClasses = Object.keys(this.combinedTypes);
+
+        this.missingClasses = [
+            ...Object.keys(this.weaponDataDump),
+            ...Object.keys(this.magDataDump),
+            ...Object.keys(this.clothingDataDump),
+            ...Object.keys(this.itemDataDump),
+        ].filter((x) => !this.combinedClasses.includes(x));
+    }
+
+    public getTypeEntry(classname?: string): TypesXmlEntry | undefined {
+        return this.combinedTypes[(classname ?? '').toLowerCase()];
+    }
+
+    public getWeaponEntry(classname?: string): DZSMWeaponDumpEntry | undefined {
+        return this.weaponDataDump[(classname ?? '').toLowerCase()];
+    }
+    public getAmmoEntry(classname?: string): DZSMAmmoDumpEntry | undefined {
+        return this.ammoDataDump[(classname ?? '').toLowerCase()];
+    }
+    public getMagEntry(classname?: string): DZSMMagDumpEntry | undefined {
+        return this.magDataDump[(classname ?? '').toLowerCase()];
+    }
+    public getClothingEntry(classname?: string): DZSMClothingDumpEntry | undefined {
+        return this.clothingDataDump[(classname ?? '').toLowerCase()];
+    }
+    public getItemEntry(classname?: string): DZSMItemDumpEntry | undefined {
+        return this.itemDataDump[(classname ?? '').toLowerCase()];
+    }
+    public getDumpEntry(classname?: string): DZSMBaseDumpEntry | undefined {
+        classname = (classname ?? '').toLowerCase();
+        return this.weaponDataDump[classname]
+            || this.clothingDataDump[classname]
+            || this.itemDataDump[classname];
+    }
+
+    public changeAttr(value: string | number): void {
 
         if (value === undefined || value === null || (typeof value === 'string' && !value)) return;
-        const prepedValue = op.valueModifier ? op.valueModifier(value, attr) : value;
+        const prepedValue = this.selectedOpertaion!.valueModifier
+            ? this.selectedOpertaion!.valueModifier(value, this.selectedOpertaionCol!)
+            : value;
         if (prepedValue === null || prepedValue === undefined) return;
 
         this.agGrid.api.forEachNodeAfterFilter((x) => {
-            op.operation(attr, prepedValue, x);
+            this.selectedOpertaion!.operation(
+                this.agGrid.api,
+                x,
+                this.selectedOpertaionCol!,
+                prepedValue,
+            );
         });
 
         // trigger change detection
-        this.files[this.activeTab].content.types.type = [...this.files[this.activeTab].content.types.type];
+        this.calcCombinedTypes()
 
-        if (attr === 'nominal') {
+        if (this.selectedOpertaionCol!.colId === 'Nominal') {
             this.filterChanged();
         }
     }
 
+    private validateType(type: TypesXmlEntry): boolean {
+        let result = true;
+        if (Number(type.min[0]) > Number(type.nominal[0])) {
+            result = false;
+            this.validationErrors.push(`${type.$.name}: Min > Nominal`);
+        }
+        if ((type.quantmin[0] === '-1' || type.quantmax[0] === '-1') && (type.quantmin[0] !== '-1' || type.quantmax[0] !== '-1')) {
+            result = false;
+            this.validationErrors.push(`${type.$.name}: QuantMin & QuantMax must be both -1 or both != -1`);
+        }
+        if (Number(type.quantmin[0]) > Number(type.quantmax[0])) {
+            result = false;
+            this.validationErrors.push(`${type.$.name}: QuantMin > QuantMax`);
+        }
+        return result;
+    }
     public validate(showSuccess: boolean): boolean {
         let result = true;
         this.validationErrors = [];
-        for (const type of this.files[this.activeTab].content.types.type) {
-            if (Number(type.min[0]) > Number(type.nominal[0])) {
-                result = false;
-                this.validationErrors.push(`${type.$.name}: Min > Nominal`);
-            }
-            if ((type.quantmin[0] === '-1' || type.quantmax[0] === '-1') && (type.quantmin[0] !== '-1' || type.quantmax[0] !== '-1')) {
-                result = false;
-                this.validationErrors.push(`${type.$.name}: QuantMin & QuantMax must be both -1 or both != -1`);
-            }
-            if (Number(type.quantmin[0]) > Number(type.quantmax[0])) {
-                result = false;
-                this.validationErrors.push(`${type.$.name}: QuantMin > QuantMax`);
+
+        for (const file of this.files) {
+            if (!file.content || file.type !== 'typesxml') continue;
+            for (const type of file.content.types.type) {
+                result &&= this.validateType(type);
             }
         }
 
@@ -875,18 +435,24 @@ export class TypesComponent implements OnInit {
         return result;
     }
 
-    public saveCurrentFile(): void {
-        if (!this.files?.length || this.activeTab > this.files.length || this.activeTab < 0) {
-            return;
-        }
+    public csvExport(): void {
+        this.agGrid?.api.exportDataAsCsv({
+            allColumns: false,
+        });
+    }
 
-        let filename = this.files[this.activeTab].file;
+    public downloadFiles(): void {
+        this.files.filter((x) => !x.skipSave).forEach((x) => this.downloadFile(x));
+    }
+
+    private downloadFile(file: FileWrapper): void {
+
+        let filename = file.file;
         if (filename.includes('/')) {
             filename = filename.split('/').pop()!;
         }
-        const xmlContent = new xml.Builder().buildObject(this.files[this.activeTab].content);
-
-        const blob = new Blob([xmlContent], { type: 'text/xml' });
+        const fileContent = file.strinigfy();
+        const blob = new Blob([fileContent], { type: file.contentType === 'xml' ? 'text/xml' : 'application/json' });
 
         /* eslint-disable no-undef */
         // eslint-disable-next-line @typescript-eslint/dot-notation
@@ -903,15 +469,38 @@ export class TypesComponent implements OnInit {
         /* eslint-enable no-undef */
     }
 
-    protected minWidth(width: number): number {
+    public minWidth(width: number): number {
         return this.lockedWidth ? width : width * 2;
     }
 
-    public getRowStyle = (params): any => {
-        if (params.data?.nominal?.[0] === '0' || params.data?.nominal?.[0] === 0) {
+    public getRowStyle = (params: RowClassParams<string, any>): RowStyle | undefined => {
+        const type = this.getTypeEntry(params.data)
+        if (type?.nominal?.[0] === '0' || type?.nominal?.[0] as any === 0) {
             return { background: 'lightgrey' };
         }
+        return undefined;
     };
+
+    public saveGridState(): void {
+
+        if (!this.agGrid?.api || !this.gridInitDone) return;
+
+        const filterModel = this.agGrid.api.getFilterModel();
+        if (filterModel) {
+            localStorage.setItem('DZSM_TYPES_FILTER', JSON.stringify(filterModel));
+        }
+
+        const columnState = this.agGrid.columnApi.getColumnState();
+        if (columnState) {
+            localStorage.setItem('DZSM_TYPES_COLSTATE', JSON.stringify(columnState));
+        }
+
+        const columnGroupState = this.agGrid.columnApi.getColumnGroupState();
+        if (columnGroupState) {
+            localStorage.setItem('DZSM_TYPES_COLGRPSTATE', JSON.stringify(columnGroupState));
+        }
+
+    }
 
     public filterChanged() {
         let count = 0;
@@ -919,9 +508,44 @@ export class TypesComponent implements OnInit {
         // there is not getFilteredNodes :(
         this.agGrid?.api?.forEachNodeAfterFilter((x) => {
             count++;
-            countNominal += Number(x.data.nominal[0]);
+
+            const type = this.getTypeEntry(x.data)
+            countNominal += Number(type?.nominal[0] ?? 0);
         });
         this.shownTypesCount = count;
         this.totalNominal = countNominal;
+
+        this.saveGridState();
+    }
+
+    public firstDataRendered() {
+
+        const filterModel = localStorage.getItem('DZSM_TYPES_FILTER');
+        if (filterModel) {
+            this.agGrid.api.setFilterModel(JSON.parse(filterModel));
+        }
+
+        const columnState = localStorage.getItem('DZSM_TYPES_COLSTATE');
+        if (columnState) {
+            const parsedColumnState = JSON.parse(columnState) as ColumnState[];
+            this.agGrid.columnApi.applyColumnState({
+                state: parsedColumnState,
+                applyOrder: true
+            });
+            this.selectedCols = parsedColumnState
+                .map((x) => this.typesColumnDefs.find((col) => col.colId === x.colId))
+                .filter((x) => !!x) as ColBase[];
+        } else {
+            this.selectedCols = [...this.typesColumnDefs];
+        }
+
+        const columnGroupState = localStorage.getItem('DZSM_TYPES_COLGRPSTATE');
+        if (columnGroupState) {
+            this.agGrid.columnApi.setColumnGroupState(JSON.parse(columnGroupState));
+        }
+
+        this.filterChanged();
+
+        this.gridInitDone = true;
     }
 }

@@ -10,10 +10,11 @@ import { NavigationModule } from '../navigation/navigation.module';
 import { AgGridModule } from 'ag-grid-angular';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { PlayersModule } from '../players/players.module';
-import { CategoryRenderer, CheckboxRenderer, TypesComponent, UsageRenderer, ValueRenderer } from './containers/types/types.component';
+import { TypesComponent } from './containers/types/types.component';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { RarityRenderer, TypesExpansionComponent } from './containers/types/types-expansion.component';
+import { TypesExpansionComponent } from './containers/types/types-expansion.component';
+import { CategoryRenderer, CheckboxRenderer, GenericListRenderer, UsageRenderer, ValueRenderer, RarityRenderer } from './containers/types/renderers';
 
 @NgModule({
     imports: [
@@ -38,6 +39,7 @@ import { RarityRenderer, TypesExpansionComponent } from './containers/types/type
         UsageRenderer,
         CheckboxRenderer,
         RarityRenderer,
+        GenericListRenderer,
         TypesComponent,
         TypesExpansionComponent,
     ],
@@ -47,6 +49,7 @@ import { RarityRenderer, TypesExpansionComponent } from './containers/types/type
         UsageRenderer,
         CheckboxRenderer,
         RarityRenderer,
+        GenericListRenderer,
         TypesComponent,
         TypesExpansionComponent,
     ],

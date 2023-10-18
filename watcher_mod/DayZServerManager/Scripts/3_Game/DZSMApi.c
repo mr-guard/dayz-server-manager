@@ -4,6 +4,7 @@ class DZSMApiOptions
 	string key = "invalid-key";
 	bool useApiForReport = false;
 	float reportInterval = 30.0;
+	bool dataDump = false;
 };
 
 static ref DZSMApiOptions m_dzsmApiOptions = null;

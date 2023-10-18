@@ -349,12 +349,22 @@ export class SteamCMD extends IService {
                 const output = await this.spawnCommand(
                     args,
                     {
-                        listener: opts?.listener ? /* istanbul ignore next */ (data: string) => {
-                            opts.listener({
+                        listener: /* istanbul ignore next */ (data: string) => {
+                            if (
+                                data?.toLowerCase()?.includes('steam guard')
+                                || data?.toLowerCase()?.includes('mobile authenticator')
+                                || data?.toLowerCase()?.includes('two-factor')
+                            ) {
+                                this.log.log(LogLevel.ERROR, 'STEAM GUARD NEEDS TO BE DISABLED!')
+                                this.log.log(LogLevel.ERROR, '')
+                                this.log.log(LogLevel.ERROR, 'The program will probably get stuck, unless you disable Steam Guard')
+                            }
+
+                            opts?.listener?.({
                                 type: 'output',
                                 text: data,
                             } as SteamCmdOutputEvent);
-                        } : undefined,
+                        },
                     },
                 );
                 opts?.listener?.({
