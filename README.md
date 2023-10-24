@@ -115,7 +115,7 @@ The goal was to break down the initial effort to a minimum while providing confi
 
 * A Windows (Root) Server with RDP/Shell access
   * hosted instances (like nitrado) cannot use this EXCEPT they can run arbitrary programs
-* To download mods: A steam account that owns DayZ and has SteamGuard DISABLED!
+* To download mods: A steam account that owns DayZ and has SteamGuard set to EMAIL or DEACTIVATED!
 * That's it!
 
 <br><a name="usage"></a>
@@ -131,7 +131,7 @@ The goal was to break down the initial effort to a minimum while providing confi
   * You can also checkout the [configuration guides](#configuration)
 * Start the manager in the folder where the config is situated
 
-* You need to disable SteamGuard on the the account to use. It is recommended to create a separate Steam account which own DayZ.
+* It is recommended to create a separate Steam account which owns DayZ. You need to set SteamGuard to EMAIL or DEACTIVATED! Do not use Mobile authenticator because those codes will not be saved on the server and need to be entered on every download/update. 
 
 * Optionally you can add it as Windows Service instead of launching it manually
 * Make sure the "Execution Location" is the folder, where the config is located (this is not necessarily the folder where the manager executable is located)
@@ -471,8 +471,9 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 <br><a name="limitations"></a>  
 ## Known Issues / Limitations <hr>  
 
-* SteamCMD Stuck:
-  * The integration with SteamCMD requires SteamGuard to be disabled.
+* SteamCMD asks for code every time:
+  * The integration with SteamCMD requires SteamGuard to be set to email code or deactivated in order for the code to be cached.
+  * Steam Mobile Authenticator cannot be cached by SteamCMD.
 
 <br>
 

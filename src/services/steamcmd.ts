@@ -355,9 +355,12 @@ export class SteamCMD extends IService {
                                 || data?.toLowerCase()?.includes('mobile authenticator')
                                 || data?.toLowerCase()?.includes('two-factor')
                             ) {
-                                this.log.log(LogLevel.ERROR, 'STEAM GUARD NEEDS TO BE DISABLED!')
-                                this.log.log(LogLevel.ERROR, '')
-                                this.log.log(LogLevel.ERROR, 'The program will probably get stuck, unless you disable Steam Guard')
+                                this.log.log(LogLevel.IMPORTANT, 'STEAM GUARD DETECTED!');
+                                this.log.log(LogLevel.IMPORTANT, '');
+                                this.log.log(LogLevel.IMPORTANT, 'It is recommended to create a separate steam account with copy of DayZ and have SteamGuard set to Email-Code or Deactivated (Mobile Authenticator Code needs to be entered EVERY TIME, Email Code is saved)');
+                                this.log.log(LogLevel.IMPORTANT, 'Otherwise the server manager might get stuck when doing updates until you enter the code');
+
+                                console.log('Enter your Steam Guard code:');
                             }
 
                             opts?.listener?.({
