@@ -80,11 +80,11 @@ export class SpawnableTypesFileWrapper extends FileWrapperBase {
         super(file);
     }
 
-    public override async parse(content: string): Promise<void> {
-        await super.parse(content);
+    // public override async parse(content: string): Promise<void> {
+    //     await super.parse(content);
 
-        console.log('spawnabletypes', this.content);
-    }
+    //     console.log('spawnabletypes', this.content);
+    // }
 }
 
 export class CoreFileWrapper extends FileWrapperBase {
@@ -157,6 +157,27 @@ export class AmmoDumpFileWrapper extends DumpFileWrapper {
     public content!: DZSMAmmoDumpEntry[];
 
     public constructor(file: string) { super(file); }
+
+    public override async parse(content: string): Promise<void> {
+        await super.parse(content);
+
+        for (const ammo of this.content) {
+            if (typeof ammo.damageOverride === 'string') {
+                // console.log(ammo)
+                if (ammo.damageOverride) {
+                    ammo.damageOverride = (JSON.parse(
+                        (ammo.damageOverride as string)
+                            .replace(/\{/g, '[')
+                            .replace(/\}/g, ']')
+                    ) as [number, number][])[0][0];
+                } else {
+                    ammo.damageOverride = 0.9;
+                }
+            } else if (typeof ammo.damageOverride !== 'number') {
+                ammo.damageOverride = 0.9;
+            }
+        }
+    }
 };
 export class MagDumpFileWrapper extends DumpFileWrapper {
     public override readonly type = 'magdumpjson';

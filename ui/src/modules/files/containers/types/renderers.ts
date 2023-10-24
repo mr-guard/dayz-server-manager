@@ -266,7 +266,7 @@ export class RarityRenderer implements ICellRendererAngularComp {
     }
 
     public checkedHandler(newValue: any): void {
-        console.warn(newValue)
+        // console.warn(newValue)
         const { colId } = this.params.column;
         this.params.node.setDataValue(colId, this.value = Number(newValue));
     }

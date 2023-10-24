@@ -113,6 +113,7 @@ class DZSMAmmoDumpEntry : DZSMDumpEntry
 	
 	float noiseHit;
 
+	ref TFloatArray damageOverride;
 	float damageHP;
 	float damageBlood;
 	float damageShock;
@@ -145,6 +146,10 @@ class DZSMAmmoDumpEntry : DZSMDumpEntry
 		deflecting = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " deflecting" );
 		
 		noiseHit = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " NoiseHit strength" );
+		
+		// damageOverride = GetGame().ConfigGetTextOut( "cfgAmmo " + projectile + " DamageApplied defaultDamageOverride" );
+		damageOverride = new TFloatArray;
+		GetGame().ConfigGetFloatArray( "cfgAmmo " + projectile + " DamageApplied defaultDamageOverride 0", damageOverride );
 		
 		damageArmor = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " DamageApplied Health armorDamage" );
 		damageHP = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " DamageApplied Health damage" );
@@ -289,6 +294,8 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 	int chamberSize;
 	int barrels;
 	
+    string color;
+
 	ref TStringArray ammo;
 	ref TStringArray mags;
 	ref TStringArray attachments;
@@ -314,6 +321,8 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 		TStringArray muzzles = new TStringArray;
 		GetGame().ConfigGetTextArray( "cfgWeapons " + classname + " muzzles", muzzles);
 		barrels = muzzles.Count();
+		
+        color = GetGame().ConfigGetTextOut( "cfgWeapons " + classname + " color" );
 		
 		modes = new array<ref DZSMWeaponModeDumpEntry>;
 		

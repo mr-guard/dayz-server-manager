@@ -134,6 +134,7 @@ export interface DZSMAmmoDumpEntry extends DZSMDumpEntry {
 
 	noiseHit: number;
 
+    damageOverride: number;
 	damageHP: number;
 	damageBlood: number;
 	damageShock: number;
@@ -180,6 +181,8 @@ export interface DZSMWeaponDumpEntry extends DZSMBaseDumpEntry {
 
 	chamberSize: number;
 	barrels: number;
+
+    color: string;
 
 	ammo: string[];
 	mags: string[];
@@ -254,7 +257,8 @@ export const toRadians = (angle: number): number => {
     return angle * (Math.PI / 180);
 }
 
-export const round = (num: number, decimals: number = 1): number => {
+export const round = (num: number | undefined, decimals: number = 1): number => {
+    if (!num) return num!;
     return +(num.toFixed(decimals));
 }
 
@@ -264,4 +268,28 @@ export const arrayMax = <T>(list: T[], accessor: (item: T) => number | undefined
         .map((x) => accessor(x) ?? -Infinity)
         .reduce((a, b) => Math.max(a, b), -Infinity);
     return max === -Infinity ? undefined : max;
+}
+
+export const arrayMin = <T>(list: T[], accessor: (item: T) => number | undefined = (x) => x as any) => {
+    if (!list?.length) return undefined;
+    const min = list
+        .map((x) => accessor(x) ?? Infinity)
+        .reduce((a, b) => Math.min(a, b), Infinity);
+    return min === Infinity ? undefined : min;
+}
+
+export const clamp = (min: number, max: number, value: number) => {
+    return Math.min(Math.max(value, min), max);
+}
+
+export const lerp = (min: number, max: number, alpha: number) => {
+    return min + alpha * (max - min);
+}
+
+export const reverselerp = (min: number, max: number, val: number) => {
+    return clamp(0, 1, (val - min) / max);
+}
+
+export const reverselerpnoclamp = (min: number, max: number, val: number) => {
+    return (val - min) / max;
 }

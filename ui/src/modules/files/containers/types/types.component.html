@@ -1,77 +1,95 @@
 <sb-layout-dashboard class="types-component">
     <sb-dashboard-head title="Files" [hideBreadcrumbs]="false"></sb-dashboard-head>
     <sb-card background="h-100 type-tabs">
-        <div class="card-header" style="display: flex; align-items: center; padding-bottom: 0; padding-top: 0.5rem;">
-            <div class="mr-3" title="Un/Lock the width of the table columns">
-                <fa-icon class="mr-1" [icon]='["fas", lockedWidth ? "lock" : "lock-open"]'></fa-icon>
-                <input type="checkbox" [(ngModel)]="lockedWidth">
+        <div class="card-header pb-0">
+
+            <div *ngIf="expanded" class="d-flex flex-row flex-grow w-100">
+                <div class="ml-auto">
+                    <ng-select [items]="typesColumnDefs"
+                        [(ngModel)]="selectedCols"
+                        [ngModelOptions]="{standalone: true}"
+                        placeholder="Columns"
+                        appendTo="body"
+                        bindLabel="colId"
+                        [searchable]="false"
+                        [multiple]="true"
+                        (change)="setVisibleCols($event)"
+                    >
+                        <ng-template ng-multi-label-tmp>
+                            <div class="ng-value">
+                                <span class="ng-value-label">{{selectedCols.length - 2}} selected...</span>
+                            </div>
+                        </ng-template>
+                    </ng-select>
+                </div>
             </div>
 
-            <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
-                <li [ngbNavItem]="0">
-                    <a ngbNavLink>Types</a>
-                    <ng-template ngbNavContent>
-                        <div style="height: 100%; margin-bottom: 20px;">
-                            <ag-grid-angular
-                                *ngIf="typesColumnDefs?.length"
-                                [columnDefs]="typesColumnDefs"
-                                [defaultColDef]="defaultColDef"
-                                [rowData]="combinedClasses"
-                                [getRowStyle]="getRowStyle"
-                                [floatingFiltersHeight]="50"
-                                [groupHeaderHeight]="75"
-                                (columnVisible)="saveGridState()"
-                                (columnResized)="saveGridState()"
-                                (columnMoved)="saveGridState()"
-                                (rowDataUpdated)="filterChanged()"
-                                (firstDataRendered)="firstDataRendered()"
-                                (filterChanged)="filterChanged()"
-                                style="width: 100%; height: 100%;"
-                                class="ag-theme-alpine"
-                                #dataGrid
-                            >
-                            </ag-grid-angular>
-
-                        </div>
-                    </ng-template>
-                </li>
-
-                <li [ngbNavItem]="1">
-                    <a ngbNavLink>Missing Types</a>
-                    <ng-template ngbNavContent>
-                        <div style="height: 100%">
-                            <ul>
-                                <li *ngFor="let classname of missingClasses">
-                                    {{ classname }}
-                                </li>
-                            </ul>
-                        </div>
-                    </ng-template>
-                </li>
-            </ul>
-
-            <div class="ml-auto mr-2">
-                <ng-select [items]="typesColumnDefs"
-                    [(ngModel)]="selectedCols"
-                    [ngModelOptions]="{standalone: true}"
-                    placeholder="Columns"
-                    appendTo="body"
-                    bindLabel="colId"
-                    [searchable]="false"
-                    [multiple]="true"
-                    (change)="setVisibleCols($event)"
+            <div style="display: flex; align-items: center; padding-bottom: 0; padding-top: 0.5rem;">
+                <div class="ml-3 mr-3" title="More options"
+                    style="cursor: pointer;"
+                    (click)="expanded = !expanded"
                 >
-                    <ng-template ng-multi-label-tmp>
-                        <div class="ng-value">
-                            <span class="ng-value-label">{{selectedCols.length - 2}} selected...</span>
-                        </div>
-                    </ng-template>
-                </ng-select>
-            </div>
-            <div class="d-flex">
-                <fa-icon class="mr-2" [icon]='["fas", "info"]'></fa-icon>
-                <div class="mr-2">Shown: {{ shownTypesCount }}</div>
-                <div>Total Nominal: {{ totalNominal }}</div>
+                    <fa-icon class="mr-1" [icon]='["fas", expanded ? "chevron-up" : "chevron-right"]'></fa-icon>
+                </div>
+
+                <div class="ml-3 mr-3" title="Un/Lock the width of the table columns">
+                    <fa-icon class="mr-1" [icon]='["fas", lockedWidth ? "lock" : "lock-open"]'></fa-icon>
+                    <input type="checkbox" [(ngModel)]="lockedWidth">
+                </div>
+
+                <ul class="nav-tabs mt-auto" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
+                    <li [ngbNavItem]="0">
+                        <a ngbNavLink>Types</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%; margin-bottom: 20px;">
+                                <ag-grid-angular
+                                    *ngIf="typesColumnDefs?.length"
+                                    [columnDefs]="typesColumnDefs"
+                                    [defaultColDef]="defaultColDef"
+                                    [rowData]="combinedClasses"
+                                    [getRowStyle]="getRowStyle"
+                                    [floatingFiltersHeight]="50"
+                                    [groupHeaderHeight]="75"
+                                    [rowSelection]="'multiple'"
+                                    (columnVisible)="saveGridState()"
+                                    (columnResized)="saveGridState()"
+                                    (columnMoved)="saveGridState()"
+                                    (sortChanged)="saveGridState()"
+                                    (rowDataUpdated)="filterChanged()"
+                                    (firstDataRendered)="firstDataRendered()"
+                                    (filterChanged)="filterChanged()"
+                                    style="width: 100%; height: 100%;"
+                                    class="ag-theme-alpine"
+                                    #dataGrid
+                                >
+                                </ag-grid-angular>
+
+                            </div>
+                        </ng-template>
+                    </li>
+
+                    <li [ngbNavItem]="1">
+                        <a ngbNavLink>Missing Types</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%">
+                                <ul>
+                                    <li *ngFor="let classname of missingClasses">
+                                        {{ classname }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </ng-template>
+                    </li>
+                </ul>
+
+                <div class="d-flex ml-auto" style="align-items: center;">
+                    <fa-icon class="mr-2" [icon]='["fas", "info"]'></fa-icon>
+                    <div style="font-weight: 400; font-size: 65%;">
+                        <div class="mr-2">Shown: {{ shownTypesCount }}</div>
+                        <div>Total Nominal: {{ totalNominal }}</div>
+                        <div>Estimated Nominal: {{ totalEstimatedNominal }}</div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card-body" *ngIf="!loading">
@@ -100,6 +118,14 @@
 
                 <div class="d-flex flex-row" style="justify-content: space-between; flex-wrap: wrap; white-space: nowrap;">
                     <div class="d-flex flex-row">
+                        <div>
+                            <button type="button" class="btn btn-success"
+                                    (click)="duplicate()"
+                                    title="Duplicate the selected entries"
+                            >
+                                Duplicate
+                            </button>
+                        </div>
                         <div class="d-flex flex-row btn-group ml-1 mr-1">
                             <input #changeInput style="margin-right: -2px;">
                             <select [(ngModel)]="selectedOpertaionCol"

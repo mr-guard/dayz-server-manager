@@ -854,7 +854,7 @@ export class Config {
     public updateServerBeforeServerStart: boolean = true;
 
     /**
-     * Whether or not to check for mod updates when the manager is started
+     * Whether or not to check for server updates when the manager is started
      */
     public updateServerOnStartup: boolean = true;
 

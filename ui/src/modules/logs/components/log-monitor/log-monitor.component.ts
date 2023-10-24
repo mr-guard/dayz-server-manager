@@ -78,7 +78,7 @@ export class LogMonitorComponent implements OnInit, OnDestroy, AfterViewInit {
 
     @HostListener('window:resize')
     public onResize(): void {
-        console.warn('test', this.container);
+        // console.warn('test', this.container);
     }
 
 }

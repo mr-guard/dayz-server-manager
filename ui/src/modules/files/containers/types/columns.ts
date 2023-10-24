@@ -1,9 +1,58 @@
-import { ColDef, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
+import { ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
 import { TypesComponent } from "./types.component";
 import { CheckboxRenderer, GenericListRenderer } from "./renderers";
 import { ExcludesFilter, IncludesFilter } from "./filter";
 import { AttributeOperation, LIST_OPS, NUMBER_OPS } from "./ops";
 import { ItemCalculator } from "./calc";
+import { round } from "./types";
+
+import {Component} from '@angular/core';
+import { ITooltipAngularComp } from "ag-grid-angular";
+
+@Component({
+    selector: 'list-tooltip-component',
+    template: `<div class="custom-tooltip" *ngIf="params.data">
+                    <p *ngFor="let item of params.value">
+                        <span>{{ item.label}}: </span>
+                        {{ round(item.value) }}
+                    </p>
+                </div>`,
+    styles: [
+        `
+          :host {
+            position: absolute;
+            pointer-events: none;
+            transition: opacity 1s;
+          }
+
+          :host.ag-tooltip-hiding {
+            opacity: 0;
+          }
+
+          .custom-tooltip {
+            background-color: white;
+            border: 1px solid grey;
+            border-radius: 3px;
+          }
+
+          .custom-tooltip p {
+            margin: 5px;
+            white-space: nowrap;
+          }
+
+        `,
+      ],
+})
+export class ListTooltipComponent implements ITooltipAngularComp {
+    public params!: ITooltipParams;
+    agInit(params: ITooltipParams): void {
+        this.params = params;
+    }
+    round(val: any) {
+        if (typeof val === 'number') return round(val, 2);
+        return val;
+    }
+}
 
 export abstract class ColBase implements ColDef<string> {
     public colId: string;
@@ -34,14 +83,46 @@ export class NameCol extends ColBase {
     headerTooltip = 'Class Name of the item';
 
     valueGetter = (params: ValueGetterParams<string>) => {
-        // console.log(params)
-        const type = this.types.getTypeEntry(params.data);
-        return type?.$?.name;
+        return params.data;
     }
     valueSetter = (params: ValueSetterParams<string>) => {
+        if (!params.newValue) return false;
+
+        const alreadyThere = this.types.getTypeEntry(params.newValue);
+        if (alreadyThere) return false;
+
         const type = this.types.getTypeEntry(params.data);
         if (type) {
+
             type.$.name = params.newValue;
+
+            for (const file of this.types.files) {
+                if (file.type === 'spawnabletypesxml') {
+                    const found = file.content.spawnabletypes.type.find((x) => x.$.name?.toLowerCase() === params.data.toLowerCase());
+                    if (found) {
+                        found.$.name = params.newValue;
+                    }
+                }
+                if (file.type === 'hardlinejson') {
+                    if (
+                        file.content.ItemRarity[params.newValue.toLowerCase()] !== undefined
+                        || file.content.ItemRarity[params.data.toLowerCase()] === undefined
+                    ) continue;
+
+                    file.content.ItemRarity[params.newValue.toLowerCase()] = file.content.ItemRarity[params.data.toLowerCase()];
+                    file.content.ItemRarity[params.data.toLowerCase()] = undefined!;
+                    delete file.content.ItemRarity[params.data.toLowerCase()];
+                }
+                if (file.type === 'traderjson') {
+                    const found = file.content.Items.find((x) => x.ClassName?.toLowerCase() === params.data.toLowerCase());
+                    if (found) {
+                        found.ClassName = params.newValue;
+                    }
+                }
+            }
+
+            this.types.calcCombinedTypes();
+            this.types.filterChanged();
             return true;
         }
         return false;
@@ -219,12 +300,49 @@ export class ScoreCol extends ColBase {
     editable = false;
     valueGetter = (params: ValueGetterParams<string>) => {
         const score = this.calc.calcItemScore(params.data);
-        if (score !== null) {
+        if (score !== null && score !== undefined) {
             return Math.ceil(score);
         }
         return undefined;
     };
     headerTooltip = 'The estimated score of this item';
+
+    tooltipComponent = ListTooltipComponent;
+    tooltipValueGetter = (params: ITooltipParams<string>): string | any => {
+        const scoreParams = this.calc.calcWeaponScoreParams(params.data);
+        if (!scoreParams) return undefined;
+
+        return [
+            {
+                label: `Combat Window (${scoreParams.combatWindow}s) Hit Chance`,
+                value: scoreParams.combatWindowChance,
+            },
+            {
+                label: `Damage Bonus`,
+                value: scoreParams.dmgScore,
+            },
+            {
+                label: `Armor Penetration Bonus`,
+                value: scoreParams.armorDmgBonus,
+            },
+            {
+                label: `Effective Range Bonus`,
+                value: scoreParams.effectiveRangeBonus,
+            },
+            {
+                label: `Max Magazine Size Bonus`,
+                value: scoreParams.maxMagSizeBonus,
+            },
+            {
+                label: `Can Attach Suppressor Bonus`,
+                value: scoreParams.canSuppressorBonus,
+            },
+            {
+                label: `Can Attach LongRangeScope Bonus`,
+                value: scoreParams.canLongRangeScopeBonus,
+            }
+        ] as { label: string; value: any }[];
+    }
 }
 
 export class EstimatedNominalCol extends ColBase {
@@ -605,6 +723,38 @@ export class DispersionCol extends ColBase {
     }
 }
 
+export class WeaponDamageCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'WeaponDamage')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return round(this.calc.calcWeaponDamage(params.data), 1);
+    }
+}
+
+export class WeaponOneHitDistanceCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'OneHit Distance')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return round(this.calc.calcWeaponDamageDistance(params.data, 100), 1);
+    }
+}
+
 export class DamageBloodCol extends ColBase {
     public constructor(
         types: TypesComponent,
@@ -617,7 +767,7 @@ export class DamageBloodCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponAmmoProp('damageBlood', params.data);
+        return round(this.calc.calcWeaponAmmoProp('damageBlood', params.data), 1);
     }
 }
 
@@ -633,7 +783,7 @@ export class DamageHPCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponAmmoProp('damageHP', params.data);
+        return round(this.calc.calcWeaponAmmoProp('damageHP', params.data), 1);
     }
 }
 
@@ -649,7 +799,7 @@ export class DamageArmorCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponAmmoProp('damageArmor', params.data);
+        return round(this.calc.calcWeaponAmmoProp('damageArmor', params.data), 1);
     }
 }
 
@@ -665,15 +815,15 @@ export class BulletSpeedCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponBulletSpeed(params.data);
+        return round(this.calc.calcWeaponBulletSpeed(params.data), 1);
     }
 }
 
-export class MaxRangeCol extends ColBase {
+export class MaxZeroCol extends ColBase {
     public constructor(
         types: TypesComponent,
     ) {
-        super(types, 'Max Range')
+        super(types, 'Max Zero')
         this.minWidth = this.types.minWidth(75);
     }
     editable = false;
@@ -697,7 +847,7 @@ export class RecoilCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponRecoil('Y', params.data);
+        return round(this.calc.calcWeaponRecoil('Y', params.data), 4);
     }
 }
 
@@ -713,7 +863,7 @@ export class StabilityCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.calc.calcWeaponRecoil('X', params.data);
+        return round(this.calc.calcWeaponRecoil('X', params.data), 4);
     }
 }
 
@@ -1111,6 +1261,22 @@ export class LootCategoryCol extends ColBase {
     valueGetter = (params) => {
         const detail = this.types.getDumpEntry(params.data);
         return detail?.lootCategory || '';
+    }
+}
+
+export class GuessedVariantOfCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Guessed Variant Of')
+        this.minWidth = this.types.minWidth(100);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params) => {
+        return this.calc.calcColorBase(params.data);
     }
 }
 

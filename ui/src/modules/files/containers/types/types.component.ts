@@ -3,12 +3,32 @@ import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import { MaintenanceService } from '../../../maintenance/services/maintenance.service';
 import { AgGridAngular } from 'ag-grid-angular';
-import { ColDef, ColumnState, RowClassParams, RowStyle } from 'ag-grid-community';
+import { CellContextMenuEvent, ColDef, ColumnState, RowClassParams, RowStyle } from 'ag-grid-community';
 
-import { DZSMAmmoDumpEntry, DZSMBaseDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, TypesXmlEntry } from './types';
-import { AmmoDumpFileWrapper, ClothingDumpFileWrapper, CoreFileWrapper, FileWrapper, ItemDumpFileWrapper, MagDumpFileWrapper, SpawnableTypesFileWrapper, TypesFileWrapper, WeaponDumpFileWrapper } from './files';
+import {
+    DZSMAmmoDumpEntry,
+    DZSMBaseDumpEntry,
+    DZSMClothingDumpEntry,
+    DZSMItemDumpEntry,
+    DZSMMagDumpEntry,
+    DZSMWeaponDumpEntry,
+    SpawnableTypesXmlEntry,
+    TypesXmlEntry,
+} from './types';
+import {
+    AmmoDumpFileWrapper,
+    ClothingDumpFileWrapper,
+    CoreFileWrapper,
+    FileWrapper,
+    ItemDumpFileWrapper,
+    MagDumpFileWrapper,
+    SpawnableTypesFileWrapper,
+    TypesFileWrapper,
+    WeaponDumpFileWrapper
+} from './files';
 import { AttributeOperation } from './ops';
-import { ArmorFragCol, ArmorInfectedCol, ArmorMeleeCol, ArmorProjectileCol, BulletSpeedCol, CargoSizeCol, CategoryCol, ColBase, CostCol, CountInCargoCol, CountInHoarderCol, CountInMapCol, CountInPlayerCol, CraftedCol, DamageArmorCol, DamageBloodCol, DamageHPCol, DelootCol, DispersionCol, EstimatedNominalCol, HitpointsCol, IsolationCol, ItemInfoCol, LifeTimeCol, LootCategoryCol, LootTagCol, MaxCargoSizeCol, MaxMagSizeCol, MaxRangeCol, MinCol, NameCol, NominalCol, PistolSlotsCol, QuantMaxCol, QuantMinCol, RPMCol, RecoilCol, RestockCol, ScoreCol, StabilityCol, UsagesCol, ValuesCol, VisibilityCol, WeaponSlotsCol, WeightCol } from './columns';
+import * as columns from './columns';
+import { ItemCalculator } from './calc';
 
 @Component({
     selector: 'sb-types',
@@ -28,6 +48,7 @@ export class TypesComponent implements OnInit {
     public get lockedWidth(): boolean {
         return this._lockedWidth;
     }
+    public expanded: boolean = false;
 
     public activeTab = 0;
 
@@ -59,6 +80,7 @@ export class TypesComponent implements OnInit {
 
     public shownTypesCount: number = 0;
     public totalNominal: number = 0;
+    public totalEstimatedNominal: number = 0;
 
     public validationErrors: string[] = [];
 
@@ -71,83 +93,91 @@ export class TypesComponent implements OnInit {
     };
 
     public gridInitDone = false;
-    public selectedCols: ColBase[] = [];
-    public typesColumnDefs: ColBase[] = [];
+    public selectedCols: columns.ColBase[] = [];
+    public typesColumnDefs: columns.ColBase[] = [];
 
-    public selectedOpertaionCol?: ColBase;
+    public selectedOpertaionCol?: columns.ColBase;
     public selectedOpertaion?: AttributeOperation;
 
+    public calc: ItemCalculator;
     public constructor(
         public appCommon: AppCommonService,
         public maintenance: MaintenanceService,
     ) {
         this.setCols();
+        this.calc = ItemCalculator.getInstance(this);
     }
 
     protected setCols(): void {
         this.typesColumnDefs = [
-            new NameCol(this),
-            new CategoryCol(this),
-            new ValuesCol(this),
-            new UsagesCol(this),
-            new NominalCol(this),
-            new EstimatedNominalCol(this),
-            new ScoreCol(this),
-            new LifeTimeCol(this),
-            new RestockCol(this),
-            new MinCol(this),
-            new QuantMinCol(this),
-            new QuantMaxCol(this),
-            new CostCol(this),
-            new CountInCargoCol(this),
-            new CountInHoarderCol(this),
-            new CountInMapCol(this),
-            new CountInPlayerCol(this),
-            new CraftedCol(this),
-            new DelootCol(this),
+            new columns.NameCol(this),
+            new columns.CategoryCol(this),
+            new columns.ValuesCol(this),
+            new columns.UsagesCol(this),
+            new columns.NominalCol(this),
+            new columns.EstimatedNominalCol(this),
+            new columns.ScoreCol(this),
+            new columns.LifeTimeCol(this),
+            new columns.RestockCol(this),
+            new columns.MinCol(this),
+            new columns.QuantMinCol(this),
+            new columns.QuantMaxCol(this),
+            new columns.CostCol(this),
+            new columns.CountInCargoCol(this),
+            new columns.CountInHoarderCol(this),
+            new columns.CountInMapCol(this),
+            new columns.CountInPlayerCol(this),
+            new columns.CraftedCol(this),
+            new columns.DelootCol(this),
 
             // weapon stuff
-            new RPMCol(this),
-            new MaxMagSizeCol(this),
-            new DispersionCol(this),
-            new DamageBloodCol(this),
-            new DamageHPCol(this),
-            new DamageArmorCol(this),
-            new BulletSpeedCol(this),
-            new MaxRangeCol(this),
-            new RecoilCol(this),
-            new StabilityCol(this),
+            new columns.RPMCol(this),
+            new columns.MaxMagSizeCol(this),
+            new columns.DispersionCol(this),
+            new columns.WeaponDamageCol(this),
+            new columns.WeaponOneHitDistanceCol(this),
+            new columns.DamageBloodCol(this),
+            new columns.DamageHPCol(this),
+            new columns.DamageArmorCol(this),
+            new columns.BulletSpeedCol(this),
+            new columns.MaxZeroCol(this),
+            new columns.RecoilCol(this),
+            new columns.StabilityCol(this),
             // new MaxRecoilUpCol(this),
             // new MaxRfecoilLeftCol(this),
             // new MaxRecoilRightCol(this),
 
             // clothing stuff
-            new ArmorProjectileCol(this),
-            new ArmorFragCol(this),
-            new ArmorInfectedCol(this),
-            new ArmorMeleeCol(this),
+            new columns.ArmorProjectileCol(this),
+            new columns.ArmorFragCol(this),
+            new columns.ArmorInfectedCol(this),
+            new columns.ArmorMeleeCol(this),
 
-            new CargoSizeCol(this),
-            new WeaponSlotsCol(this),
-            new PistolSlotsCol(this),
-            new MaxCargoSizeCol(this),
-            new IsolationCol(this),
-            new VisibilityCol(this),
+            new columns.CargoSizeCol(this),
+            new columns.WeaponSlotsCol(this),
+            new columns.PistolSlotsCol(this),
+            new columns.MaxCargoSizeCol(this),
+            new columns.IsolationCol(this),
+            new columns.VisibilityCol(this),
 
             // Common
-            new WeightCol(this),
-            new HitpointsCol(this),
-            new ItemInfoCol(this),
-            new LootTagCol(this),
-            new LootCategoryCol(this),
+            new columns.WeightCol(this),
+            new columns.HitpointsCol(this),
+            new columns.ItemInfoCol(this),
+            new columns.LootTagCol(this),
+            new columns.LootCategoryCol(this),
+            new columns.GuessedVariantOfCol(this),
         ];
     }
 
     public setVisibleCols(cols: ColDef[]): void {
         if (!this.gridInitDone) return;
+
         const invisible = this.typesColumnDefs.filter((x) => !cols.includes(x));
         this.agGrid?.columnApi?.setColumnsVisible(cols.map((x) => x.colId!), true);
         this.agGrid?.columnApi?.setColumnsVisible(invisible.map((x) => x.colId), false);
+
+        this.saveGridState();
     }
 
     protected async saveFiles(): Promise<void> {
@@ -324,7 +354,7 @@ export class TypesComponent implements OnInit {
         this.filterChanged();
     }
 
-    protected calcCombinedTypes(): void {
+    public calcCombinedTypes(): void {
         this.combinedTypes = {};
         this.files
             ?.map((x) => {
@@ -381,14 +411,27 @@ export class TypesComponent implements OnInit {
             : value;
         if (prepedValue === null || prepedValue === undefined) return;
 
-        this.agGrid.api.forEachNodeAfterFilter((x) => {
-            this.selectedOpertaion!.operation(
-                this.agGrid.api,
-                x,
-                this.selectedOpertaionCol!,
-                prepedValue,
-            );
-        });
+        const selectedNodes = this.agGrid.api.getSelectedNodes();
+        if (selectedNodes?.length) {
+            selectedNodes.forEach((x) => {
+                this.selectedOpertaion!.operation(
+                    this.agGrid.api,
+                    x,
+                    this.selectedOpertaionCol!,
+                    prepedValue,
+                );
+            });
+        } else {
+            this.agGrid.api.forEachNodeAfterFilter((x) => {
+                this.selectedOpertaion!.operation(
+                    this.agGrid.api,
+                    x,
+                    this.selectedOpertaionCol!,
+                    prepedValue,
+                );
+            });
+        }
+
 
         // trigger change detection
         this.calcCombinedTypes()
@@ -495,6 +538,11 @@ export class TypesComponent implements OnInit {
             localStorage.setItem('DZSM_TYPES_COLSTATE', JSON.stringify(columnState));
         }
 
+        const visisbleColumnState = this.selectedCols;
+        if (visisbleColumnState) {
+            localStorage.setItem('DZSM_TYPES_VISCOLSTATE', JSON.stringify(visisbleColumnState.map((x) => x.colId)));
+        }
+
         const columnGroupState = this.agGrid.columnApi.getColumnGroupState();
         if (columnGroupState) {
             localStorage.setItem('DZSM_TYPES_COLGRPSTATE', JSON.stringify(columnGroupState));
@@ -505,15 +553,19 @@ export class TypesComponent implements OnInit {
     public filterChanged() {
         let count = 0;
         let countNominal = 0;
+        let countEstimatedNominal = 0;
         // there is not getFilteredNodes :(
         this.agGrid?.api?.forEachNodeAfterFilter((x) => {
             count++;
 
             const type = this.getTypeEntry(x.data)
             countNominal += Number(type?.nominal[0] ?? 0);
+            countEstimatedNominal += Number(this.calc.estimateItemNominal(x.data) ?? type?.nominal[0] ?? 0);
         });
         this.shownTypesCount = count;
         this.totalNominal = countNominal;
+        this.totalEstimatedNominal = countEstimatedNominal;
+        // console.log('totalEstimatedNominal', this.totalEstimatedNominal)
 
         this.saveGridState();
     }
@@ -532,10 +584,22 @@ export class TypesComponent implements OnInit {
                 state: parsedColumnState,
                 applyOrder: true
             });
-            this.selectedCols = parsedColumnState
-                .map((x) => this.typesColumnDefs.find((col) => col.colId === x.colId))
-                .filter((x) => !!x) as ColBase[];
-        } else {
+
+            const visColumnState = localStorage.getItem('DZSM_TYPES_VISCOLSTATE');
+            if (visColumnState) {
+                try {
+                    this.selectedCols = JSON.parse(visColumnState)
+                    .map((x) => this.typesColumnDefs.find((y) => y.colId === x))
+                    .filter((x) => !!x) as columns.ColBase[];
+
+                    const invisible = this.typesColumnDefs.filter((x) => !this.selectedCols.includes(x));
+                    this.agGrid?.columnApi?.setColumnsVisible(this.selectedCols.map((x) => x.colId!), true);
+                    this.agGrid?.columnApi?.setColumnsVisible(invisible.map((x) => x.colId), false);
+                } catch {}
+            }
+        }
+
+        if (!this.selectedCols?.length) {
             this.selectedCols = [...this.typesColumnDefs];
         }
 
@@ -547,5 +611,55 @@ export class TypesComponent implements OnInit {
         this.filterChanged();
 
         this.gridInitDone = true;
+    }
+
+    public duplicate() {
+        const classesToDupe = this.agGrid.api.getSelectedRows();
+        for (const classname of classesToDupe) {
+
+            for (const file of this.files) {
+                if (file.type === 'typesxml') {
+                    if (file.content.types.type.some((x) => x.$.name?.toLowerCase() === (classname.toLowerCase() + ' copy'))) continue;
+
+                    const idx = file.content.types.type.findIndex((x) => x.$.name?.toLowerCase() === classname.toLowerCase());
+                    if (idx !== -1) {
+                        const copy = JSON.parse(JSON.stringify(file.content.types.type[idx])) as TypesXmlEntry;
+                        copy.$.name = copy.$.name + ' copy'
+                        file.content.types.type.splice(idx, 0, copy);
+                    }
+                }
+                if (file.type === 'spawnabletypesxml') {
+                    if (file.content.spawnabletypes.type.some((x) => x.$.name?.toLowerCase() === (classname.toLowerCase() + ' copy'))) continue;
+
+                    const idx = file.content.spawnabletypes.type.findIndex((x) => x.$.name?.toLowerCase() === classname.toLowerCase());
+                    if (idx !== -1) {
+                        const copy = JSON.parse(JSON.stringify(file.content.spawnabletypes.type[idx])) as SpawnableTypesXmlEntry;
+                        copy.$.name = copy.$.name + ' copy'
+                        file.content.spawnabletypes.type.splice(idx, 0, copy);
+                    }
+                }
+                if (file.type === 'hardlinejson') {
+                    if (
+                        file.content.ItemRarity[classname.toLowerCase() + ' copy'] !== undefined
+                        || file.content.ItemRarity[classname.toLowerCase()] === undefined
+                    ) continue;
+
+                    file.content.ItemRarity[classname.toLowerCase() + ' copy'] = file.content.ItemRarity[classname.toLowerCase()];
+                }
+                if (file.type === 'traderjson') {
+                    if (file.content.Items.some((x) => x.ClassName?.toLowerCase() === (classname.toLowerCase() + ' copy'))) continue;
+
+                    const idx = file.content.Items.findIndex((x) => x.ClassName?.toLowerCase() === classname.toLowerCase());
+                    if (idx !== -1) {
+                        const copy = JSON.parse(JSON.stringify(file.content.Items[idx]));
+                        copy.ClassName = copy.ClassName + ' copy';
+                        file.content.Items.splice(idx, 0, copy);
+                    }
+                }
+            }
+        }
+
+        this.calcCombinedTypes();
+        this.filterChanged();
     }
 }
