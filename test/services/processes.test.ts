@@ -170,7 +170,7 @@ describe('Test class SystemInfo', () => {
 
 });
 
-describe('Test class WinProcesseFetcher', () => {
+describe('Test class WinProcessFetcher', () => {
 
     let injector: DependencyContainer;
 
@@ -333,7 +333,8 @@ describe('Test class Processes', () => {
         container.reset();
         injector = container.createChildContainer();
         injector.register(ProcessSpawner, stubClass(ProcessSpawner));
-        injector.register(WindowsProcessFetcher, stubClass(WindowsProcessFetcher))
+        injector.register(WindowsProcessFetcher, stubClass(WindowsProcessFetcher));
+        injector.register(Paths, stubClass(Paths));
     });
 
     it('Processes-getProcessList', async () => {

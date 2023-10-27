@@ -599,7 +599,9 @@ export class Config {
     public serverPath: string = 'DayZServer';
 
     /**
-     * Name of the server exe (Default is DayZServer_x64.exe)
+     * Name of the server exe
+     * On Windows default is: "DayZServer_x64.exe"
+     * On Linux default is: "DayZServer"
      */
     public serverExe: string = 'DayZServer_x64.exe';
 
@@ -760,6 +762,30 @@ export class Config {
      * Default is false
      */
     public experimentalServer: boolean = false;
+
+    /**
+     * DayZ Steam App ID
+     * Do not change this unless you know what you are doing.
+     */
+    public dayzSteamAppId: string = '221100';
+
+    /**
+     * DayZ Server Steam App ID
+     * Do not change this unless you know what you are doing.
+     */
+    public dayzServerSteamAppId: string = '223350';
+
+    /**
+     * DayZ Experimental Server Steam App ID
+     * Do not change this unless you know what you are doing.
+     */
+    public dayzExperimentalServerSteamAppId: string = '1042420';
+
+    /**
+     * whether the prerequisites (runtime libs, tec.) are mandatory.
+     * Turn this off if you are sure the requirements for the server are met but not detected.
+     */
+    public prerequisitesMandatory: boolean = true;
 
     // /////////////////////////// Backups ////////////////////////////////////////
     /**

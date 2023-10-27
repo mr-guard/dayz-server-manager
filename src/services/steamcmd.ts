@@ -15,9 +15,6 @@ import { request } from '../util/request';
 import { DAYZ_APP_ID, DAYZ_EXPERIMENTAL_SERVER_APP_ID, DAYZ_SERVER_APP_ID, LocalMetaData, PublishedFileDetail, SteamApiWorkshopItemDetailsResponse, SteamCmdAppUpdateProgressEvent, SteamCmdEvent, SteamCmdEventListener, SteamCmdExitEvent, SteamCmdModUpdateProgressEvent, SteamCmdOutputEvent, SteamCmdRetryEvent, SteamExitCodes } from '../types/steamcmd';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
-import { RichEmbed } from 'discord.js';
-
-
 
 @singleton()
 @injectable()
@@ -342,7 +339,8 @@ export class SteamCMD extends IService {
             listener: SteamCmdEventListener,
         },
     ): Promise<boolean> {
-
+        let steamGuardDetected = false;
+        let steamGuardConfirmed = false;
         let retries = 3;
         while (retries >= 0) {
             try {
@@ -359,8 +357,16 @@ export class SteamCMD extends IService {
                                 this.log.log(LogLevel.IMPORTANT, '');
                                 this.log.log(LogLevel.IMPORTANT, 'It is recommended to create a separate steam account with copy of DayZ and have SteamGuard set to Email-Code or Deactivated (Mobile Authenticator Code needs to be entered EVERY TIME, Email Code is saved)');
                                 this.log.log(LogLevel.IMPORTANT, 'Otherwise the server manager might get stuck when doing updates until you enter the code');
-
+                                steamGuardDetected = true;
                                 console.log('Enter your Steam Guard code:');
+                            }
+
+                            if (
+                                steamGuardDetected && !steamGuardConfirmed
+                                && data.toLowerCase().includes('ok')
+                            ) {
+                                steamGuardConfirmed = true;
+                                console.log('OK');
                             }
 
                             opts?.listener?.({
@@ -440,7 +446,11 @@ export class SteamCMD extends IService {
             serverPath,
             ...this.getLoginArgs(),
             '+app_update',
-            (this.manager.config?.experimentalServer ? DAYZ_EXPERIMENTAL_SERVER_APP_ID : DAYZ_SERVER_APP_ID),
+            (
+                this.manager.config?.experimentalServer
+                    ? (this.manager.config?.dayzExperimentalServerSteamAppId || DAYZ_EXPERIMENTAL_SERVER_APP_ID)
+                    : (this.manager.config?.dayzServerSteamAppId || DAYZ_SERVER_APP_ID)
+            ),
             ...((opts?.validate ?? this.manager.config?.validateServerAfterUpdate ?? true) ? ['validate'] : []),
             '+quit',
         ], {
@@ -506,7 +516,7 @@ export class SteamCMD extends IService {
         }
         const metaContent = this.fs.readFileSync(modMeta).toString();
         const names = metaContent.match(/name\s*=.*/g) ?? [];
-        const modName = names
+        let modName = names
             .pop()
             ?.split('=')[1]
             ?.trim()
@@ -516,6 +526,10 @@ export class SteamCMD extends IService {
             ?.replace(/[^a-zA-Z0-9\-_]/g, '')
             ?.replace(/-+/g, '-')
             || '';
+        const isWindows = detectOS() === 'windows';
+        if (!isWindows) {
+            modName = modName?.toLowerCase();
+        }
         return modName ? `@${modName}` : '';
     }
 
@@ -553,7 +567,7 @@ export class SteamCMD extends IService {
                 (acc, modId) => {
                     acc.push(
                         '+workshop_download_item',
-                        DAYZ_APP_ID,
+                        this.manager.config?.dayzSteamAppId || DAYZ_APP_ID,
                         modId,
                         ...((opts?.validate ?? this.manager.config?.validateModsAfterUpdate ?? true) ? ['validate'] : []),
                     );
@@ -777,7 +791,37 @@ export class SteamCMD extends IService {
 
         }
 
+        // on linux, all folders and files need to be lowercase
+        const isWindows = detectOS() === 'windows';
+        if (!isWindows) {
+            await this.modToLowerCase(serverDir);
+        }
+
         return true;
+    }
+
+    /* istanbul ignore next */
+    private async modToLowerCase(modFolder: string): Promise<void> {
+        if (!this.fs.existsSync(modFolder)) {
+            return;
+        }
+
+        const files = await this.fs.promises.readdir(modFolder);
+        for (const file of files) {
+            const filename = path.join(modFolder, file);
+            const stat = await this.fs.promises.lstat(filename);
+            if (stat.isDirectory()) {
+                if (file !== file.toLowerCase()) {
+                    const newFilename = path.join(modFolder, file.toLowerCase());
+                    this.fs.renameSync(filename, newFilename);
+                    await this.modToLowerCase(newFilename);
+                } else {
+                    await this.modToLowerCase(filename);
+                }
+            } else {
+                this.fs.renameSync(filename, path.join(modFolder, file.toLowerCase()));
+            }
+        }
     }
 
     public async installMods(): Promise<boolean> {

@@ -13,6 +13,7 @@
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
 The goal was to break down the initial effort to a minimum while providing configuration to nearly all aspects of the server administration process.
 
+Also supports experimental linux server (See [Known Issues and Limitations](#limitations))
 
 ## Content <hr>
 
@@ -514,8 +515,16 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 
 <br>
 
-* This app has not been tested all to well
+* This app has been tested but is very complex
   * if you have any issues please report them to get them fixed
+
+<br>
+
+* Linux Server Support
+  * .. is limited to the experimental server version only
+  * The linux server has not been released to the stable version of DayZ yet (as of 27.10.2023)
+  * The Linux server also only supports Ubuntu 18 and Debian Bullseye due to the required glib versions (https://feedback.bistudio.com/T176564)
+    * I cannot do something about that.. you will need to beg the DayZ devs to fix/update that
 
 <br><a name="development"></a>  
 ## Development <hr>

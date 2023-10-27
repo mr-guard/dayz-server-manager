@@ -339,6 +339,7 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
         loggerFactory: LoggerFactory,
         private spawner: ProcessSpawner,
         private windowsProcessFetcher: WindowsProcessFetcher,
+        private paths: Paths,
     ) {
         super(loggerFactory.createLogger('Processes'));
     }
@@ -366,7 +367,9 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
                     KernelModeTime: x.stime, // TODO
                     /* eslint-enable @typescript-eslint/naming-convention */
                 }),
-            );
+            )
+            .filter(/* istanbul ignore next */ (x) => !!x?.ExecutablePath)
+            .filter(/* istanbul ignore next */ (x) => this.paths.samePath(x?.ExecutablePath, exeName));
     }
 
     public getProcessCPUSpent(proc: ProcessEntry): number {

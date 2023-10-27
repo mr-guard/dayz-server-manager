@@ -112,31 +112,66 @@ export class Requirements extends IService {
         return false;
     }
 
-    public async isLinuxLibPresent(libname: string): Promise<boolean> {
-        const result = await this.processes.spawnForOutput(
+    public async isLinuxLibPresent(
+        libname: string,
+        libmarker?: string,
+        alternativeLib?: string,
+    ): Promise<boolean> {
+        const pkgResult = await this.processes.spawnForOutput(
             'bash',
             [
                 '-c',
-                `ldconfig -p | grep ${libname}`,
+                `dpkg -l ${libname} | grep ${libname}`,
             ],
             {
                 dontThrow: true,
             },
         );
-        const present = !!(result.stdout?.trim()?.length);
+        const pkgPresent = !!(pkgResult.stdout?.trim()?.length);
 
-        if (present) {
-            this.log.log(LogLevel.DEBUG, `${libname} is OK!`);
+        let alternativePresent = false;
+        if (alternativeLib) {
+            const alternativePkgResult = await this.processes.spawnForOutput(
+                'bash',
+                [
+                    '-c',
+                    `dpkg -l ${libname} | grep ${libname}`,
+                ],
+                {
+                    dontThrow: true,
+                },
+            );
+            alternativePresent = !!(alternativePkgResult.stdout?.trim()?.length);
         }
-        this.log.log(
-            LogLevel.IMPORTANT,
-            `\n\n${libname} was not found.\n`
-                + 'You can install it by:\n\n'
-                + `apt-get install ${libname}\n\n`
-                + `Install it and restart the manager`,
-        );
 
-        return present;
+        let markerPresent = false;
+        if (libmarker) {
+            const markerResult = await this.processes.spawnForOutput(
+                'bash',
+                [
+                    '-c',
+                    `ldconfig -p | grep ${libmarker}`,
+                ],
+                {
+                    dontThrow: true,
+                },
+            );
+            markerPresent = !!(markerResult.stdout?.trim()?.length);
+        }
+
+        if (pkgPresent || markerPresent || alternativePresent) {
+            this.log.log(LogLevel.DEBUG, `${libname} is OK!`);
+        } else {
+            this.log.log(
+                LogLevel.IMPORTANT,
+                `\n\n${libname} was not found.\n`
+                    + 'You can install it by:\n\n'
+                    + `apt-get install ${libname}\n\n`
+                    + `Install it and restart the manager`,
+            );
+        }
+
+        return pkgPresent || markerPresent || alternativePresent;
     }
 
     public async checkRuntimeLibs(): Promise<boolean> {
@@ -160,10 +195,10 @@ export class Requirements extends IService {
 
             // steamcmd
             checks.push(
-                await this.isLinuxLibPresent('lib32gcc1'),
+                await this.isLinuxLibPresent('lib32gcc1', undefined, 'lib32gcc-s1'),
             );
             checks.push(
-                await this.isLinuxLibPresent('libcurl4'),
+                await this.isLinuxLibPresent('libcurl4', 'libcurl.so.4'),
             );
             checks.push(
                 await this.isLinuxLibPresent('libcurl4-openssl-dev'),
@@ -225,7 +260,7 @@ export class Requirements extends IService {
         await this.checkOptionals();
 
         // check runtime libs
-        if (!await this.checkRuntimeLibs()) {
+        if (!await this.checkRuntimeLibs() && this.manager.config?.prerequisitesMandatory !== false) {
             this.log.log(LogLevel.IMPORTANT, 'Install the missing runtime libs and restart the manager');
             this.processes.exit(0);
         }
