@@ -626,6 +626,21 @@ describe('Test Interface', () => {
         expect(missionFiles.readMissionFile.called).to.be.true;
     });
 
+    it('execute-readmissionfiles', async () => {
+        missionFiles.readMissionFile.resolves('test-content');
+        const handler = injector.resolve(Interface);
+        const request: Request = {
+            resource: 'readmissionfiles',
+            user: 'admin',
+            body: {
+                files: ['test1', 'test2', 'test3'],
+            }
+        };
+        const response = await handler.execute(request);
+        expect(response.status).to.equal(200);
+        expect(missionFiles.readMissionFile.callCount).to.equal(3);
+    });
+
     it('execute-readmissiondir', async () => {
         missionFiles.readMissionDir.resolves([]);
         const handler = injector.resolve(Interface);
@@ -670,6 +685,21 @@ describe('Test Interface', () => {
         const response = await handler.execute(request);
         expect(response.status).to.equal(200);
         expect(missionFiles.readProfileFile.called).to.be.true;
+    });
+
+    it('execute-readprofilefiles', async () => {
+        missionFiles.readProfileFile.resolves('test-content');
+        const handler = injector.resolve(Interface);
+        const request: Request = {
+            resource: 'readprofilefiles',
+            user: 'admin',
+            body: {
+                files: ['test1', 'test2', 'test3'],
+            }
+        };
+        const response = await handler.execute(request);
+        expect(response.status).to.equal(200);
+        expect(missionFiles.readProfileFile.callCount).to.equal(3);
     });
 
     it('execute-readprofiledir', async () => {
