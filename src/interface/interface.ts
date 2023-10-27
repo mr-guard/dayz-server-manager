@@ -53,7 +53,7 @@ export class Interface extends IService {
             ['ping', RequestTemplate.build({
                 level: 'view',
                 disableRest: true,
-                action: () => 'I won\'t say pong you stupid fuck',
+                action: () => 'I won\'t say pong',
             })],
             ['process', RequestTemplate.build({
                 level: 'view',
