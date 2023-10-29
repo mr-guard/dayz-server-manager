@@ -64,6 +64,7 @@ jobs:
           python2 \
           build-essential \
           libvorbisenc2 \
+          liblzo2-dev \
           curl \
         && \
         chmod -R 777 . && \
