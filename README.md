@@ -523,7 +523,7 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 * Linux Server Support
   * .. is limited to the experimental server version only
   * The linux server has not been released to the stable version of DayZ yet (as of 27.10.2023)
-  * The Linux server also only supports Ubuntu 18 and Debian Bullseye due to the required glib versions (https://feedback.bistudio.com/T176564)
+  * The Linux server also only supports Ubuntu 18 and Debian Buster due to the required glib versions (https://feedback.bistudio.com/T170140)
     * I cannot do something about that.. you will need to beg the DayZ devs to fix/update that
 
 <br><a name="development"></a>  

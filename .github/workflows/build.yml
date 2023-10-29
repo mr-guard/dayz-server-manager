@@ -47,12 +47,15 @@ jobs:
     
   build-linux:
     runs-on: ubuntu-latest
+    container:
+      image: debian:buster
+
     steps:
     - uses: actions/checkout@v2
 
     - name: Install build tools
       run: |
-        sudo apt-get install -y make python3 python2 build-essential
+        apt-get update && apt-get install -y make python3 python2 build-essential
 
     - name: Use Node.js
       uses: actions/setup-node@v1

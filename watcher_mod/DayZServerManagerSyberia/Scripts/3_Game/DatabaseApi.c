@@ -61,9 +61,16 @@ modded class Database
 	override bool QuerySync(string databaseName, string queryText, out DatabaseResponse response)
 	{
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ QuerySync: " + apiOptions.host + "/" + databaseName + "/query?key=" + apiOptions.key);
+		#endif
+		
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
 		restContext.SetHeader("text/plain");
 		string responseData = restContext.POST_now("/" + databaseName + "/query?key=" + apiOptions.key, queryText);
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ QuerySyncResponse: " + responseData);
+		#endif
 		if (responseData.Length() > 0 && responseData.Get(0) == "[")
 		{
 			response = new DatabaseResponse(responseData);
@@ -125,6 +132,6 @@ modded class Database
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
 		restContext.SetHeader("text/plain");
-		restContext.POST(new SyberiaDatabaseCallback(callbackClass, callbackFnc, args), "/" + databaseName + "/transaction?key=" apiOptions.key, queryText);
+		restContext.POST(new SyberiaDatabaseCallback(callbackClass, callbackFnc, args), "/" + databaseName + "/transaction?key=" + apiOptions.key, queryText);
 	}
 };
