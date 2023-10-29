@@ -49,6 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: debian:buster
+      env:
+        npm_config_cache: ./npmcache
 
     steps:
     - uses: actions/checkout@v2
