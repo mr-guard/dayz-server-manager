@@ -55,7 +55,16 @@ jobs:
 
     - name: Install build tools
       run: |
-        apt-get update && apt-get install -y make python3 python2 build-essential libvorbisenc2 curl
+        apt-get update && \
+        apt-get install -y \
+          make \
+          python3 \
+          python2 \
+          build-essential \
+          libvorbisenc2 \
+          curl \
+        && \
+        chmod -R 777 .
 
     - name: Use Node.js
       uses: actions/setup-node@v1
