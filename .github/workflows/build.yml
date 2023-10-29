@@ -64,7 +64,8 @@ jobs:
           libvorbisenc2 \
           curl \
         && \
-        chmod -R 777 .
+        chmod -R 777 . && \
+        chown -R 1001:127 "/github/home/.npm"
 
     - name: Use Node.js
       uses: actions/setup-node@v1
