@@ -55,14 +55,23 @@ jobs:
 
     - name: Install build tools
       run: |
-        apt-get update && apt-get install -y make python3 python2 build-essential
+        apt-get update && apt-get install -y make python3 python2 build-essential libvorbisenc2
 
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
         node-version: '16.x'
+    
     - name: download mikeros tools
-      uses: arma-actions/mikero-tools@latest
+      # uses: arma-actions/mikero-tools@latest
+      run: |
+        mkdir -p /opt/mikero-tools
+        curl -fsSL "https://raw.githubusercontent.com/arma-actions/mikero-tools/latest/linux/depbo-tools-0.9.13-linux-amd64.tgz" -o depbo-tools.tgz
+        tar -zxf depbo-tools.tgz --strip-components=1 -C /opt/mikero-tools
+
+        echo "Updating environment variables"
+        echo "/opt/mikero-tools/bin" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/mikero-tools/lib" >> $GITHUB_ENV
     
     - name: Install deps
       run: npm ci
