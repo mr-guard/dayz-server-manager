@@ -65,7 +65,7 @@ jobs:
           curl \
         && \
         chmod -R 777 . && \
-        chown -R 1001:127 "/github/home/.npm"
+        chown -R 777 "/github/home"
 
     - name: Use Node.js
       uses: actions/setup-node@v1
