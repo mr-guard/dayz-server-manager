@@ -66,6 +66,7 @@ jobs:
           libvorbisenc2 \
           liblzo2-dev \
           libvorbisfile3 \
+          libuchardet-dev \
           curl \
         && \
         chmod -R 777 . && \
