@@ -65,6 +65,7 @@ jobs:
           build-essential \
           libvorbisenc2 \
           liblzo2-dev \
+          libvorbisfile3 \
           curl \
         && \
         chmod -R 777 . && \
