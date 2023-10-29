@@ -68,6 +68,7 @@ jobs:
           libvorbisfile3 \
           libuchardet-dev \
           curl \
+          zip \
         && \
         chmod -R 777 . && \
         chown -R 777 "/github/home"
