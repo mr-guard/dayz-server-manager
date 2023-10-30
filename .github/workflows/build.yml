@@ -50,7 +50,7 @@ jobs:
     container:
       image: debian:buster
       env:
-        npm_config_cache: ./.npmcache
+        npm_config_cache: ./.npm-cache
         PKG_CACHE_PATH: ./.pkg-cache
 
     steps:
