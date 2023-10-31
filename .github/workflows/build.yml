@@ -48,7 +48,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     container:
-      image: debian:buster
+      image: ubuntu:18.04
       env:
         npm_config_cache: ./.npm-cache
         PKG_CACHE_PATH: ./.pkg-cache
