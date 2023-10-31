@@ -13,6 +13,7 @@
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
 The goal was to break down the initial effort to a minimum while providing configuration to nearly all aspects of the server administration process.
 
+Also supports experimental linux server (See [Known Issues and Limitations](#limitations))
 
 ## Content <hr>
 
@@ -115,6 +116,7 @@ The goal was to break down the initial effort to a minimum while providing confi
 
 * A Windows (Root) Server with RDP/Shell access
   * hosted instances (like nitrado) cannot use this EXCEPT they can run arbitrary programs
+* To download mods: A steam account that owns DayZ and has SteamGuard set to EMAIL or DEACTIVATED!
 * That's it!
 
 <br><a name="usage"></a>
@@ -129,6 +131,8 @@ The goal was to break down the initial effort to a minimum while providing confi
   * Other than that the defaults will probably fit your needs
   * You can also checkout the [configuration guides](#configuration)
 * Start the manager in the folder where the config is situated
+
+* It is recommended to create a separate Steam account which owns DayZ. You need to set SteamGuard to EMAIL or DEACTIVATED! Do not use Mobile authenticator because those codes will not be saved on the server and need to be entered on every download/update. 
 
 * Optionally you can add it as Windows Service instead of launching it manually
 * Make sure the "Execution Location" is the folder, where the config is located (this is not necessarily the folder where the manager executable is located)
@@ -230,6 +234,7 @@ In a nutshell:
 * (Optional) Select an icon and enter a short description for your bot
 * In the left menu, select "Bot"
 * Click "Add Bot" and confirm
+* Scroll down and enable the "MESSAGE CONTENT INTENT" (allows the bot to parse the messages)
 * Under "Token" copy the token by clicking on "Copy" or reveal value and copy the text
 * paste the token inside the config file like so:
 ```json
@@ -467,6 +472,12 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 <br><a name="limitations"></a>  
 ## Known Issues / Limitations <hr>  
 
+* SteamCMD asks for code every time:
+  * The integration with SteamCMD requires SteamGuard to be set to email code or deactivated in order for the code to be cached.
+  * Steam Mobile Authenticator cannot be cached by SteamCMD.
+
+<br>
+
 * SteamCMD Timeouts:
   * SteamCMD sometimes fails to download large mods (usually > 1GB)
   * this depends on your hardware and the network
@@ -504,8 +515,16 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 
 <br>
 
-* This app has not been tested all to well
+* This app has been tested but is very complex
   * if you have any issues please report them to get them fixed
+
+<br>
+
+* Linux Server Support
+  * .. is limited to the experimental server version only
+  * The linux server has not been released to the stable version of DayZ yet (as of 27.10.2023)
+  * The Linux server also only supports Ubuntu 18 and Debian Buster due to the required glib versions (https://feedback.bistudio.com/T170140)
+    * I cannot do something about that.. you will need to beg the DayZ devs to fix/update that
 
 <br><a name="development"></a>  
 ## Development <hr>

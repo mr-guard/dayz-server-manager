@@ -53,7 +53,7 @@ export class Interface extends IService {
             ['ping', RequestTemplate.build({
                 level: 'view',
                 disableRest: true,
-                action: () => 'I won\'t say pong you stupid fuck',
+                action: () => 'I won\'t say pong',
             })],
             ['process', RequestTemplate.build({
                 level: 'view',
@@ -261,6 +261,13 @@ export class Interface extends IService {
                 params: [{ name: 'file', location: 'query' }],
                 action: (req, params) => this.missionFiles.readMissionFile(params.file),
             })],
+            ['readmissionfiles', RequestTemplate.build({
+                method: 'post',
+                level: 'manage',
+                disableDiscord: true,
+                params: [{ name: 'files' }],
+                action: (req, params) => Promise.all(params.files.map((x: string) => this.missionFiles.readMissionFile(x))),
+            })],
             ['readmissiondir', RequestTemplate.build({
                 method: 'get',
                 level: 'manage',
@@ -286,6 +293,13 @@ export class Interface extends IService {
                 disableDiscord: true,
                 params: [{ name: 'file', location: 'query' }],
                 action: (req, params) => this.missionFiles.readProfileFile(params.file),
+            })],
+            ['readprofilefiles', RequestTemplate.build({
+                method: 'post',
+                level: 'manage',
+                disableDiscord: true,
+                params: [{ name: 'files' }],
+                action: (req, params) => Promise.all(params.files.map((x: string) => this.missionFiles.readProfileFile(x))),
             })],
             ['readprofiledir', RequestTemplate.build({
                 method: 'get',

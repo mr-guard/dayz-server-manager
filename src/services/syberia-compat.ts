@@ -17,7 +17,7 @@ import { LogLevel } from '../util/logger';
 export class SyberiaCompat extends IStatefulService {
 
     public readonly MOD_NAME = '@DayZServerManagerSyberia';
-    public readonly SYBERIA_MOD_ID = '2291785437';
+    public readonly SYBERIA_MOD_ID = '2569522069';
 
     public constructor(
         loggerFactory: LoggerFactory,

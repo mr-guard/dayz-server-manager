@@ -192,6 +192,15 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                     },
                 );
 
+                let inputHandlerSet = false;
+                if (opts?.spawnOpts?.stdio === 'inherit' || opts?.spawnOpts?.stdio?.[0] === 'inherit') {
+                    inputHandlerSet = true;
+                    process.stdin.on('data', /* istanbul ignore next */ (data) => {
+                        pty.write(data.toString());
+                    });
+                    process.stdin.unref();
+                }
+
                 let stdout = '';
                 const stderr = '';
                 const onData = pty.onData(async (data) => {
@@ -218,6 +227,11 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                     if (opts?.verbose) {
                         this.log.log(LogLevel.DEBUG, `Spawned process exited with code ${code}`);
                         this.log.log(LogLevel.DEBUG, `Duration: ${new Date().valueOf() - startTS}`);
+                    }
+
+                    if (inputHandlerSet) {
+                        process.stdin.removeAllListeners('data');
+                        process.stdin.ref();
                     }
 
                     setTimeout(
@@ -325,6 +339,7 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
         loggerFactory: LoggerFactory,
         private spawner: ProcessSpawner,
         private windowsProcessFetcher: WindowsProcessFetcher,
+        private paths: Paths,
     ) {
         super(loggerFactory.createLogger('Processes'));
     }
@@ -352,7 +367,9 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
                     KernelModeTime: x.stime, // TODO
                     /* eslint-enable @typescript-eslint/naming-convention */
                 }),
-            );
+            )
+            .filter(/* istanbul ignore next */ (x) => !!x?.ExecutablePath)
+            .filter(/* istanbul ignore next */ (x) => this.paths.samePath(x?.ExecutablePath, exeName));
     }
 
     public getProcessCPUSpent(proc: ProcessEntry): number {

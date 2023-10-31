@@ -155,8 +155,9 @@ export class ServerStarter extends IService {
             };
         }
 
+        this.log.log(LogLevel.DEBUG, `Starting: ${path.join(this.manager.getServerPath(), this.manager.config.serverExe)}`);
         return {
-            cmd: this.manager.config.serverExe,
+            cmd: path.join(this.manager.getServerPath(), this.manager.config.serverExe),
             args: [],
             cwd: this.manager.getServerPath(),
         };

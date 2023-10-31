@@ -14,5 +14,15 @@ export const loggerMiddleware = (req: Request, resp: Response, next: any): void 
         typeof req.body === 'object' ? JSON.stringify(req.body) : req.body,
         req.headers,
     );
+    resp.on(
+        'finish',
+        () => {
+            logger.log(
+                LogLevel.DEBUG,
+                'Response:',
+                resp.statusCode,
+            );
+        },
+    );
     next();
 };

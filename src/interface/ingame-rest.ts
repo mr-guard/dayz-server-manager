@@ -69,6 +69,7 @@ export class IngameREST extends IStatefulService {
                 key: this.manager.config.ingameApiKey,
                 useApiForReport: this.manager.config.ingameReportViaRest || false,
                 reportInterval: this.manager.config.ingameReportIntervall || 30.0,
+                dataDump: this.manager.config.dataDump || false,
             } as IngameConfig),
             { encoding: 'utf-8' },
         );

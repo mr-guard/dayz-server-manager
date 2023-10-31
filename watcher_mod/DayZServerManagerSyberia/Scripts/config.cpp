@@ -7,9 +7,6 @@ class CfgPatches
 		requiredVersion = 0.1;
 		requiredAddons[] = {
 			"DayZServerManager",
-			"DZ_Data",
-			"DZ_Scripts",
-			"SyberiaScripts",
 			"SyberiaServer"
 		};
 	};
@@ -33,9 +30,9 @@ class CfgMods
 		author = "DayZServerManagerSyberia";
 		authorID = "";
 		dependencies[] = {
-            // "Game",
-            "World",
-            "Mission"
+            "Game",
+            // "World",
+            // "Mission"
         };
 		class defs
 		{

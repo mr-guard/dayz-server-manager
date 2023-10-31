@@ -11,6 +11,7 @@ import {
     faChartPie,
     faChevronDown,
     faChevronUp,
+    faChevronRight,
     faColumns,
     faSearch,
     faTable,
@@ -40,6 +41,7 @@ import {
     faCrosshairs,
     faPlane,
     faWrench,
+    faInfo,
 } from '@fortawesome/free-solid-svg-icons';
 
 export const fontAwesomeSolidIcons = {
@@ -53,6 +55,7 @@ export const fontAwesomeSolidIcons = {
     faChartPie,
     faChevronDown,
     faChevronUp,
+    faChevronRight,
     faColumns,
     faSearch,
     faTable,
@@ -82,4 +85,5 @@ export const fontAwesomeSolidIcons = {
     faCrosshairs,
     faPlane,
     faWrench,
+    faInfo,
 };
