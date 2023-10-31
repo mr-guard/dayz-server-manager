@@ -45,7 +45,7 @@ jobs:
         name: server-manager-windows
         path: ./server-manager.zip
     
-  build-linux:
+  build-ubuntu-18:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:18.04
@@ -102,14 +102,53 @@ jobs:
     - name: Build
       run: npm run build
 
-    - name: Pack (linux)
+    - name: Pack (ubuntu-18)
       run: npm run pack:linux
-    - name: Zip Artifacts (linux)
+    - name: Zip Artifacts (ubuntu-18)
       run: zip -r server-manager.zip build/*
-    - name: Archive build artifacts (linux)
+    - name: Archive build artifacts (ubuntu-18)
       uses: actions/upload-artifact@v2
       with:
-        name: server-manager-linux
+        name: server-manager-ubuntu-18
+        path: ./server-manager.zip
+
+  build-ubuntu-latest:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install build tools
+      run: sudo apt-get install -y make python3 python2 build-essential
+
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '16.x'
+    
+    - name: download mikeros tools
+      uses: arma-actions/mikero-tools@latest
+
+    - name: Install deps
+      run: npm ci
+    - name: Install ui deps
+      run: npm run install:ui
+    
+    - name: Set version
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: npm version ${{ github.ref_name }}
+
+    - name: Build
+      run: npm run build
+
+    - name: Pack (ubuntu latest)
+      run: npm run pack:linux
+    - name: Zip Artifacts (ubuntu latest)
+      run: zip -r server-manager.zip build/*
+    - name: Archive build artifacts (ubuntu latest)
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-manager-ubuntu-latest
         path: ./server-manager.zip
 
   test:
@@ -161,7 +200,8 @@ jobs:
 
     needs:
     - test
-    - build-linux
+    - build-ubuntu-18
+    - build-ubuntu-latest
     - build-windows
 
     steps:
@@ -196,22 +236,42 @@ jobs:
         asset_name: server-manager-windows.zip
         asset_content_type: application/zip
 
-    - name: Download artifacts (linux)
+    - name: Download artifacts (ubuntu 18)
       uses: actions/download-artifact@v2
       with:
-        name: server-manager-linux
+        name: server-manager-ubuntu-18
 
     - name: Rename
       run: |
-        mv server-manager.zip server-manager-linux.zip
+        mv server-manager.zip server-manager-ubuntu-18.zip
 
-    - name: Upload Release Asset (Linux)
-      id: upload-release-asset-linux
+    - name: Upload Release Asset (Ubuntu 18)
+      id: upload-release-asset-ubuntu-18
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./server-manager-linux.zip
-        asset_name: server-manager-linux.zip
+        asset_path: ./server-manager-ubuntu-18.zip
+        asset_name: server-manager-ubuntu-18.zip
+        asset_content_type: application/zip 
+
+    - name: Download artifacts (ubuntu latest)
+      uses: actions/download-artifact@v2
+      with:
+        name: server-manager-ubuntu-latest
+
+    - name: Rename
+      run: |
+        mv server-manager.zip server-manager-ubuntu-latest.zip
+
+    - name: Upload Release Asset (Ubuntu latest)
+      id: upload-release-asset-ubuntu-latest
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server-manager-ubuntu-latest.zip
+        asset_name: server-manager-ubuntu-latest.zip
         asset_content_type: application/zip
