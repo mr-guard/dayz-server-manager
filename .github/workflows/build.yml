@@ -62,7 +62,7 @@ jobs:
         apt-get install -y \
           make \
           python3 \
-          python2 \
+          python \
           build-essential \
           libvorbisenc2 \
           liblzo2-dev \
