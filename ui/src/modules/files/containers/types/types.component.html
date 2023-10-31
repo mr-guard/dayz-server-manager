@@ -72,11 +72,23 @@
                         <a ngbNavLink>Missing Types</a>
                         <ng-template ngbNavContent>
                             <div style="height: 100%">
-                                <ul>
-                                    <li *ngFor="let classname of missingClasses">
-                                        {{ classname }}
-                                    </li>
-                                </ul>
+                                <div>
+                                    <span>Missing Types</span>
+                                    <ul>
+                                        <li *ngFor="let classname of missingClasses">
+                                            {{ classname }}
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div *ngIf="missingTraderItems && missingTraderItems.length">
+                                    <span>Missing Trader Items</span>
+                                    <ul>
+                                        <li *ngFor="let classname of missingTraderItems">
+                                            {{ classname }}
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </ng-template>
                     </li>

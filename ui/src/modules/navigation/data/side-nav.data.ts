@@ -21,7 +21,6 @@ export const sideNavSections: SideNavSection[] = [
         text: 'Files',
         items: [
             'types',
-            'typesexpansion',
         ],
     },
 ];
@@ -71,10 +70,5 @@ export const sideNavItems: SideNavItems = {
         icon: 'wrench',
         text: 'Types',
         link: '/dashboard/files/types',
-    },
-    typesexpansion: {
-        icon: 'wrench',
-        text: 'Types Expansion',
-        link: '/dashboard/files/types-expansion',
     },
 };

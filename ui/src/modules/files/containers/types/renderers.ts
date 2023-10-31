@@ -13,7 +13,11 @@ import { ColBase } from "./columns";
                [multiple]="true"
                [disabled]="false"
                [(ngModel)]="selectedItems"
+               bindLabel="label"
+               bindValue="value"
+               [compareWith]="compareWith"
                (change)="checkedHandler()"
+               style="height: 100%;"
         >
         </ng-select>
     `,
@@ -22,24 +26,37 @@ export class GenericListRenderer implements ICellRendererAngularComp {
 
     public params!: ICellRendererParams<string>;
 
-    public dropdownList: any[] = [];
+    public dropdownList: {label: string, value: any}[] = [];
 
-    public selectedItems: any[] = [];
+    public selectedItems: {label: string, value: any}[] = [];
 
     public agInit(params: ICellRendererParams<string>): void {
         this.params = params;
-        this.selectedItems = [...(params.value || [])];
+        this.selectedItems = this.mapLabels([...(params.value || [])]);
 
-        this.dropdownList = [
+        this.dropdownList = this.mapLabels([
+            ...this.dropdownList.map((x) => x.value),
             ...((params.colDef as ColBase).extraDropdownEntries || []),
-            ...this.dropdownList,
-            ...(params.value || []).filter((x) => !this.dropdownList.includes(x)),
-        ];
+            ...(params.value || [])
+        ].reduce((prev, x) => {
+            if (!prev.includes(x)) {
+                prev.push(x);
+            }
+            return prev;
+        }, [] as any[]));
+    }
+
+    private mapLabels(values: any[]): {label: string, value: any}[] {
+        const labels = (this.params.colDef as ColBase).valueLabels || {};
+        return values.map((x) => ({
+            label: labels[x] ? `${labels[x]} (${x})` : x,
+            value: x,
+        }));
     }
 
     public checkedHandler(): void {
         const colId = this.params.colDef?.colId!;
-        this.params.node.setDataValue(colId, [...this.selectedItems]);
+        this.params.node.setDataValue(colId, [...this.selectedItems.map((x) => x.value)]);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -50,6 +67,8 @@ export class GenericListRenderer implements ICellRendererAngularComp {
     public isPopup(): boolean {
         return false;
     }
+
+    public compareWith = (a, b) => a?.value === b?.value;
 
 }
 

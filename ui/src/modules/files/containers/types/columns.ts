@@ -1,7 +1,7 @@
 import { ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
 import { TypesComponent } from "./types.component";
 import { CheckboxRenderer, GenericListRenderer } from "./renderers";
-import { ExcludesFilter, IncludesFilter } from "./filter";
+import { ExcludesFilter, ExcludesPartialFilter, IncludesFilter, IncludesPartialFilter } from "./filter";
 import { AttributeOperation, LIST_OPS, NUMBER_OPS } from "./ops";
 import { ItemCalculator } from "./calc";
 import { round } from "./types";
@@ -59,6 +59,7 @@ export abstract class ColBase implements ColDef<string> {
     public minWidth!: number;
     public operations: AttributeOperation[] = [];
     public extraDropdownEntries: any[] = [];
+    public valueLabels: Record<any, string> = {};
 
     public calc: ItemCalculator;
     public constructor(
@@ -160,8 +161,10 @@ export class CategoryCol extends ColBase {
     filter = true;
     filterParams = {
         filterOptions: [
-            IncludesFilter,
-            ExcludesFilter,
+            IncludesFilter(this),
+            IncludesPartialFilter(this),
+            ExcludesFilter(this),
+            ExcludesPartialFilter(this),
         ],
         trimInput: true,
         debounceMs: 1000,
@@ -187,6 +190,10 @@ export class ValuesCol extends ColBase {
     ) {
         super(types, 'Values')
         this.minWidth = this.types.minWidth(175);
+
+        for (let i = 1; i <= 18; i++) {
+            this.extraDropdownEntries.push(`Tier${i}`);
+        }
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
@@ -209,8 +216,10 @@ export class ValuesCol extends ColBase {
     filter = true;
     filterParams = {
         filterOptions: [
-            IncludesFilter,
-            ExcludesFilter,
+            IncludesFilter(this),
+            IncludesPartialFilter(this),
+            ExcludesFilter(this),
+            ExcludesPartialFilter(this),
         ],
         trimInput: true,
         debounceMs: 1000,
@@ -247,8 +256,10 @@ export class UsagesCol extends ColBase {
     filter = true;
     filterParams = {
         filterOptions: [
-            IncludesFilter,
-            ExcludesFilter,
+            IncludesFilter(this),
+            IncludesPartialFilter(this),
+            ExcludesFilter(this),
+            ExcludesPartialFilter(this),
         ],
         trimInput: true,
         debounceMs: 1000,
@@ -1211,8 +1222,10 @@ export class ItemInfoCol extends ColBase {
     filter = true;
     filterParams = {
         filterOptions: [
-            IncludesFilter,
-            ExcludesFilter,
+            IncludesFilter(this),
+            IncludesPartialFilter(this),
+            ExcludesFilter(this),
+            ExcludesPartialFilter(this),
         ],
         trimInput: true,
         debounceMs: 1000,
@@ -1239,8 +1252,10 @@ export class LootTagCol extends ColBase {
     filter = true;
     filterParams = {
         filterOptions: [
-            IncludesFilter,
-            ExcludesFilter,
+            IncludesFilter(this),
+            IncludesPartialFilter(this),
+            ExcludesFilter(this),
+            ExcludesPartialFilter(this),
         ],
         trimInput: true,
         debounceMs: 1000,
@@ -1280,5 +1295,25 @@ export class GuessedVariantOfCol extends ColBase {
     }
 }
 
-
-
+export class SourceFileCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'SourceFile')
+        this.minWidth = this.types.minWidth(100);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params) => {
+        for (const file of this.types.files) {
+            if (file.type === 'typesxml') {
+                if (file.content.types.type.some((x) => x.$.name?.toLowerCase() === params.data.toLowerCase())) {
+                    return file.file;
+                }
+            }
+        }
+        return undefined;
+    }
+}

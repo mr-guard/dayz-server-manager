@@ -113,7 +113,7 @@ class DZSMAmmoDumpEntry : DZSMDumpEntry
 	
 	float noiseHit;
 
-	ref TFloatArray damageOverride;
+	// ref TFloatArray damageOverride;
 	float damageHP;
 	float damageBlood;
 	float damageShock;
@@ -148,8 +148,8 @@ class DZSMAmmoDumpEntry : DZSMDumpEntry
 		noiseHit = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " NoiseHit strength" );
 		
 		// damageOverride = GetGame().ConfigGetTextOut( "cfgAmmo " + projectile + " DamageApplied defaultDamageOverride" );
-		damageOverride = new TFloatArray;
-		GetGame().ConfigGetFloatArray( "cfgAmmo " + projectile + " DamageApplied defaultDamageOverride 0", damageOverride );
+		// damageOverride = new TFloatArray;
+		// GetGame().ConfigGetFloatArray( "cfgAmmo " + projectile + " DamageApplied defaultDamageOverride 0", damageOverride );
 		
 		damageArmor = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " DamageApplied Health armorDamage" );
 		damageHP = GetGame().ConfigGetFloat( "cfgAmmo " + projectile + " DamageApplied Health damage" );
@@ -321,6 +321,7 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 		TStringArray muzzles = new TStringArray;
 		GetGame().ConfigGetTextArray( "cfgWeapons " + classname + " muzzles", muzzles);
 		barrels = muzzles.Count();
+		delete muzzles;
 		
         color = GetGame().ConfigGetTextOut( "cfgWeapons " + classname + " color" );
 		
@@ -380,6 +381,18 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 		delete attachments;
 		delete modes;
 		delete recoilModifier;
+		if (opticsDiscreteDistance)
+		{
+			delete opticsDiscreteDistance;
+		}
+		if (swayModifier)
+		{
+			delete swayModifier;
+		}
+		if (recoilModifier)
+		{
+			delete recoilModifier;
+		}
 	}
 
 	private bool CheckItemCrash( string name )
@@ -599,7 +612,27 @@ class DZSMItemDumpEntry : DZSMBaseDumpEntry
 		}
 		if (medicine)
 		{
-			delete medicine
+			delete medicine;
+		}
+		if (cargoSize)
+		{
+			delete cargoSize;
+		}
+		if (attachments)
+		{
+			delete attachments;
+		}
+		if (recoilModifier)
+		{
+			delete recoilModifier;
+		}
+		if (swayModifier)
+		{
+			delete swayModifier;
+		}
+		if (opticsDiscreteDistance)
+		{
+			delete opticsDiscreteDistance;
 		}
 	}
 }
@@ -623,6 +656,106 @@ static void DZSMItemDump()
 		}
     }
 	JsonFileLoader<array<ref DZSMItemDumpEntry>>.JsonSaveFile(filepath, list);
+}
+
+class DZSMContainerDumpEntry : DZSMBaseDumpEntry
+{
+
+	int canBeDigged;
+	int heavyItem;
+	ref TIntArray cargoSize;
+	
+	ref TStringArray attachments;
+	
+	void DZSMContainerDumpEntry(string classname)
+	{
+		Init(classname, "cfgVehicles");
+
+		canBeDigged = GetGame().ConfigGetInt( "cfgVehicles " + classname + " canBeDigged" );
+		heavyItem = GetGame().ConfigGetInt( "cfgVehicles " + classname + " heavyItem" );
+
+		cargoSize = new TIntArray;
+		if (GetGame().ConfigIsExisting( "cfgVehicles " + classname + " Cargo itemscargoSize" ))
+		{
+			GetGame().ConfigGetIntArray( "cfgVehicles " + classname + " Cargo itemscargoSize", cargoSize);
+		}
+		else
+		{
+			GetGame().ConfigGetIntArray( "cfgVehicles " + classname + " itemscargoSize", cargoSize);
+		}
+	
+		attachments = new TStringArray;
+		GetGame().ConfigGetTextArray( "cfgVehicles " + classname + " attachments", attachments);
+	}
+
+	void ~DZSMContainerDumpEntry()
+	{
+		if (cargoSize)
+		{
+			delete cargoSize;
+		}
+		if (attachments)
+		{
+			delete attachments;
+		}
+	}
+}
+
+static void DZSMContainerDump()
+{
+	string filepath = "$profile:dzsm-containerdump.json";
+	if (FileExist(filepath))
+	{
+		return;
+	}
+
+	array<ref DZSMContainerDumpEntry> list = new array<ref DZSMContainerDumpEntry>;
+    int nClasses = GetGame().ConfigGetChildrenCount( "cfgVehicles" );
+    for ( int nClass = 0; nClass < nClasses; ++nClass )
+	{
+    	string className;
+    	GetGame().ConfigGetChildName( "cfgVehicles", nClass, className );
+		if (GetGame().IsKindOf(className, "Container_Base") && GetGame().ConfigGetInt( "cfgVehicles " + className + " scope" ) == 2) {
+			list.Insert(new DZSMContainerDumpEntry(className));
+		}
+    }
+	JsonFileLoader<array<ref DZSMContainerDumpEntry>>.JsonSaveFile(filepath, list);
+}
+
+class DZSMZombieDumpEntry : DZSMDumpEntry
+{
+	
+	void DZSMZombieDumpEntry(string classname)
+	{
+		Init(classname, "cfgVehicles");
+
+	}
+
+	void ~DZSMZombieDumpEntry()
+	{
+		
+	}
+}
+
+static void DZSMZombieDump()
+{
+	string filepath = "$profile:dzsm-zombiedump.json";
+	if (FileExist(filepath))
+	{
+		return;
+	}
+
+	array<ref DZSMZombieDumpEntry> list = new array<ref DZSMZombieDumpEntry>;
+    int nClasses = GetGame().ConfigGetChildrenCount( "cfgVehicles" );
+    for ( int nClass = 0; nClass < nClasses; ++nClass )
+	{
+    	string className;
+    	GetGame().ConfigGetChildName( "cfgVehicles", nClass, className );
+		if (GetGame().IsKindOf(className, "ZombieBase") && GetGame().ConfigGetInt( "cfgVehicles " + className + " scope" ) == 2) {
+			list.Insert(new DZSMZombieDumpEntry(className));
+		}
+    }
+	JsonFileLoader<array<ref DZSMZombieDumpEntry>>.JsonSaveFile(filepath, list);
 }
 
 class ServerManagerCallback: RestCallback
@@ -755,6 +888,16 @@ class DayZServerManagerWatcher
 			Print("DZSM ~ DayZServerManagerWatcher() - ITEM DUMP");
 			#endif
 			DZSMItemDump();
+			
+			#ifdef DZSM_DEBUG
+			Print("DZSM ~ DayZServerManagerWatcher() - CONTAINER DUMP");
+			#endif
+			DZSMContainerDump();
+
+			#ifdef DZSM_DEBUG
+			Print("DZSM ~ DayZServerManagerWatcher() - ZOMBIE DUMP");
+			#endif
+			DZSMZombieDump();
 
 			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - DATA DUMP DONE");

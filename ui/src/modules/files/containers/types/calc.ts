@@ -170,7 +170,7 @@ export class ItemCalculator {
         return cargoSize;
     }
 
-    public calcItemScore(classname?: string): number {
+    public calcItemScore(classname?: string): number | null | undefined {
         classname = classname?.toLowerCase();
         if (!classname) return null!;
 
@@ -221,7 +221,7 @@ export class ItemCalculator {
             maxScore = 250;
         }
 
-        if (score !== null) {
+        if (score !== null && score !== undefined) {
             const perc = 1 - Math.min(Math.ceil(score) / maxScore, 1);
             const easeing = (x: number): number => {
                 if (x <= lowPass) {
@@ -417,7 +417,7 @@ export class ItemCalculator {
             canLongRangeScopeBonus: canLongRangeScope ? 10 : 0,
         };
 
-        console.log(classname, params);
+        // console.log(classname, params);
 
         this.weaponScoreParams[classname] = params;
 

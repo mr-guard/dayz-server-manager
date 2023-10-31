@@ -1,23 +1,13 @@
 import { ValueGetterParams, ValueSetterParams } from "ag-grid-community";
 import { ColBase } from "./columns";
-import { TypesExpansionComponent } from "./types-expansion.component";
 import { HardlineFileWrapper, TraderFileWrapper } from "./files";
 import { RarityRenderer } from "./renderers";
-import { AttributeOperation, NUMBER_OPS, SET_NUMBER_OP, SET_STRING_OP } from "./ops";
+import { NUMBER_OPS, SET_NUMBER_OP, SET_STRING_OP } from "./ops";
+import { TypesComponent } from "./types.component";
 
-export abstract class ExpansionColBase extends ColBase {
-    public override types!: TypesExpansionComponent;
-    public constructor(
-        types: TypesExpansionComponent,
-        headerName: string,
-    ) {
-        super(types, headerName);
-    }
-}
-
-export class TraderCategoryCol extends ExpansionColBase {
+export class TraderCategoryCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Trader Category');
         this.minWidth = this.types.minWidth(150);
@@ -66,9 +56,9 @@ export class TraderCategoryCol extends ExpansionColBase {
     override operations = [SET_STRING_OP];
 }
 
-export class TraderVariantOfCol extends ExpansionColBase {
+export class TraderVariantOfCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Trader Variant Of');
         this.minWidth = this.types.minWidth(150);
@@ -102,9 +92,9 @@ export class TraderVariantOfCol extends ExpansionColBase {
     override operations = [SET_STRING_OP];
 }
 
-export class MaxPriceCol extends ExpansionColBase {
+export class MaxPriceCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Max Price');
         this.minWidth = this.types.minWidth(75);
@@ -126,9 +116,9 @@ export class MaxPriceCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class MinPriceCol extends ExpansionColBase {
+export class MinPriceCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Min Price');
         this.minWidth = this.types.minWidth(75);
@@ -150,9 +140,9 @@ export class MinPriceCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class SellPricePercentCol extends ExpansionColBase {
+export class SellPricePercentCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Sell Price %');
         this.minWidth = this.types.minWidth(75);
@@ -174,9 +164,9 @@ export class SellPricePercentCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class MaxStockCol extends ExpansionColBase {
+export class MaxStockCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Max Stock');
         this.minWidth = this.types.minWidth(75);
@@ -198,9 +188,9 @@ export class MaxStockCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class MinStockCol extends ExpansionColBase {
+export class MinStockCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Min Stock');
         this.minWidth = this.types.minWidth(75);
@@ -222,9 +212,9 @@ export class MinStockCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class QuantityPercentCol extends ExpansionColBase {
+export class QuantityPercentCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Quantity %');
         this.minWidth = this.types.minWidth(75);
@@ -246,9 +236,9 @@ export class QuantityPercentCol extends ExpansionColBase {
     override operations = [...NUMBER_OPS];
 }
 
-export class RarityCol extends ExpansionColBase {
+export class RarityCol extends ColBase {
     constructor(
-        types: TypesExpansionComponent,
+        types: TypesComponent,
     ) {
         super(types, 'Rarity');
         this.minWidth = this.types.minWidth(150);

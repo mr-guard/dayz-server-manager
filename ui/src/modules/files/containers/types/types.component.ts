@@ -13,6 +13,7 @@ import {
     DZSMMagDumpEntry,
     DZSMWeaponDumpEntry,
     SpawnableTypesXmlEntry,
+    TraderItem,
     TypesXmlEntry,
 } from './types';
 import {
@@ -20,15 +21,18 @@ import {
     ClothingDumpFileWrapper,
     CoreFileWrapper,
     FileWrapper,
+    HardlineFileWrapper,
     ItemDumpFileWrapper,
     MagDumpFileWrapper,
     SpawnableTypesFileWrapper,
+    TraderFileWrapper,
     TypesFileWrapper,
     WeaponDumpFileWrapper
 } from './files';
 import { AttributeOperation } from './ops';
 import * as columns from './columns';
 import { ItemCalculator } from './calc';
+import { MaxPriceCol, MaxStockCol, MinPriceCol, MinStockCol, QuantityPercentCol, RarityCol, SellPricePercentCol, TraderCategoryCol, TraderVariantOfCol } from './expansion-columns';
 
 @Component({
     selector: 'sb-types',
@@ -65,12 +69,14 @@ export class TypesComponent implements OnInit {
 
     public files: FileWrapper[] = [];
     public coreXmlIdx: number = -1;
+    public hardlineFileIndex = -1;
 
     public combinedTypes: Record<string, TypesXmlEntry> = {};
     public combinedSpawnableTypes: Record<string, TypesXmlEntry> = {};
 
     public combinedClasses: string[] = [];
     public missingClasses: string[] = [];
+    public missingTraderItems: string[] = [];
 
     public weaponDataDump: Record<string, DZSMWeaponDumpEntry> = {};
     public magDataDump: Record<string, DZSMMagDumpEntry> = {};
@@ -167,6 +173,8 @@ export class TypesComponent implements OnInit {
             new columns.LootTagCol(this),
             new columns.LootCategoryCol(this),
             new columns.GuessedVariantOfCol(this),
+            new columns.SourceFileCol(this),
+
         ];
     }
 
@@ -257,6 +265,35 @@ export class TypesComponent implements OnInit {
     }
 
     protected async reset(): Promise<void> {
+
+        try {
+            const serverInfo = await this.appCommon.fetchServerInfo().toPromise();
+            if (serverInfo?.worldName?.toLowerCase() === 'deerisle') {
+                const valuesCol = this.typesColumnDefs.find((x) => x.colId === 'Values');
+                if (valuesCol) {
+                    valuesCol.valueLabels = {
+                        'Tier1': 'Crotch Island / Mine',
+                        'Tier2': 'Start Island',
+                        'Tier3': 'Main South',
+                        'Tier4': 'Paris Island',
+                        'Tier5': 'Swamp',
+                        'Tier6': 'Main North',
+                        'Tier7': 'Mt Katahdin',
+                        'Tier8': 'Main East',
+                        'Tier9': 'Oil Rigs',
+                        'Tier10': 'Temple',
+                        'Tier11': 'Power Plant',
+                        'Tier12': 'Devils Eye',
+                        'Tier13': 'Area 42',
+                        'Tier14': 'Arctic',
+                        'Tier15': 'Archipeligo',
+                        'Tier16': 'Crater',
+                        'Tier17': 'Alcatraz',
+                        'Tier18': 'Crypt',
+                    };
+                }
+            }
+        } catch {}
 
         try {
             const dumpFiles = [
@@ -350,6 +387,49 @@ export class TypesComponent implements OnInit {
             };
         }
 
+        try {
+            const traderFilesPath = 'ExpansionMod/Market';
+            const traderFiles = ((await this.appCommon.fetchProfileDir(traderFilesPath).toPromise().catch()) || [])
+                .map((x) => `${traderFilesPath}/${x}`)
+                .map((x) => new TraderFileWrapper(x, x.slice(0, x.lastIndexOf('.'))));
+
+            const traderFilesContents = await this.appCommon.fetchProfileFiles(traderFiles.map((x) => x.file)).toPromise();
+            for (let i = 0; i < traderFilesContents.length; i++) {
+                await traderFiles[i].parse(traderFilesContents[i]);
+                if (traderFiles[i].content) {
+                    this.files.push(traderFiles[i]);
+                }
+            }
+
+            this.typesColumnDefs = [
+                ...this.typesColumnDefs,
+                new TraderCategoryCol(this),
+                new TraderVariantOfCol(this),
+                new MaxPriceCol(this),
+                new MinPriceCol(this),
+                new SellPricePercentCol(this),
+                new MaxStockCol(this),
+                new MinStockCol(this),
+                new QuantityPercentCol(this),
+            ];
+        } catch (e) {
+            console.error('Failed to load expansion files', e);
+        }
+
+        try {
+            const hardlineFile = new HardlineFileWrapper('expansion/settings/HardlineSettings.json');
+            const hardlineContent = await this.appCommon.fetchMissionFile(hardlineFile.file).toPromise().catch();
+            await hardlineFile.parse(hardlineContent);
+            this.hardlineFileIndex = this.files.push(hardlineFile) - 1;
+
+            this.typesColumnDefs = [
+                ...this.typesColumnDefs,
+                new RarityCol(this),
+            ];
+        } catch (e) {
+            console.error('Failed to load expansion hardline settings', e);
+        }
+
         this.calcCombinedTypes();
         this.filterChanged();
     }
@@ -375,6 +455,19 @@ export class TypesComponent implements OnInit {
             ...Object.keys(this.clothingDataDump),
             ...Object.keys(this.itemDataDump),
         ].filter((x) => !this.combinedClasses.includes(x));
+
+        const traderFiles = this.files.filter((x) => x.type === 'traderjson') as TraderFileWrapper[];
+        for (const type of this.combinedClasses) {
+            if (!traderFiles.some(
+                (traderFile) => traderFile.content.Items.some(
+                    (traderItem) =>
+                        traderItem.ClassName?.toLowerCase() === type.toLowerCase()
+                        || traderItem.Variants?.some((variant) => variant?.toLowerCase() === type.toLowerCase())
+                )
+            )) {
+                this.missingTraderItems.push(type);
+            }
+        }
     }
 
     public getTypeEntry(classname?: string): TypesXmlEntry | undefined {
@@ -662,4 +755,38 @@ export class TypesComponent implements OnInit {
         this.calcCombinedTypes();
         this.filterChanged();
     }
+
+    public findItemInTraderfiles(classname?: string): { traderFile: TraderFileWrapper, item: TraderItem } {
+        if (!classname) return null!;
+        classname = classname.toLowerCase();
+        for (const traderFile of this.files) {
+            if (traderFile.type !== 'traderjson') continue;
+            const item = traderFile.content.Items.find((x) => x.ClassName?.toLowerCase() === classname);
+            if (item) {
+                return {
+                    traderFile,
+                    item
+                };
+            }
+        }
+        return null!;
+    }
+
+    public findItemVariantParent(classname?: string): { traderFile: TraderFileWrapper, item: TraderItem } {
+        if (!classname) return null!;
+        classname = classname.toLowerCase();
+        for (const traderFile of this.files) {
+            if (traderFile.type !== 'traderjson') continue;
+            const item = traderFile.content.Items
+                .find((x) => x.Variants?.some((variant) => variant.toLowerCase() === classname));
+            if (item) {
+                return {
+                    traderFile,
+                    item
+                };
+            }
+        }
+        return null!;
+    }
+
 }

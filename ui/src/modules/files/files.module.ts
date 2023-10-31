@@ -13,7 +13,6 @@ import { PlayersModule } from '../players/players.module';
 import { TypesComponent } from './containers/types/types.component';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { TypesExpansionComponent } from './containers/types/types-expansion.component';
 import { CategoryRenderer, CheckboxRenderer, GenericListRenderer, UsageRenderer, ValueRenderer, RarityRenderer } from './containers/types/renderers';
 import { ListTooltipComponent } from './containers/types/columns';
 
@@ -42,7 +41,6 @@ import { ListTooltipComponent } from './containers/types/columns';
         RarityRenderer,
         GenericListRenderer,
         TypesComponent,
-        TypesExpansionComponent,
         ListTooltipComponent,
     ],
     exports: [
@@ -53,7 +51,6 @@ import { ListTooltipComponent } from './containers/types/columns';
         RarityRenderer,
         GenericListRenderer,
         TypesComponent,
-        TypesExpansionComponent,
         ListTooltipComponent,
     ],
 })
