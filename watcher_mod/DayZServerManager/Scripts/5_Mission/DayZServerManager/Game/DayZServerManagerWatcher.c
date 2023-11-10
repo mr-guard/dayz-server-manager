@@ -36,6 +36,7 @@ class DZSMDumpEntry : Managed
 class DZSMBaseDumpEntry : DZSMDumpEntry
 {
 	string displayName;
+	string descriptionShort;
 	float hitPoints;
 	
 	float weight;
@@ -63,6 +64,7 @@ class DZSMBaseDumpEntry : DZSMDumpEntry
 		super.Init(classname, source);
 
 		displayName = GetGame().ConfigGetTextOut( source + " " + classname + " displayName" );
+		descriptionShort = GetGame().ConfigGetTextOut( source + " " + classname + " descriptionShort" );
 		hitPoints = GetGame().ConfigGetFloat( source + " " + classname + " DamageSystem GlobalHealth Health hitpoints" );
 
 		weight = GetGame().ConfigGetFloat( source +" " + classname + " weight" );

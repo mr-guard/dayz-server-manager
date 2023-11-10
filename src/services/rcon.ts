@@ -131,7 +131,7 @@ export class RCON extends IStatefulService {
             {
                 name: 'rcon',
                 password: this.getRconPassword(),
-                ip: '127.0.0.1',
+                ip: this.getRconIP() ? this.getRconIP() : '127.0.0.1',
                 port: this.getRconPort(),
             },
             {
@@ -237,6 +237,10 @@ export class RCON extends IStatefulService {
         );
     }
 
+    private getRconIP(): string | undefined {
+        return this.manager.config?.rconIP || undefined;
+    }
+
     public createBattleyeConf(): void {
         let battleyePath = this.manager.config?.battleyePath;
         if (!battleyePath) {
@@ -256,6 +260,7 @@ export class RCON extends IStatefulService {
         const battleyeConfPath = path.join(battleyePath, 'BEServer_x64.cfg');
         const rConPassword = this.getRconPassword();
         const rConPort = this.getRconPort();
+        const rConIP = this.getRconIP();
 
         this.fs.mkdirSync(battleyePath, { recursive: true });
         try {
@@ -268,7 +273,12 @@ export class RCON extends IStatefulService {
         } catch {}
         this.fs.writeFileSync(
             battleyeConfPath,
-            `RConPassword ${rConPassword}\nRestrictRCon 0\nRConPort ${rConPort}`,
+            [
+                `RConPassword ${rConPassword}`,
+                `RestrictRCon 0`,
+                `RConPort ${rConPort}`,
+                ...(rConIP ? [`RConIP ${rConIP}`] : []),
+            ].join('\n'),
         );
     }
 
