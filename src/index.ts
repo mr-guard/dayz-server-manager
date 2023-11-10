@@ -4,7 +4,23 @@ import { isRunFromWindowsGUI } from './util/is-run-from-gui';
 import * as childProcess from 'child_process';
 import { container } from 'tsyringe';
 
+const origExit = process.exit;
+
+process.exit = (code?: number): never => {
+    console.trace();
+    return origExit(code);
+}
+
 void (async () => {
+
+    process.on('uncaughtException', (reason) => {
+        console.error(
+            'Unhandled Exception:',
+            reason,
+        );
+
+        // TODO save and report
+    });
 
     process.on('unhandledRejection', (reason) => {
         if ((reason as any)?.message?.includes('Config missing or invalid')) {
