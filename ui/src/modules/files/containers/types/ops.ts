@@ -102,6 +102,18 @@ export const ADD_ITEM_OP: AttributeOperation = {
     },
 }
 
+export const SET_ITEMS_OP: AttributeOperation = {
+    label: 'Set Items',
+    operation: (api, node, col, value) => {
+        const currentValue = api.getValue(col.colId, node);
+        if (currentValue === null || currentValue === undefined) return;
+        node.setDataValue(
+            col.colId,
+            (value as string).split(',').map((x) => x.trim()).filter((x) => !!x),
+        );
+    },
+}
+
 export const LIST_OPS: AttributeOperation[] = [
     ADD_ITEM_OP,
     REMOVE_ITEM_OP,

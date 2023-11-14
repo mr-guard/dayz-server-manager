@@ -6,19 +6,23 @@ import { ColBase } from "./columns";
 @Component({
     selector: 'generic-list-renderer',
     template: `
-        <ng-select [items]="dropdownList"
+        <ng-select
                placeholder="Select item"
                appendTo="body"
                [searchable]="false"
                [multiple]="true"
                [disabled]="false"
+               [closeOnSelect]="false"
                [(ngModel)]="selectedItems"
-               bindLabel="label"
-               bindValue="value"
                [compareWith]="compareWith"
-               (change)="checkedHandler()"
+               (ngModelChange)="checkedHandler($event)"
                style="height: 100%;"
         >
+            <ng-option *ngFor="let item of dropdownList"
+                       [value]="item.value"
+            >
+                {{item.label}}
+            </ng-option>
         </ng-select>
     `,
 })
@@ -28,11 +32,11 @@ export class GenericListRenderer implements ICellRendererAngularComp {
 
     public dropdownList: {label: string, value: any}[] = [];
 
-    public selectedItems: {label: string, value: any}[] = [];
+    public selectedItems: any[] = [];
 
     public agInit(params: ICellRendererParams<string>): void {
         this.params = params;
-        this.selectedItems = this.mapLabels([...(params.value || [])]);
+        this.selectedItems = [...(params.value || [])];
 
         this.dropdownList = this.mapLabels([
             ...this.dropdownList.map((x) => x.value),
@@ -49,14 +53,14 @@ export class GenericListRenderer implements ICellRendererAngularComp {
     private mapLabels(values: any[]): {label: string, value: any}[] {
         const labels = (this.params.colDef as ColBase).valueLabels || {};
         return values.map((x) => ({
-            label: labels[x] ? `${labels[x]} (${x})` : x,
+            label: labels[x] ? `${x} (${labels[x]})` : x,
             value: x,
         }));
     }
 
-    public checkedHandler(): void {
+    public checkedHandler(change: any): void {
         const colId = this.params.colDef?.colId!;
-        this.params.node.setDataValue(colId, [...this.selectedItems.map((x) => x.value)]);
+        this.params.node.setDataValue(colId, [...change]);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -68,7 +72,7 @@ export class GenericListRenderer implements ICellRendererAngularComp {
         return false;
     }
 
-    public compareWith = (a, b) => a?.value === b?.value;
+    public compareWith = (a, b) => a === b;
 
 }
 

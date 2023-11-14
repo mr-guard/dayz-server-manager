@@ -29,6 +29,7 @@ import { MetricsCollector } from '../services/metrics-collector';
 import { IngameREST } from '../interface/ingame-rest';
 import { SyberiaCompat } from '../services/syberia-compat';
 import { DiscordEventConverter } from '../services/discord-event-converter';
+import { origExit } from '../util/exit-capture';
 
 @singleton()
 @registry([
@@ -241,7 +242,7 @@ export class ManagerController {
             }
         } catch (e) {
             this.log.log(LogLevel.ERROR, e?.message, e);
-            process.exit(1);
+            process['origExit'](1);
         }
 
         this.working = false;

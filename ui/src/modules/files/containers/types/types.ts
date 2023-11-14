@@ -87,6 +87,39 @@ export interface CoreXml {
     }
 }
 
+export interface LimitsXml {
+    lists: {
+        categories: [{
+            category: {
+                $: {
+                    name: string,
+                },
+            }[],
+        }],
+        tags: [{
+            tag: {
+                $: {
+                    name: string,
+                },
+            }[],
+        }],
+        usageflags: [{
+            usage: {
+                $: {
+                    name: string,
+                },
+            }[],
+        }],
+        valueflags: [{
+            value: {
+                $: {
+                    name: string,
+                },
+            }[],
+        }],
+    },
+}
+
 export interface DZSMDumpEntry {
 	classname: string;
 	source: string;

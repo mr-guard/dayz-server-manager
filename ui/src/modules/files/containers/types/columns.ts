@@ -1,8 +1,8 @@
-import { ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
+import { CellDoubleClickedEvent, ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
 import { TypesComponent } from "./types.component";
 import { CheckboxRenderer, GenericListRenderer } from "./renderers";
 import { ExcludesFilter, ExcludesPartialFilter, IncludesFilter, IncludesPartialFilter } from "./filter";
-import { AttributeOperation, LIST_OPS, NUMBER_OPS } from "./ops";
+import { AttributeOperation, LIST_OPS, NUMBER_OPS, SET_ITEMS_OP } from "./ops";
 import { ItemCalculator } from "./calc";
 import { round } from "./types";
 
@@ -84,6 +84,10 @@ export class NameCol extends ColBase {
     headerTooltip = 'Class Name of the item';
 
     valueGetter = (params: ValueGetterParams<string>) => {
+        const type = this.types.getTypeEntry(params.data);
+        if (type) {
+            return type.$.name;
+        }
         return params.data;
     }
     valueSetter = (params: ValueSetterParams<string>) => {
@@ -133,9 +137,21 @@ export class NameCol extends ColBase {
 export class CategoryCol extends ColBase {
     public constructor(
         types: TypesComponent,
+        extraDropdownEntries?: any[],
     ) {
         super (types, 'Categories')
         this.minWidth = this.types.minWidth(175);
+        this.extraDropdownEntries = extraDropdownEntries?.length
+            ? extraDropdownEntries
+            : [
+                'weapons',
+                'explosives',
+                'clothes',
+                'containers',
+                'tools',
+                'vehicleparts',
+                'food',
+            ];
     }
     headerTooltip = 'Categories of this item. Used to determine general usage (Must exist in area map)';
 
@@ -170,30 +186,26 @@ export class CategoryCol extends ColBase {
         debounceMs: 1000,
     };
 
-    override extraDropdownEntries: any[] = [
-        'weapons',
-        'explosives',
-        'clothes',
-        'containers',
-        'tools',
-        'vehicleparts',
-        'food',
-    ];
-
-    override operations = [...LIST_OPS];
+    override operations = [...LIST_OPS, SET_ITEMS_OP];
 }
 
 
 export class ValuesCol extends ColBase {
     public constructor(
         types: TypesComponent,
+        extraDropdownEntries?: any[],
     ) {
         super(types, 'Values')
         this.minWidth = this.types.minWidth(175);
 
-        for (let i = 1; i <= 18; i++) {
-            this.extraDropdownEntries.push(`Tier${i}`);
-        }
+        this.extraDropdownEntries = extraDropdownEntries?.length
+            ? extraDropdownEntries
+            : [
+                'Tier1',
+                'Tier2',
+                'Tier3',
+                'Tier4',
+            ];
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
@@ -225,19 +237,43 @@ export class ValuesCol extends ColBase {
         debounceMs: 1000,
     };
     headerTooltip = 'Tiers of the item (defines the quality that places new to have to spawn this item). Must exist in area map. * = custom maps only.';
-    override operations = [...LIST_OPS];
+    override operations = [...LIST_OPS, SET_ITEMS_OP];
 }
 
 export class UsagesCol extends ColBase {
     public constructor(
         types: TypesComponent,
+        extraDropdownEntries?: any[],
     ) {
         super(types, 'Usages')
         this.minWidth = this.types.minWidth(175);
+
+        this.extraDropdownEntries = extraDropdownEntries?.length
+            ? extraDropdownEntries
+            : [
+                'Military',
+                'Police',
+                'Medic',
+                'Firefighter',
+                'Industrial',
+                'Farm',
+                'Coast',
+                'Town',
+                'Village',
+                'Hunting',
+                'Office',
+                'School',
+                'Prison',
+                'Lunapark',
+                'SeasonalEvent',
+                'ContaminatedArea',
+                'Historical',
+            ];
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return type?.usage?.map((x) => x.$.name) ?? [];
+        return type?.usage
+            ?.map((x) => x.$.name) ?? [];
     }
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
@@ -265,7 +301,7 @@ export class UsagesCol extends ColBase {
         debounceMs: 1000,
     };
     headerTooltip = 'The categories of places to spawn this item (Must exist in area map)';
-    override operations = [...LIST_OPS];
+    override operations = [...LIST_OPS, SET_ITEMS_OP];
 }
 
 export class NominalCol extends ColBase {
@@ -311,7 +347,7 @@ export class ScoreCol extends ColBase {
     editable = false;
     valueGetter = (params: ValueGetterParams<string>) => {
         const score = this.calc.calcItemScore(params.data);
-        if (score !== null && score !== undefined) {
+        if (score !== null && score !== undefined && isFinite(score)) {
             return Math.ceil(score);
         }
         return undefined;
@@ -369,7 +405,7 @@ export class EstimatedNominalCol extends ColBase {
     editable = false;
     valueGetter = (params) => {
         const estimated = this.calc.estimateItemNominal(params.data);
-        if (estimated !== null) {
+        if (estimated !== null && isFinite(estimated)) {
             return estimated;
         }
         return undefined;
@@ -385,7 +421,7 @@ export class LifeTimeCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.lifetime[0])
+        return Number(type?.lifetime?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -407,7 +443,7 @@ export class RestockCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.restock[0])
+        return Number(type?.restock?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -430,7 +466,7 @@ export class MinCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.min[0])
+        return Number(type?.min?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -458,7 +494,7 @@ export class QuantMinCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.quantmin[0])
+        return Number(type?.quantmin?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -490,7 +526,7 @@ export class QuantMaxCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.quantmax[0])
+        return Number(type?.quantmax?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -521,7 +557,7 @@ export class CostCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.cost[0])
+        return Number(type?.cost?.[0])
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -544,7 +580,7 @@ export class CountInCargoCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.count_in_cargo === '1')
+        return Number(type?.flags?.[0].$.count_in_cargo === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -569,7 +605,7 @@ export class CountInHoarderCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.count_in_hoarder === '1')
+        return Number(type?.flags?.[0].$.count_in_hoarder === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -594,7 +630,7 @@ export class CountInMapCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.count_in_map === '1')
+        return Number(type?.flags?.[0].$.count_in_map === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -619,7 +655,7 @@ export class CountInPlayerCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.count_in_player === '1')
+        return Number(type?.flags?.[0].$.count_in_player === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -644,7 +680,7 @@ export class CraftedCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.crafted === '1')
+        return Number(type?.flags?.[0].$.crafted === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -669,7 +705,7 @@ export class DelootCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data);
-        return Number(type?.flags[0].$.deloot === '1')
+        return Number(type?.flags?.[0].$.deloot === '1')
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const type = this.types.getTypeEntry(params.data)
@@ -685,6 +721,50 @@ export class DelootCol extends ColBase {
     headerTooltip = 'Wether this item is spawned at dynamic events';
 }
 
+export class AmmoCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Ammo')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getWeaponEntry(params.data)?.ammo?.join(', ');
+    };
+}
+
+export class MagsCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Mags')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getWeaponEntry(params.data)?.mags?.join(', ');
+    };
+
+    onCellDoubleClicked = (event: CellDoubleClickedEvent<string>) => {
+        const mag = this.types.getWeaponEntry(event.data)?.mags?.[0]?.toLowerCase();
+        if (mag) {
+            let node;
+            event.api.forEachNode((x) => {
+                if (x.data === mag) {
+                    node = x;
+                }
+            });
+            event.api.ensureNodeVisible(node);
+        }
+    };
+}
 
 export class RPMCol extends ColBase {
     public constructor(
