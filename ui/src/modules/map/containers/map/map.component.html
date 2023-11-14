@@ -1,4 +1,24 @@
 <sb-layout-dashboard>
+    <div class="d-flex btn-group"
+         style="margin-top: -1rem; margin-left: -1rem; margin-right: -1rem; margin-bottom: 0.5rem;"
+    >
+        <label style="margin-bottom: 0; margin-right: 0.5rem; align-self: center;">Search:</label>
+        <input class="form-control"
+               style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
+               (keyup)="$event.key === 'Enter' ? search(searchInput.value) : null"
+               #searchInput
+        >
+        <button class="btn btn-primary"
+                (click)="search(searchInput.value)"
+        >
+            <fa-icon [icon]='["fas", "search"]'></fa-icon>
+        </button>
+        <button class="btn btn-danger"
+                (click)="search(undefined)"
+        >
+            <fa-icon [icon]='["fas", "trash"]'></fa-icon>
+        </button>
+    </div>
     <div class="map-container"
         *ngIf="options"
         leaflet

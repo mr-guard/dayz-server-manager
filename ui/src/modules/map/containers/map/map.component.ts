@@ -52,6 +52,7 @@ interface MarkerWithId {
     marker: Marker;
     toolTip?: Tooltip;
     id: string;
+    data: any;
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -290,6 +291,7 @@ export class MapComponent implements OnInit, OnDestroy {
                     marker: m,
                     toolTip: t,
                     id: x.name,
+                    data: x,
                 });
 
                 locationLayer.layer.addLayer(m);
@@ -450,6 +452,7 @@ export class MapComponent implements OnInit, OnDestroy {
                 marker: m,
                 toolTip: t,
                 id: String(x.id),
+                data: x,
             });
 
             layer.layer.addLayer(m);
@@ -506,8 +509,37 @@ export class MapComponent implements OnInit, OnDestroy {
                 marker: m,
                 toolTip: t,
                 id: String(x.id),
+                data: x,
             });
             layer.layer.addLayer(m);
+        }
+    }
+
+    public search(value?: string) {
+        value = value?.toLowerCase();
+        const layerGroups = [
+            this.layers.get('vehicleLayer')!,
+            this.layers.get('airLayer')!,
+            this.layers.get('boatLayer')!,
+            this.layers.get('playerLayer')!,
+        ];
+        for (const layerGroup of layerGroups) {
+            for (const m of layerGroup.markers) {
+                const hasMarker = layerGroup.layer.hasLayer(m.marker);
+                const shouldHave = !value
+                    || !!(m.data as IngameEntity).name?.toLowerCase().includes(value)
+                    || !!(m.data as IngameEntity).type?.toLowerCase().includes(value);
+
+                console.log(m.data, shouldHave, hasMarker)
+
+                if (hasMarker && !shouldHave) {
+                    layerGroup.layer.removeLayer(m.marker);
+                }
+
+                if (!hasMarker && shouldHave) {
+                    layerGroup.layer.addLayer(m.marker);
+                }
+            }
         }
     }
 
