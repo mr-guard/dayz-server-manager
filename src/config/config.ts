@@ -641,6 +641,12 @@ export class Config {
     public rconPort: number = 2306;
 
     /**
+     * RCon IP to bind to.
+     * Only set this if you have multiple network interfaces and want to useet a specific one.
+     */
+    public rconIP: string = '';
+
+    /**
      * Local mods
      * Actual modnames like '@MyAwesomeMod'
      */

@@ -45,24 +45,23 @@ export class DiscordBot extends IStatefulService {
             return;
         }
 
-        const client = new Client();
-        client.on('ready', () => this.onReady());
-        if (this.debug) {
-            client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
-            client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
-            client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
-        }
-        client.on('message', (m) => this.onMessage(m));
-        client.on('disconnect', (d) => {
-            if (d?.wasClean) {
-                this.log.log(LogLevel.INFO, 'disconnect');
-            } else {
-                this.log.log(LogLevel.ERROR, 'disconnect', d);
-            }
-        });
-        client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
-
         try {
+            const client = new Client();
+            client.on('ready', () => this.onReady());
+            if (this.debug) {
+                client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
+                client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
+                client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
+            }
+            client.on('message', (m) => this.onMessage(m));
+            client.on('disconnect', (d) => {
+                if (d?.wasClean) {
+                    this.log.log(LogLevel.INFO, 'disconnect');
+                } else {
+                    this.log.log(LogLevel.ERROR, 'disconnect', d);
+                }
+            });
+            client.on('error', (e) => this.log.log(LogLevel.ERROR, 'error', e));
             await client.login(this.manager.config.discordBotToken);
             this.client = client;
             this.sendQueuedMessage();

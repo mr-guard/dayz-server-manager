@@ -114,20 +114,58 @@ export class LogReader extends IStatefulService {
         const createTail = (type: string, logContainer: LogContainer, retry?: number): void => {
             logContainer.logLines = [];
             if (logContainer.logFiles?.length) {
-                logContainer.tail = new tail.Tail(
-                    logContainer.logFiles[0].file,
-                    {
-                        follow: true,
-                        fromBeginning: true,
-                        flushAtEOF: true,
-                    },
-                );
-                logContainer.tail.on('error', /* istanbul ignore next */ (e) => {
+                try {
+                    logContainer.tail = new tail.Tail(
+                        logContainer.logFiles[0].file,
+                        {
+                            follow: true,
+                            fromBeginning: true,
+                            flushAtEOF: true,
+                        },
+                    );
+                    logContainer.tail.on('error', /* istanbul ignore next */ (e) => {
+                        this.log.log(LogLevel.WARN, `Error reading ${type}`, e);
+                        try {
+                            logContainer.tail?.unwatch();
+                        } catch {}
+                        if (!retry || retry < 1) {
+                            setTimeout(
+                                () => {
+                                    try {
+                                        createTail(type, logContainer, (retry ?? 0) + 1);
+                                    } catch (createTailError) {
+                                        this.log.log(LogLevel.WARN, `Error creating file reader ${type}`, createTailError);
+                                    }
+                                },
+                                10000,
+                            );
+                        }
+                    });
+                    logContainer.tail.on('line', (line) => {
+                        if (line) {
+                            this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
+                            const logEntry = {
+                                timestamp: new Date().valueOf(),
+                                message: line,
+                            };
+                            logContainer.logLines.push(logEntry);
+                            this.eventBus.emit(
+                                InternalEventTypes.LOG_ENTRY,
+                                {
+                                    type: type as LogTypeEnum,
+                                    entry: logEntry,
+                                },
+                            );
+                        }
+                    });
+                } catch (e) {
                     this.log.log(LogLevel.WARN, `Error reading ${type}`, e);
-                    logContainer.tail.unwatch();
+                    try {
+                        logContainer.tail?.unwatch();
+                    } catch {}
                     if (!retry || retry < 1) {
                         setTimeout(
-                            () => {
+                            /* istanbul ignore next */ () => {
                                 try {
                                     createTail(type, logContainer, (retry ?? 0) + 1);
                                 } catch (createTailError) {
@@ -137,24 +175,7 @@ export class LogReader extends IStatefulService {
                             10000,
                         );
                     }
-                });
-                logContainer.tail.on('line', (line) => {
-                    if (line) {
-                        this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
-                        const logEntry = {
-                            timestamp: new Date().valueOf(),
-                            message: line,
-                        };
-                        logContainer.logLines.push(logEntry);
-                        this.eventBus.emit(
-                            InternalEventTypes.LOG_ENTRY,
-                            {
-                                type: type as LogTypeEnum,
-                                entry: logEntry,
-                            },
-                        );
-                    }
-                });
+                }
             }
         };
 

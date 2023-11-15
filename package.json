@@ -117,7 +117,7 @@
     "@types/sinon": "^10.0.0",
     "@types/sinon-chai": "^3.2.5",
     "@types/table": "^6.0.0",
-    "@types/tail": "2.0.0",
+    "@types/tail": "2.2.3",
     "@types/tar": "^6.1.5",
     "@types/websocket": "^1.0.5",
     "@types/ws": "^7.4.0",
@@ -162,7 +162,7 @@
     "reflect-metadata": "0.1.13",
     "sudo-prompt": "^9.2.1",
     "swagger-ui-express": "^4.3.0",
-    "tail": "2.2.2",
+    "tail": "2.2.6",
     "tar": "^6.1.11",
     "tsyringe": "^4.8.0"
   }

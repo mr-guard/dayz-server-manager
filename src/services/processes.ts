@@ -448,7 +448,7 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
      */
     /* istanbul ignore next */
     public exit(status: number): never {
-        process.exit(status);
+        return process['origExit'](status) as never;
     }
 
 }

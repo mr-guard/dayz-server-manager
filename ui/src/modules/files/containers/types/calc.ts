@@ -122,7 +122,7 @@ export class ItemCalculator {
         const attachments: string[] = [];
         if (foundType) {
             attachments.push(
-                ...foundType.attachments
+                ...(foundType.attachments || [])
                     .filter((x) => x.$.chance && Number(x.$.chance) === 1)
                     .reduce((prev, cur) => {
                         if (cur.item.length) {
@@ -678,7 +678,7 @@ export class ItemCalculator {
             const parentClass = this.types.getDumpEntry(classnameLC)?.parents?.[0];
             if (parentClass) {
                 if (this.types.getDumpEntry(parentClass)) {
-                    console.warn(this.types.getDumpEntry(parentClass))
+                    // console.warn(this.types.getDumpEntry(parentClass))
                     return parentClass;
                 }
 

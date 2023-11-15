@@ -128,7 +128,7 @@ export class IngameREST extends IStatefulService {
             '/ingamereport',
             async (req, res) => { // NOSONAR
                 try {
-                    await this.ingameReport.processIngameReport(req.body);
+                    await this.ingameReport.processIngameReport(typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
                     res.status(200).send(JSON.stringify({ status: 200 }));
                 } catch {
                     res.status(500).send(JSON.stringify({ status: 500 }));
@@ -163,9 +163,16 @@ export class IngameREST extends IStatefulService {
             (req, res) => {
                 try {
                     const db = this.db.getDatabase(req.params.dbName as any);
-                    const results = db.allRaw(req.body);
-                    res.send(results?.length ? serializeResult(results) : '[]');
-                } catch {
+                    if (req.body?.toLowerCase().trim().startsWith('select')) {
+                        const results = db.allRaw(req.body);
+                        this.log.log(LogLevel.DEBUG, 'Query results', results);
+                        res.send(results?.length ? serializeResult(results) : '[]');
+                    } else {
+                        db.run(req.body);
+                        res.send('[]');
+                    }
+                } catch (e) {
+                    this.log.log(LogLevel.ERROR, 'Query error', e);
                     res.status(500).send(JSON.stringify({ status: 500 }));
                 }
             },
@@ -176,9 +183,16 @@ export class IngameREST extends IStatefulService {
             (req, res) => {
                 try {
                     const db = this.db.getDatabase(req.params.dbName as any);
-                    const results = db.allRaw(req.body);
-                    res.send(results?.length ? serializeResult(results) : '[]');
-                } catch {
+                    if (req.body?.toLowerCase().trim().startsWith('select')) {
+                        const results = db.allRaw(req.body);
+                        this.log.log(LogLevel.DEBUG, 'QueryNoStrict result', results);
+                        res.send(results?.length ? serializeResult(results) : '[]');
+                    } else {
+                        db.run(req.body);
+                        res.send('[]');
+                    }
+                } catch (e) {
+                    this.log.log(LogLevel.ERROR, 'QueryNoStrict error', e);
                     res.send('[]');
                 }
             },
@@ -192,16 +206,19 @@ export class IngameREST extends IStatefulService {
                     const db = this.db.getDatabase(req.params.dbName as any);
                     const results = db.transaction((sqlDb) => {
                         for (let i = 0; i < queries.length; i++) {
-                            if (i === (queries.length - 1)) {
+                            this.log.log(LogLevel.DEBUG, 'Transaction query', queries[i]);
+                            if (i === (queries.length - 1) && queries[i]?.toLowerCase().trim().startsWith('select')) {
                                 return sqlDb.prepare(queries[i]).raw().all();
                             } else {
                                 sqlDb.prepare(queries[i]).run();
                             }
                         }
                     });
+                    this.log.log(LogLevel.DEBUG, 'Transaction results', results);
                     res.send(results?.length ? serializeResult(results) : '[]');
-                } catch {
-                    res.send('[]');
+                } catch (e) {
+                    this.log.log(LogLevel.ERROR, 'Transaction error', e);
+                    res.status(500).send(JSON.stringify({ status: 500 }));
                 }
             },
         );

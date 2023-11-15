@@ -24,8 +24,10 @@ body {
 }
 
 .map-container {
-    height: calc(100% +  2 * 1.5rem /*$grid-gutter-width*/);
-    margin: -$grid-gutter-width;
+    height: calc(100% +  2 * 1.5rem - 3rem /*$grid-gutter-width*/);
+    margin-left: -$grid-gutter-width;
+    margin-right: -$grid-gutter-width;
+    margin-bottom: -$grid-gutter-width;
 }
 
 .position {

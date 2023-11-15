@@ -63,6 +63,7 @@ modded class Database
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
 		#ifdef DZSM_DEBUG
 		Print("DZSM Syberia ~ QuerySync: " + apiOptions.host + "/" + databaseName + "/query?key=" + apiOptions.key);
+		Print("DZSM Syberia ~ QuerySync: " + queryText);
 		#endif
 		
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
@@ -90,6 +91,12 @@ modded class Database
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
 		restContext.SetHeader("text/plain");
+		
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ QueryAsync: " + apiOptions.host + "/" + databaseName + "/query?key=" + apiOptions.key);
+		Print("DZSM Syberia ~ QueryAsync: " + queryText);
+		#endif
+		
 		restContext.POST(new SyberiaDatabaseCallback(callbackClass, callbackFnc, args), "/" + databaseName + "/query?key=" + apiOptions.key, queryText);
 	}
 	
@@ -107,7 +114,18 @@ modded class Database
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
 		restContext.SetHeader("text/plain");
+
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ TransactionSync: " + apiOptions.host + "/" + databaseName + "/transaction?key=" + apiOptions.key);
+		Print("DZSM Syberia ~ TransactionSync: " + queryText);
+		#endif
+
 		string responseData = restContext.POST_now("/" + databaseName + "/transaction?key=" + apiOptions.key, queryText);
+
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ TransactionSyncResponse: " + responseData);
+		#endif
+
 		if (responseData.Length() > 0 && responseData.Get(0) == "[")
 		{
 			response = new DatabaseResponse(responseData);
@@ -132,6 +150,12 @@ modded class Database
 		DZSMApiOptions apiOptions = GetDZSMApiOptions();
 		RestContext restContext = GetRestApi().GetRestContext(apiOptions.host);
 		restContext.SetHeader("text/plain");
+
+		#ifdef DZSM_DEBUG
+		Print("DZSM Syberia ~ TransactionAsync: " + apiOptions.host + "/" + databaseName + "/transaction?key=" + apiOptions.key);
+		Print("DZSM Syberia ~ TransactionAsync: " + queryText);
+		#endif
+
 		restContext.POST(new SyberiaDatabaseCallback(callbackClass, callbackFnc, args), "/" + databaseName + "/transaction?key=" + apiOptions.key, queryText);
 	}
 };

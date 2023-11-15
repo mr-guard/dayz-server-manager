@@ -23,6 +23,7 @@ import {
     FileWrapper,
     HardlineFileWrapper,
     ItemDumpFileWrapper,
+    LimitsFileWrapper,
     MagDumpFileWrapper,
     SpawnableTypesFileWrapper,
     TraderFileWrapper,
@@ -47,7 +48,7 @@ export class TypesComponent implements OnInit {
     public _lockedWidth = false;
     public set lockedWidth(locked: boolean) {
         this._lockedWidth = locked;
-        this.setCols();
+        this.typesColumnDefs = [...this.typesColumnDefs];
     }
     public get lockedWidth(): boolean {
         return this._lockedWidth;
@@ -121,8 +122,6 @@ export class TypesComponent implements OnInit {
             new columns.ValuesCol(this),
             new columns.UsagesCol(this),
             new columns.NominalCol(this),
-            new columns.EstimatedNominalCol(this),
-            new columns.ScoreCol(this),
             new columns.LifeTimeCol(this),
             new columns.RestockCol(this),
             new columns.MinCol(this),
@@ -136,45 +135,7 @@ export class TypesComponent implements OnInit {
             new columns.CraftedCol(this),
             new columns.DelootCol(this),
 
-            // weapon stuff
-            new columns.RPMCol(this),
-            new columns.MaxMagSizeCol(this),
-            new columns.DispersionCol(this),
-            new columns.WeaponDamageCol(this),
-            new columns.WeaponOneHitDistanceCol(this),
-            new columns.DamageBloodCol(this),
-            new columns.DamageHPCol(this),
-            new columns.DamageArmorCol(this),
-            new columns.BulletSpeedCol(this),
-            new columns.MaxZeroCol(this),
-            new columns.RecoilCol(this),
-            new columns.StabilityCol(this),
-            // new MaxRecoilUpCol(this),
-            // new MaxRfecoilLeftCol(this),
-            // new MaxRecoilRightCol(this),
-
-            // clothing stuff
-            new columns.ArmorProjectileCol(this),
-            new columns.ArmorFragCol(this),
-            new columns.ArmorInfectedCol(this),
-            new columns.ArmorMeleeCol(this),
-
-            new columns.CargoSizeCol(this),
-            new columns.WeaponSlotsCol(this),
-            new columns.PistolSlotsCol(this),
-            new columns.MaxCargoSizeCol(this),
-            new columns.IsolationCol(this),
-            new columns.VisibilityCol(this),
-
-            // Common
-            new columns.WeightCol(this),
-            new columns.HitpointsCol(this),
-            new columns.ItemInfoCol(this),
-            new columns.LootTagCol(this),
-            new columns.LootCategoryCol(this),
-            new columns.GuessedVariantOfCol(this),
             new columns.SourceFileCol(this),
-
         ];
     }
 
@@ -218,6 +179,9 @@ export class TypesComponent implements OnInit {
 
         if (this.validate(false)) {
             try {
+                if (this.withBackup) {
+                    await this.maintenance.createBackup();
+                }
                 await this.saveFiles();
                 if (this.withRestart) {
                     await this.maintenance.restartServer();
@@ -266,6 +230,51 @@ export class TypesComponent implements OnInit {
 
     protected async reset(): Promise<void> {
 
+        // limits
+        try {
+            const limits = new LimitsFileWrapper('cfglimitsdefinition.xml');
+            await limits.parse(await this.appCommon.fetchMissionFile(limits.file).toPromise());
+            this.files.push(limits);
+
+            const valuesCol = this.typesColumnDefs.find((x) => x.colId === 'Values');
+            if (valuesCol) {
+                const values = limits.content?.lists?.valueflags?.[0]?.value
+                    ?.map((x) => x?.$?.name)
+                    .filter((x) => !!x);
+                if (values.length) {
+                    valuesCol.extraDropdownEntries = values;
+                }
+            }
+
+            const categoryCol = this.typesColumnDefs.find((x) => x.colId === 'Categories');
+            if (categoryCol) {
+                const categories = limits.content?.lists?.categories?.[0]?.category
+                    ?.map((x) => x?.$?.name)
+                    .filter((x) => !!x);
+                if (categories.length) {
+                    categoryCol.extraDropdownEntries = categories;
+                }
+            }
+
+            const usagesCol = this.typesColumnDefs.find((x) => x.colId === 'Usages');
+            if (usagesCol) {
+                const usages = limits.content?.lists?.usageflags?.[0]?.usage
+                    ?.map((x) => x?.$?.name)
+                    .filter((x) => !!x);
+                if (usages.length) {
+                    usagesCol.extraDropdownEntries = usages;
+                }
+            }
+
+        } catch (e) {
+            console.error(`Failed to load limits files`, e);
+            this.outcomeBadge = {
+                success: false,
+                message: `Failed to load limits files`,
+            };
+        }
+
+        // server info
         try {
             const serverInfo = await this.appCommon.fetchServerInfo().toPromise();
             if (serverInfo?.worldName?.toLowerCase() === 'deerisle') {
@@ -295,6 +304,7 @@ export class TypesComponent implements OnInit {
             }
         } catch {}
 
+        // dump files
         try {
             const dumpFiles = [
                 new WeaponDumpFileWrapper('dzsm-weapondump.json'),
@@ -339,10 +349,57 @@ export class TypesComponent implements OnInit {
                     this.files.push(file);
                 }
             }
+
+            this.typesColumnDefs = [
+                ...this.typesColumnDefs,
+                // weapon stuff
+                new columns.AmmoCol(this),
+                new columns.MagsCol(this),
+                new columns.RPMCol(this),
+                new columns.MaxMagSizeCol(this),
+                new columns.DispersionCol(this),
+                new columns.WeaponDamageCol(this),
+                new columns.WeaponOneHitDistanceCol(this),
+                new columns.DamageBloodCol(this),
+                new columns.DamageHPCol(this),
+                new columns.DamageArmorCol(this),
+                new columns.BulletSpeedCol(this),
+                new columns.MaxZeroCol(this),
+                new columns.RecoilCol(this),
+                new columns.StabilityCol(this),
+                // new MaxRecoilUpCol(this),
+                // new MaxRfecoilLeftCol(this),
+                // new MaxRecoilRightCol(this),
+
+                // clothing stuff
+                new columns.ArmorProjectileCol(this),
+                new columns.ArmorFragCol(this),
+                new columns.ArmorInfectedCol(this),
+                new columns.ArmorMeleeCol(this),
+
+                new columns.CargoSizeCol(this),
+                new columns.WeaponSlotsCol(this),
+                new columns.PistolSlotsCol(this),
+                new columns.MaxCargoSizeCol(this),
+                new columns.IsolationCol(this),
+                new columns.VisibilityCol(this),
+
+                // Common
+                new columns.EstimatedNominalCol(this),
+                new columns.ScoreCol(this),
+                new columns.WeightCol(this),
+                new columns.HitpointsCol(this),
+                new columns.ItemInfoCol(this),
+                new columns.LootTagCol(this),
+                new columns.LootCategoryCol(this),
+                new columns.GuessedVariantOfCol(this),
+            ];
+
         } catch (e) {
             console.error('Failed to load data dump files', e);
         }
 
+        // economy core + types
         try {
             const core = new CoreFileWrapper('cfgEconomyCore.xml');
             await core.parse(await this.appCommon.fetchMissionFile(core.file).toPromise());
@@ -387,6 +444,7 @@ export class TypesComponent implements OnInit {
             };
         }
 
+        // trader files
         try {
             const traderFilesPath = 'ExpansionMod/Market';
             const traderFiles = ((await this.appCommon.fetchProfileDir(traderFilesPath).toPromise().catch()) || [])
@@ -416,6 +474,7 @@ export class TypesComponent implements OnInit {
             console.error('Failed to load expansion files', e);
         }
 
+        // hardline
         try {
             const hardlineFile = new HardlineFileWrapper('expansion/settings/HardlineSettings.json');
             const hardlineContent = await this.appCommon.fetchMissionFile(hardlineFile.file).toPromise().catch();
@@ -557,7 +616,9 @@ export class TypesComponent implements OnInit {
         for (const file of this.files) {
             if (!file.content || file.type !== 'typesxml') continue;
             for (const type of file.content.types.type) {
-                result &&= this.validateType(type);
+                if (!this.validateType(type)) {
+                    result = false;
+                }
             }
         }
 
@@ -567,6 +628,8 @@ export class TypesComponent implements OnInit {
                 message: 'No errors found',
             };
         }
+
+        console.log(this.validationErrors)
 
         return result;
     }
@@ -653,7 +716,8 @@ export class TypesComponent implements OnInit {
 
             const type = this.getTypeEntry(x.data)
             countNominal += Number(type?.nominal[0] ?? 0);
-            countEstimatedNominal += Number(this.calc.estimateItemNominal(x.data) ?? type?.nominal[0] ?? 0);
+            const estimated = Number(this.calc.estimateItemNominal(x.data) ?? type?.nominal[0] ?? 0);
+            countEstimatedNominal += isFinite(estimated) ? estimated : 0;
         });
         this.shownTypesCount = count;
         this.totalNominal = countNominal;

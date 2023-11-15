@@ -1,4 +1,4 @@
-import { CoreXml, DZSMAmmoDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, SpawnableTypesXml, TraderItem, TypesXml } from "./types";
+import { CoreXml, DZSMAmmoDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, LimitsXml, SpawnableTypesXml, TraderItem, TypesXml } from "./types";
 import * as xml from 'xml2js';
 
 export abstract class FileWrapperBase {
@@ -7,6 +7,7 @@ export abstract class FileWrapperBase {
     public abstract readonly type: 'typesxml'
         | 'spawnabletypesxml'
         | 'corexml'
+        | 'limitsxml'
         | 'traderjson'
         | 'hardlinejson'
         | 'weapondumpjson'
@@ -101,8 +102,22 @@ export class CoreFileWrapper extends FileWrapperBase {
     }
 }
 
-export class TraderFileWrapper extends FileWrapperBase {
+export class LimitsFileWrapper extends FileWrapperBase {
     public readonly location = 'mission';
+    public readonly contentType = 'xml';
+    public readonly type = 'limitsxml';
+    public override readonly skipSave = true;
+    public content!: LimitsXml;
+
+    public constructor(
+        file: string,
+    ) {
+        super(file);
+    }
+}
+
+export class TraderFileWrapper extends FileWrapperBase {
+    public readonly location = 'profile';
     public readonly contentType = 'json';
     public readonly type = 'traderjson';
     public override readonly skipSave = false;
@@ -202,6 +217,7 @@ export type FileWrapper =
     TypesFileWrapper
     | SpawnableTypesFileWrapper
     | CoreFileWrapper
+    | LimitsFileWrapper
     | TraderFileWrapper
     | HardlineFileWrapper
     | WeaponDumpFileWrapper

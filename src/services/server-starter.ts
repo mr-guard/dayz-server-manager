@@ -104,6 +104,29 @@ export class ServerStarter extends IService {
 
     private async prepareServerStart(skipPrep?: boolean): Promise<void> {
 
+        if (!skipPrep) {
+            // Server
+            if (!await this.steamCmd.checkServer() || this.manager.config.updateServerBeforeServerStart) {
+                await this.steamCmd.updateServer();
+            }
+            if (!await this.steamCmd.checkServer()) {
+                throw new Error('Server installation failed');
+            }
+
+            // Mods
+            if (!await this.steamCmd.checkMods() || this.manager.config.updateModsBeforeServerStart) {
+                if (!await this.steamCmd.updateAllMods()) {
+                    throw new Error('Mod update failed');
+                }
+            }
+            if (!await this.steamCmd.installMods()) {
+                throw new Error('Mod installation failed');
+            }
+            if (!await this.steamCmd.checkMods()) {
+                throw new Error('Mod installation failed');
+            }
+        }
+
         // install internal mods
         await Promise.all(
             await this.eventBus.request(InternalEventTypes.INTERNAL_MOD_INSTALL),
@@ -115,31 +138,6 @@ export class ServerStarter extends IService {
         await this.writeServerCfg();
 
         await this.adjustDayzSettingXml();
-
-        if (!!skipPrep) {
-            return;
-        }
-
-        // Server
-        if (!await this.steamCmd.checkServer() || this.manager.config.updateServerBeforeServerStart) {
-            await this.steamCmd.updateServer();
-        }
-        if (!await this.steamCmd.checkServer()) {
-            throw new Error('Server installation failed');
-        }
-
-        // Mods
-        if (!await this.steamCmd.checkMods() || this.manager.config.updateModsBeforeServerStart) {
-            if (!await this.steamCmd.updateAllMods()) {
-                throw new Error('Mod update failed');
-            }
-        }
-        if (!await this.steamCmd.installMods()) {
-            throw new Error('Mod installation failed');
-        }
-        if (!await this.steamCmd.checkMods()) {
-            throw new Error('Mod installation failed');
-        }
 
     }
 

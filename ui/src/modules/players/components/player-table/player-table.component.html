@@ -5,6 +5,7 @@
             [(ngModel)]="playerService.searchTerm" />
         <span class="ml-3" *ngIf="playerService.loading$ | async">Loading...</span>
     </div>
+    <span>SteamID and character values are only available when the player is online.</span>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -20,6 +21,9 @@
                 <th scope="col" sbSortable="ping" (sort)="onSort($event)"><span>Ping</span>
                     <sb-sort-icon *ngIf='sortedColumn === "ping"' [direction]="sortedDirection"></sb-sort-icon>
                 </th>
+                <th scope="col"><span>SteamID</span></th>
+                <th scope="col"><span>Damage</span></th>
+                <th scope="col"><span>Position</span></th>
             </tr>
         </thead>
         <tbody>
@@ -40,6 +44,15 @@
                 </td>
                 <td>
                     {{ player.ping | number }}
+                </td>
+                <td>
+                    <ngb-highlight [result]="player.steamid" [term]="playerService.searchTerm"></ngb-highlight>
+                </td>
+                <td>
+                    {{ player.damage }}
+                </td>
+                <td>
+                    {{ player.position }}
                 </td>
             </tr>
         </tbody>
