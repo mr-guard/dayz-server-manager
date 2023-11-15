@@ -14,7 +14,7 @@
             <fa-icon [icon]='["fas", "search"]'></fa-icon>
         </button>
         <button class="btn btn-danger"
-                (click)="search(undefined)"
+                (click)="searchInput.value = ''; search(undefined)"
         >
             <fa-icon [icon]='["fas", "trash"]'></fa-icon>
         </button>

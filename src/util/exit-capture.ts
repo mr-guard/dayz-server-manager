@@ -8,7 +8,10 @@ process.exit = (code?: number): never => {
     console.error('Unplanned exit');
     console.trace();
 
-    fs.writeFileSync('manager-crash-dump.log', `Unplanned exit - ${code} - ${new Error().stack}`);
+    fs.writeFileSync(
+        `manager-exit-dump-${new Date().valueOf()}.log`,
+        `Unplanned exit - ${code} - ${new Error().stack}`,
+    );
 
     return origExit(code);
 };

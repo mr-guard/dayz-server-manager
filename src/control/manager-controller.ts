@@ -29,7 +29,6 @@ import { MetricsCollector } from '../services/metrics-collector';
 import { IngameREST } from '../interface/ingame-rest';
 import { SyberiaCompat } from '../services/syberia-compat';
 import { DiscordEventConverter } from '../services/discord-event-converter';
-import { origExit } from '../util/exit-capture';
 
 @singleton()
 @registry([
@@ -238,10 +237,15 @@ export class ManagerController {
             this.log.log(LogLevel.DEBUG, 'Initial Check done. Starting Init..');
             for (const service of this.getStatefulServices()) {
                 this.log.log(LogLevel.DEBUG, `Starting ${this.getServiceName(service)}..`);
-                await service.start();
+                try {
+                    await service.start();
+                } catch (e) {
+                    this.log.log(LogLevel.ERROR, `Failed to start service "${this.getServiceName(service)}": ${e?.message}`, e);
+                    throw new Error(`Failed to start service "${this.getServiceName(service)}": ${e?.message}`);
+                }
             }
         } catch (e) {
-            this.log.log(LogLevel.ERROR, e?.message, e);
+            this.log.log(LogLevel.ERROR, `Setup failed: ${e?.message}`, e);
             process['origExit'](1);
         }
 

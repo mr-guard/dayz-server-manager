@@ -1,7 +1,9 @@
 import 'reflect-metadata';
+import './util/exit-capture';
 import { ManagerController } from './control/manager-controller';
 import { isRunFromWindowsGUI } from './util/is-run-from-gui';
 import * as childProcess from 'child_process';
+import * as fs from 'fs';
 import { container } from 'tsyringe';
 
 void (async () => {
@@ -11,8 +13,14 @@ void (async () => {
             'Unhandled Exception:',
             reason,
         );
+        fs.writeFileSync(
+            `manager-exception-dump-${new Date().valueOf()}.log`,
+            `Unhandled exception - ${reason}`,
+        );
+        // TODO report
 
-        // TODO save and report
+        // uncaught expections are supposed to exit the process
+        process.exit(1)
     });
 
     process.on('unhandledRejection', (reason) => {

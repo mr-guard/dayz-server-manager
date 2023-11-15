@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ServerInfo } from '../../../app-common/models';
+import { ServerInfo, IngameReportEntry } from '../../../app-common/models';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
 import {
     Control,
@@ -75,17 +75,6 @@ class LayerContainer {
         public markers: MarkerWithId[] = [],
     ) {}
 
-}
-
-interface IngameEntity {
-    damage: number;
-    entryType: 'VEHICLE' | 'PLAYER';
-    category: 'GROUND' | 'AIR' | 'SEA' | 'MAN';
-    id: number;
-    name: string;
-    position: string;
-    speed: string;
-    type: string;
 }
 
 @Component({
@@ -417,7 +406,7 @@ export class MapComponent implements OnInit, OnDestroy {
         };
     }
 
-    private updatePlayers(players: IngameEntity[]): void {
+    private updatePlayers(players: IngameReportEntry[]): void {
         const layer = this.layers.get('playerLayer')!;
 
         // remove absent
@@ -459,7 +448,7 @@ export class MapComponent implements OnInit, OnDestroy {
         }
     }
 
-    private updateVehicles(vehicles: IngameEntity[]): void {
+    private updateVehicles(vehicles: IngameReportEntry[]): void {
         const layerGround = this.layers.get('vehicleLayer')!;
         const layerAir = this.layers.get('airLayer')!;
         const layerSea = this.layers.get('boatLayer')!;
@@ -527,8 +516,8 @@ export class MapComponent implements OnInit, OnDestroy {
             for (const m of layerGroup.markers) {
                 const hasMarker = layerGroup.layer.hasLayer(m.marker);
                 const shouldHave = !value
-                    || !!(m.data as IngameEntity).name?.toLowerCase().includes(value)
-                    || !!(m.data as IngameEntity).type?.toLowerCase().includes(value);
+                    || !!(m.data as IngameReportEntry).name?.toLowerCase().includes(value)
+                    || !!(m.data as IngameReportEntry).type?.toLowerCase().includes(value);
 
                 console.log(m.data, shouldHave, hasMarker)
 

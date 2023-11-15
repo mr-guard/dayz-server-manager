@@ -128,7 +128,7 @@ export class IngameREST extends IStatefulService {
             '/ingamereport',
             async (req, res) => { // NOSONAR
                 try {
-                    await this.ingameReport.processIngameReport(req.body);
+                    await this.ingameReport.processIngameReport(typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
                     res.status(200).send(JSON.stringify({ status: 200 }));
                 } catch {
                     res.status(500).send(JSON.stringify({ status: 500 }));

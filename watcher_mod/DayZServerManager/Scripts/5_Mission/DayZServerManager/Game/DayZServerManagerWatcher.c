@@ -796,6 +796,7 @@ class ServerManagerEntry
 	string category;
 	string name;
 	int id;
+	string id2;
 	string position;	
 	string speed;
 	float damage;
@@ -998,6 +999,7 @@ class DayZServerManagerWatcher
 				playerEntry.damage = player.GetDamage();
 				playerEntry.type = player.GetType();
 				playerEntry.id = player.GetID();
+				playerEntry.id2 = player.GetIdentity().GetPlainId();
 				playerEntry.speed = player.GetSpeed().ToString(false);
 				playerEntry.position = player.GetPosition().ToString(false);
 

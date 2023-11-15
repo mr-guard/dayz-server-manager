@@ -1,12 +1,28 @@
 import { Injectable } from '@angular/core';
-import { MetricTypeEnum, MetricWrapper, RconPlayer } from '../../app-common/models';
+import { MetricTypeEnum, MetricWrapper, RconPlayer, IngameReportEntry } from '../../app-common/models';
 import { BehaviorSubject, Observable, of, Subject, Subscription } from 'rxjs';
 import { debounceTime, delay, switchMap, tap } from 'rxjs/operators';
 import { SortDirection } from '../directives/sortable.directive';
 import { AppCommonService } from 'src/modules/app-common/services/app-common.service';
 
+export interface MergedPlayer {
+    id: string;
+    name: string;
+    beguid: string;
+    ip: string;
+    port: string;
+    ping: string;
+    lobby: boolean;
+
+    steamid?: string;
+    ingamename?: string;
+    position?: string;
+    speed?: string;
+    damage?: number;
+}
+
 interface SearchResult {
-    players: RconPlayer[];
+    players: MergedPlayer[];
     total: number;
 }
 
@@ -22,7 +38,7 @@ const compare = (v1: number | string, v2: number | string): -1 | 1 | 0 => {
     return v1 < v2 ? -1 : v1 > v2 ? 1 : 0;
 };
 
-const sort = (players: RconPlayer[], column: 'name' | 'id' | 'ping', direction: string): RconPlayer[] => {
+const sort = (players: MergedPlayer[], column: 'name' | 'id' | 'ping', direction: string): RconPlayer[] => {
     if (direction === '') {
         return players;
     }
@@ -32,11 +48,12 @@ const sort = (players: RconPlayer[], column: 'name' | 'id' | 'ping', direction: 
     });
 };
 
-const matches = (player: RconPlayer, term: string): boolean => {
+const matches = (player: MergedPlayer, term: string): boolean => {
     return (
         player.name.toLowerCase().includes(term.toLowerCase())
         || player.beguid.includes(term)
         || player.ip.includes(term)
+        || !!player.steamid?.includes(term)
     );
 };
 
@@ -45,7 +62,7 @@ export class PlayersService {
 
     protected _loading$ = new BehaviorSubject<boolean>(true);
     protected _search$ = new Subject<void>();
-    protected _players$ = new BehaviorSubject<RconPlayer[]>([]);
+    protected _players$ = new BehaviorSubject<MergedPlayer[]>([]);
     protected _total$ = new BehaviorSubject<number>(0);
 
     protected _state: State = {
@@ -57,7 +74,9 @@ export class PlayersService {
     };
 
     protected currentPlayers: RconPlayer[] = [];
+    protected currentIngamePlayers: IngameReportEntry[] = [];
     protected sub!: Subscription;
+    protected subIngame!: Subscription;
 
     public constructor(
         protected appCommon: AppCommonService,
@@ -93,9 +112,21 @@ export class PlayersService {
                 }
             },
         );
+
+        this.subIngame = this.appCommon.getApiFetcher<
+        MetricTypeEnum.INGAME_PLAYERS,
+        MetricWrapper<IngameReportEntry[]>
+        >(MetricTypeEnum.INGAME_PLAYERS)!.latestData.subscribe(
+            (players) => {
+                if (players?.value) {
+                    this.currentIngamePlayers = players.value;
+                    this._search$.next();
+                }
+            },
+        );
     }
 
-    public get players$(): Observable<RconPlayer[]> {
+    public get players$(): Observable<MergedPlayer[]> {
         return this._players$.asObservable();
     }
 
@@ -149,8 +180,23 @@ export class PlayersService {
     protected _search(): Observable<SearchResult> {
         const { sortColumn, sortDirection, pageSize, page, searchTerm } = this._state;
 
+        const mergedPlayers: MergedPlayer[] = this.currentPlayers.map((x) => {
+            const matchedIngamePlayer = this.currentIngamePlayers?.find((ingamePlayer) => ingamePlayer.name?.toLowerCase() === x.name?.toLowerCase());
+
+            return {
+                ...x,
+                damage: matchedIngamePlayer?.damage,
+                ingamename: matchedIngamePlayer?.name,
+                position: matchedIngamePlayer?.position,
+                speed: matchedIngamePlayer?.speed,
+                steamid: matchedIngamePlayer?.id2,
+            };
+        });
+
+        console.warn(mergedPlayers, this.currentPlayers, this.currentIngamePlayers)
+
         // 1. sort
-        let players = sort(this.currentPlayers, sortColumn, sortDirection);
+        let players = sort(mergedPlayers, sortColumn, sortDirection);
 
         // 2. filter
         players = players.filter((country) => matches(country, searchTerm));

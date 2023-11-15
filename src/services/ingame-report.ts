@@ -55,9 +55,11 @@ export class IngameReport extends IStatefulService {
             this.TICK_FILE,
         );
 
-        this.timers.addInterval('scanTick', () => {
-            void this.scanTick();
-        }, this.intervalTimeout);
+        if (!this.manager.config.ingameReportViaRest) {
+            this.timers.addInterval('scanTick', () => {
+                void this.scanTick();
+            }, this.intervalTimeout);
+        }
     }
 
     public async stop(): Promise<void> {

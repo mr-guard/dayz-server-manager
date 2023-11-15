@@ -6,9 +6,8 @@ import {
     QueryList,
     ViewChildren,
 } from '@angular/core';
-import { RconPlayer } from '../../../app-common/models';
 import { SBSortableHeaderDirective, SortEvent } from '../../directives/sortable.directive';
-import { AllPlayersService, PlayersService } from '../..//services/players.service';
+import { AllPlayersService, MergedPlayer, PlayersService } from '../..//services/players.service';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -22,7 +21,7 @@ export class PlayerTableComponent implements OnInit {
 
     @Input() public pageSize = this.MAX_ITEMS;
 
-    public players$!: Observable<RconPlayer[]>;
+    public players$!: Observable<MergedPlayer[]>;
     public total$!: Observable<number>;
     public sortedColumn!: string;
     public sortedDirection!: string;
@@ -63,7 +62,7 @@ export class AllPlayerTableComponent implements OnInit {
 
     @Input() public pageSize = this.MAX_ITEMS;
 
-    public players$!: Observable<RconPlayer[]>;
+    public players$!: Observable<MergedPlayer[]>;
     public total$!: Observable<number>;
     public sortedColumn!: string;
     public sortedDirection!: string;
