@@ -1,4 +1,4 @@
-import { CoreXml, DZSMAmmoDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, LimitsXml, SpawnableTypesXml, TraderItem, TypesXml } from "./types";
+import { CoreXml, DZSMAmmoDumpEntry, DZSMClothingDumpEntry, DZSMItemDumpEntry, DZSMMagDumpEntry, DZSMWeaponDumpEntry, EventSpawnsXml, LimitsXml, MapGroupPosXml, SpawnableTypesXml, TraderItem, TypesXml } from "./types";
 import * as xml from 'xml2js';
 
 export abstract class FileWrapperBase {
@@ -15,6 +15,8 @@ export abstract class FileWrapperBase {
         | 'magdumpjson'
         | 'clothingdumpjson'
         | 'itemdumpjson'
+        | 'eventspawnsxml'
+        | 'mapgroupposxml'
     ;
     public readonly skipSave: boolean = false;
     public abstract content: any;
@@ -213,6 +215,34 @@ export class ItemDumpFileWrapper extends DumpFileWrapper {
     public constructor(file: string) { super(file); }
 };
 
+export class EventSpawnsFileWrapper extends FileWrapperBase {
+    public readonly location = 'mission';
+    public readonly contentType = 'xml';
+    public readonly type = 'eventspawnsxml';
+    public override readonly skipSave = false;
+    public content!: EventSpawnsXml;
+
+    public constructor(
+        file: string,
+    ) {
+        super(file);
+    }
+}
+
+export class MapGroupPosFileWrapper extends FileWrapperBase {
+    public readonly location = 'mission';
+    public readonly contentType = 'xml';
+    public readonly type = 'mapgroupposxml';
+    public override readonly skipSave = false;
+    public content!: MapGroupPosXml;
+
+    public constructor(
+        file: string,
+    ) {
+        super(file);
+    }
+}
+
 export type FileWrapper =
     TypesFileWrapper
     | SpawnableTypesFileWrapper
@@ -225,4 +255,6 @@ export type FileWrapper =
     | MagDumpFileWrapper
     | ClothingDumpFileWrapper
     | ItemDumpFileWrapper
+    | EventSpawnsFileWrapper
+    | MapGroupPosFileWrapper
 ;

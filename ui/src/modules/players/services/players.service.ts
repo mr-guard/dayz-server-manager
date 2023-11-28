@@ -193,7 +193,7 @@ export class PlayersService {
             };
         });
 
-        console.warn(mergedPlayers, this.currentPlayers, this.currentIngamePlayers)
+        //console.warn(mergedPlayers, this.currentPlayers, this.currentIngamePlayers)
 
         // 1. sort
         let players = sort(mergedPlayers, sortColumn, sortDirection);

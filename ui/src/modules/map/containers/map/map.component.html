@@ -23,6 +23,11 @@
         *ngIf="options"
         leaflet
         (leafletMapReady)="onMapReady($event)"
+        (leafletCenterChange)="onCenterChange($event)"
+        (leafletDoubleClick)="onMapDoubleClick($event)"
         [leafletOptions]="options"
     ></div>
+    <div style="position: absolute;left: 48%;background: #fff8;z-index: 900;padding: 7px;border-radius: 7px;bottom: 6%;">
+        {{ curCoordinatesX }} | {{ curCoordinatesY }}
+    </div>
 </sb-layout-dashboard>

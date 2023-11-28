@@ -109,11 +109,13 @@
             <div class="d-flex flex-row justify-content-between">
                 <ngb-alert  *ngIf="outcomeBadge"
                             [type]="outcomeBadge.success ? 'success' : 'danger'"
+                            (closed)="outcomeBadge = undefined"
                 >
                     {{ outcomeBadge.message }}
                 </ngb-alert>
                 <ngb-alert  *ngIf="validationErrors?.length"
                             type="danger"
+                            (closed)="validationErrors = []"
                 >
                     <div>
                         Errors:

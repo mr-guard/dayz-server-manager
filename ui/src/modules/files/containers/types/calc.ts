@@ -21,6 +21,18 @@ export interface WeaponScoreParams {
     canLongRangeScopeBonus: number;
 }
 
+export interface ClothingScoreParams {
+    cargo: number;
+    hitpoints: number;
+    armorProjectile: number;
+    armorFrag: number;
+    armorMelee: number;
+    armorInfected: number;
+    armorAvg: number;
+    isolation: number;
+    visibilityBonus: number;
+}
+
 export class ItemCalculator {
 
     private static instance: ItemCalculator;
@@ -36,6 +48,7 @@ export class ItemCalculator {
     public defaultAttachments: Record<string, string[]> = {};
 
     public weaponScoreParams: Record<string, WeaponScoreParams> = {};
+    public clothingScoreParams: Record<string, ClothingScoreParams> = {};
     public itemScore: Record<string, number> = {};
     public estimatedNominal: Record<string, number> = {};
     public colorBase: Record<string, string> = {};
@@ -186,11 +199,11 @@ export class ItemCalculator {
             this.itemScore[classname] = this.calcWeaponScore(classname) ?? -1;
             return this.itemScore[classname] < 0 ? undefined! : this.itemScore[classname];
         }
-        // const clothing = this.types.getClothingEntry(classname);
-        // if (clothing) {
-        //     this.itemScore[classname] = this.calcClothingScore(classname);
-        //     return this.itemScore[classname];
-        // }
+        const clothing = this.types.getClothingEntry(classname);
+        if (clothing) {
+            this.itemScore[classname] = this.calcClothingScore(classname) ?? -1;
+            return this.itemScore[classname];
+        }
 
         return null!;
     }
@@ -271,24 +284,63 @@ export class ItemCalculator {
             || item.parents?.some((x) => x?.toLowerCase() === parent);
     }
 
-    public calcClothingScore(classname: string): number {
+    public calcClothingScoreParams(classname?: string): ClothingScoreParams | undefined {
         classname = classname?.toLowerCase();
+        if (!classname) return undefined;
+
         const clothing = this.types.getClothingEntry(classname);
-        if (!clothing) return 0;
+        if (!clothing) return undefined;
 
-        Math.round(clothing.armorFragHP * 100);
-        Math.round(clothing.armorInfectedHP * 100);
-        Math.round(clothing.armorMeleeHP * 100);
-        Math.round(clothing.armorProjectileHP * 100);
-        clothing.hitPoints
+        const cargo = this.getMaxCargoSpace(classname);
 
-        clothing.visibilityModifier
-        clothing.weight
-        clothing.heatIsolation
-        clothing.durability
-        this.getMaxCargoSpace(classname);
+        // console.warn(
+        //     classname,
+        //     cargo,
+        //     Math.round(((clothing.armorInfectedHP + clothing.armorProjectileHP) / 2) * clothing.hitPoints),
+        //     Math.round(clothing.heatIsolation * 10),
+        //     Math.round(10 - (clothing.visibilityModifier * 10)),
+        //     // Math.round(clothing.armorFragHP * 100),
+        //     // Math.round(clothing.armorMeleeHP * 100),
+        //     // Math.round(clothing.armorInfectedHP * 100),
+        //     // Math.round(clothing.armorProjectileHP * 100),
+        //     // clothing.hitPoints,
 
-        return 0;
+        //     // clothing.visibilityModifier,
+        //     // clothing.weight,
+        //     // clothing.heatIsolation,
+        //     // clothing.durability,
+        // )
+
+        const params = {
+            cargo,
+            hitpoints: clothing.hitPoints,
+            armorProjectile: clothing.armorProjectileHP,
+            armorFrag: clothing.armorFragHP,
+            armorMelee: clothing.armorMeleeHP,
+            armorInfected: clothing.armorInfectedHP,
+            armorAvg: Math.round(((clothing.armorInfectedHP + clothing.armorProjectileHP) / 2) * clothing.hitPoints),
+            isolation: Math.round(clothing.heatIsolation * 10),
+            visibilityBonus: Math.round((100 - (clothing.visibilityModifier * 100))  / 2),
+        };
+
+        this.clothingScoreParams[classname] = params;
+
+        return params;
+    }
+
+    public calcClothingScore(classname: string): number | undefined {
+        const clothing = this.types.getClothingEntry(classname);
+        if (!clothing) return undefined;
+
+        const params = this.calcClothingScoreParams(classname);
+        if (!params) return undefined;
+
+        return Math.ceil(
+            params.cargo
+            + params.armorAvg
+            + params.isolation
+            + params.visibilityBonus
+        );
     }
 
     public isArcheryWeapon(classname?: string): boolean {

@@ -1,0 +1,75 @@
+<sb-layout-dashboard>
+    <div class="h-100 d-flex flex-column">
+        <ngb-alert  *ngIf="outcomeBadge"
+                    [type]="outcomeBadge.success ? 'success' : 'danger'"
+                    (closed)="outcomeBadge = undefined"
+                    style="position: absolute;"
+        >
+            {{ outcomeBadge.message }}
+        </ngb-alert>
+        <div class="d-flex flex-column flex-grow">
+            <div class="d-flex btn-group"
+                 style="margin-top: -1rem; margin-left: -1rem; margin-right: -1rem; margin-bottom: 0.5rem;"
+            >
+                <label style="margin-bottom: 0; margin-right: 0.5rem; align-self: center;">Search:</label>
+                <input class="form-control"
+                       style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
+                       (keyup)="$event.key === 'Enter' ? search(searchInput.value) : null"
+                       #searchInput
+                >
+                <button class="btn btn-primary"
+                        (click)="search(searchInput.value)"
+                >
+                    <fa-icon [icon]='["fas", "search"]'></fa-icon>
+                </button>
+                <button class="btn btn-danger"
+                        (click)="searchInput.value = ''; search(undefined)"
+                >
+                    <fa-icon [icon]='["fas", "trash"]'></fa-icon>
+                </button>
+            </div>
+            <div style="flex-grow: 1;"
+                *ngIf="options"
+                leaflet
+                (leafletMapReady)="onMapReady($event)"
+                (leafletCenterChange)="onCenterChange($event)"
+                (leafletDoubleClick)="onMapDoubleClick($event)"
+                [leafletOptions]="options"
+            ></div>
+            <div style="position: absolute;left: 48%;background: #fff8;z-index: 900;padding: 7px;border-radius: 7px;bottom: 6%;">
+                {{ curCoordinatesX }} | {{ curCoordinatesY }}
+            </div>
+        </div>
+        <div class="d-flex flex-row">
+            <div class="d-flex flex-row ml-1 mr-1" style="align-items: center;">
+                <label class="form-label" style="white-space: nowrap;">Create Backup</label>
+                <input type="checkbox" class="form-control form-control-sm mx-1"
+                       [(ngModel)]="withBackup"
+                       [ngModelOptions]="{standalone: true}"
+                       [disabled]="submitting"
+                >
+            </div>
+            <div class="d-flex flex-row ml-1 mr-1" style="align-items: center;">
+                <label class="form-label" style="white-space: nowrap;">Restart Server</label>
+                <input type="checkbox" class="form-control form-control-sm mx-1"
+                       [(ngModel)]="withRestart"
+                       [ngModelOptions]="{standalone: true}"
+                       [disabled]="submitting"
+                >
+            </div>
+            <button type="submit" class="btn btn-success ml-1 mr-1"
+                    (click)="onSubmit()"
+                    [disabled]="submitting"
+            >
+                <fa-icon *ngIf="submitting" [icon]='["fas", "spinner"]' [classes]="['fa-spin']"></fa-icon>
+                Submit
+            </button>
+            <button type="button" class="btn btn-primary ml-1 mr-1"
+                    (click)="resetClicked()"
+                    [disabled]="submitting"
+            >
+                Reset
+            </button>
+        </div>
+    </div>
+</sb-layout-dashboard>

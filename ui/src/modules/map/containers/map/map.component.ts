@@ -20,21 +20,25 @@ import {
     tileLayer,
     tooltip,
     Tooltip,
+    imageOverlay,
 } from 'leaflet';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-interface Location {
+export interface Location {
     name: string;
     cfgName: string;
     position: [number, number];
     type: string;
 }
 
-interface MapInfo {
+export interface MapInfo {
     title: string;
     worldName: string;
     tilePattern: string;
+    fullImage?: string;
+    fullImageMinZoom?: number;
+    fullImageMaxZoom?: number;
     maxZoom: number;
     minZoom: number;
     defaultZoom: number;
@@ -48,7 +52,7 @@ interface MapInfo {
     locations: Location[];
 }
 
-interface MarkerWithId {
+export interface MarkerWithId {
     marker: Marker;
     toolTip?: Tooltip;
     id: string;
@@ -57,17 +61,19 @@ interface MarkerWithId {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 // eslint-disable-next-line no-shadow
-enum LayerIdsEnum {
+export enum LayerIdsEnum {
     locationLayer = 'locationLayer',
     playerLayer = 'playerLayer',
     vehicleLayer = 'vehicleLayer',
     boatLayer = 'boatLayer',
     airLayer = 'airLayer',
+    lootLayer = 'lootLayer',
+    eventsLayer = 'eventsLayer',
 }
-type LayerIds = keyof typeof LayerIdsEnum;
+export type LayerIds = keyof typeof LayerIdsEnum;
 /* eslint-enable @typescript-eslint/naming-convention */
 
-class LayerContainer {
+export class LayerContainer {
 
     public constructor(
         public label: string,
@@ -84,7 +90,7 @@ class LayerContainer {
 })
 export class MapComponent implements OnInit, OnDestroy {
 
-    private onDestroy = new Subject();
+    protected onDestroy = new Subject();
 
     public info?: MapInfo;
     public options?: MapOptions;
@@ -94,13 +100,14 @@ export class MapComponent implements OnInit, OnDestroy {
     public map?: LeafletMap;
     public curZoom?: number;
     public mapScale?: number;
-    public curCoordinates: Point = new Point(0, 0);
+    public curCoordinatesX: number = 0;
+    public curCoordinatesY: number = 0;
 
-    private mapHost = 'https://mr-guard.de/dayz-maps';
-    private mapName?: string;
+    protected mapHost = 'https://mr-guard.de/dayz-maps';
+    protected mapName?: string;
 
-    private layerControl?: Control;
-    private layers = new Map<LayerIds, LayerContainer>([
+    protected layerControl?: Control;
+    protected layers = new Map<LayerIds, LayerContainer>([
         ['locationLayer', new LayerContainer('Locations')],
         ['playerLayer', new LayerContainer('Players')],
         ['vehicleLayer', new LayerContainer('Vehicles')],
@@ -121,12 +128,6 @@ export class MapComponent implements OnInit, OnDestroy {
     }
 
     public ngOnInit(): void {
-        // ignore
-        void this.init();
-    }
-
-    private async init(): Promise<void> {
-
         this.appCommon.SERVER_INFO
             .asObservable()
             .pipe(
@@ -143,34 +144,67 @@ export class MapComponent implements OnInit, OnDestroy {
                 },
             );
 
-        await this.appCommon.fetchServerInfo().toPromise();
-
+        this.appCommon.fetchServerInfo().toPromise().then();
     }
 
-    private createBaseLayers(): void {
+    protected createBaseLayers(): void {
+
         const bounds = this.unproject([this.info!.worldSize, this.info!.worldSize]);
-        this.baseLayers = {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            Satelite: tileLayer(
-                `${this.mapHost}/${this.mapName}/${this.info!.tilePattern ?? 'tiles/{z}/{x}/{y}.png'}`,
-                {
-                    attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
-                    bounds: [
+
+        if (this.info!.fullImage) {
+            this.baseLayers = {
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                Satelite: tileLayer(
+                    `${this.mapHost}/${this.mapName}/${this.info!.tilePattern ?? 'tiles/{z}/{x}/{y}.png'}`,
+                    {
+                        attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
+                        bounds: [
+                            [0, 0],
+                            [bounds.lat, bounds.lng],
+                        ],
+                        maxNativeZoom: this.info!.maxZoom ?? 7,
+                        maxZoom: 20,
+                    },
+                ),
+                Single: imageOverlay(
+                    `${this.mapHost}/${this.mapName}/${this.info!.fullImage}`,
+                    [
                         [0, 0],
                         [bounds.lat, bounds.lng],
                     ],
-                },
-            ),
-        };
+                    {
+                        attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
+                    },
+                ),
+            };
+        } else {
+            this.baseLayers = {
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                Satelite: tileLayer(
+                    `${this.mapHost}/${this.mapName}/${this.info!.tilePattern ?? 'tiles/{z}/{x}/{y}.png'}`,
+                    {
+                        attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
+                        bounds: [
+                            [0, 0],
+                            [bounds.lat, bounds.lng],
+                        ],
+                        maxNativeZoom: this.info!.maxZoom ?? 7,
+                        maxZoom: 20,
+                    },
+                ),
+            };
+        }
+
     }
 
-    private async setUpWorld(name: string): Promise<void> {
+    protected async setUpWorld(name: string): Promise<void> {
 
         this.mapName = name;
         const urlBase = `${this.mapHost}/${this.mapName}`;
         this.info = (await this.http.get(
             `${urlBase}/data.json`,
         ).toPromise()) as MapInfo;
+
         this.mapScale = Math.ceil(
             Math.log(
                 this.info!.worldSize / ((this.info!.tileSize ?? 256) / (this.info!.scale ?? 1)),
@@ -178,18 +212,20 @@ export class MapComponent implements OnInit, OnDestroy {
         );
 
         this.options = {
+            preferCanvas: true,
+            doubleClickZoom: false,
             layers: [],
             zoom: this.info.defaultZoom ?? (this.info.minZoom ?? 1),
             center: [0, 0],
-            minZoom: this.info.minZoom ?? 1,
-            maxZoom: this.info.maxZoom ?? 7,
+            minZoom: Math.min(this.info.minZoom ?? 1, this.info.fullImageMinZoom ?? 1),
+            maxZoom: Math.max(this.info.maxZoom ?? 7, this.info.fullImageMaxZoom ?? 20),
             crs: CRS.Simple,
         };
 
         console.log('Map Setup Done');
     }
 
-    private updateLayersControl(): void {
+    protected updateLayersControl(): void {
         if (this.layerControl) {
             this.layerControl.remove();
         }
@@ -209,15 +245,15 @@ export class MapComponent implements OnInit, OnDestroy {
         this.map?.addControl(this.layerControl);
     }
 
-    private project(coords: LatLng): Point {
+    protected project(coords: LatLng): Point {
         return this.map!.project(coords, this.mapScale!);
     }
 
-    private unproject(coords: PointExpression): LatLng {
+    protected unproject(coords: PointExpression): LatLng {
         return this.map!.unproject(coords, this.mapScale!);
     }
 
-    private zoomChange(): void {
+    protected zoomChange(): void {
         if (!this.map) {
             return;
         }
@@ -243,7 +279,7 @@ export class MapComponent implements OnInit, OnDestroy {
         this.curZoom = newZoom;
     }
 
-    private createLocations(): void {
+    protected createLocations(): void {
 
         const locationLayer = this.layers.get('locationLayer')!;
         if (locationLayer.markers.length) {
@@ -289,19 +325,26 @@ export class MapComponent implements OnInit, OnDestroy {
 
     }
 
+    public onCenterChange(event: LatLng) {
+        const newPos = this.project(event);
+        this.curCoordinatesX = newPos.x;
+        this.curCoordinatesY = newPos.y;
+    };
+
     public onMapReady(map: LeafletMap): void {
         console.log('Map Ready');
 
         this.map = map;
-        this.map.on('mousemove', (event: LeafletMouseEvent) => {
-            this.curCoordinates = this.project(event.latlng);
+
+        this.map.on('click', (event: LeafletMouseEvent) => {
+            const newPos = this.project(event.latlng);
+            this.curCoordinatesX = newPos.x;
+            this.curCoordinatesY = newPos.y;
         });
         this.map.on('zoomend', () => this.zoomChange());
 
         this.createBaseLayers();
-        Object.keys(this.baseLayers!).forEach((x) => {
-            this.map!.addLayer(this.baseLayers![x]);
-        });
+        this.map!.addLayer(this.baseLayers!['Satelite']);
         this.map.setView(this.unproject(this.info!.center ?? [0, 0]));
 
         for (const x of this.layers) {
@@ -312,6 +355,15 @@ export class MapComponent implements OnInit, OnDestroy {
         this.updateLayersControl();
 
         this.zoomChange();
+
+        void this.loadData();
+    }
+
+    public onMapDoubleClick(event: LeafletMouseEvent) {
+
+    }
+
+    protected async loadData(): Promise<void> {
 
         this.appCommon.getApiFetcher('INGAME_PLAYERS').latestData
             .pipe(
@@ -338,9 +390,10 @@ export class MapComponent implements OnInit, OnDestroy {
                     }
                 },
             );
+
     }
 
-    private getLocationTooltip(x: Location): { name: string; icon: string } {
+    protected getLocationTooltip(x: Location): { name: string; icon: string } {
         let icon = 'city';
         switch (x.type.toLowerCase()) {
             case 'marine': {
@@ -406,7 +459,7 @@ export class MapComponent implements OnInit, OnDestroy {
         };
     }
 
-    private updatePlayers(players: IngameReportEntry[]): void {
+    protected updatePlayers(players: IngameReportEntry[]): void {
         const layer = this.layers.get('playerLayer')!;
 
         // remove absent
@@ -448,7 +501,7 @@ export class MapComponent implements OnInit, OnDestroy {
         }
     }
 
-    private updateVehicles(vehicles: IngameReportEntry[]): void {
+    protected updateVehicles(vehicles: IngameReportEntry[]): void {
         const layerGround = this.layers.get('vehicleLayer')!;
         const layerAir = this.layers.get('airLayer')!;
         const layerSea = this.layers.get('boatLayer')!;
@@ -518,8 +571,6 @@ export class MapComponent implements OnInit, OnDestroy {
                 const shouldHave = !value
                     || !!(m.data as IngameReportEntry).name?.toLowerCase().includes(value)
                     || !!(m.data as IngameReportEntry).type?.toLowerCase().includes(value);
-
-                console.log(m.data, shouldHave, hasMarker)
 
                 if (hasMarker && !shouldHave) {
                     layerGroup.layer.removeLayer(m.marker);

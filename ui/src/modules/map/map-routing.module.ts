@@ -6,6 +6,7 @@ import { Routes, RouterModule } from '@angular/router';
 import { MapModule } from './map.module';
 import { MapComponent } from './containers/map/map.component';
 import { SBRouteData } from '../navigation/models';
+import { MapLootComponent } from './containers/map/map-loot.component';
 
 /* Routes */
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -23,6 +24,24 @@ export const ROUTES: Routes = [
                 },
                 {
                     text: 'Map',
+                    active: true,
+                },
+            ],
+        } as SBRouteData,
+    },
+    {
+        path: 'maploot',
+        canActivate: [],
+        component: MapLootComponent,
+        data: {
+            title: 'MapLoot',
+            breadcrumbs: [
+                {
+                    text: 'Dashboard',
+                    link: '/dashboard',
+                },
+                {
+                    text: 'MapLoot',
                     active: true,
                 },
             ],
