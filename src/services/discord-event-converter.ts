@@ -8,7 +8,7 @@ import { Manager } from "../control/manager";
 import { EventBus } from "../control/event-bus";
 import { InternalEventTypes } from "../types/events";
 import { SteamMetaData } from "./steamcmd";
-import { RichEmbed } from "discord.js";
+import { MessageEmbed } from "discord.js";
 import { GameUpdatedStatus, ModUpdatedStatus } from "../types/steamcmd";
 import { ServerState } from "../types/monitor";
 import { LogLevel } from "../util/logger";
@@ -27,21 +27,24 @@ export class DiscordEventConverter extends IService {
 
         this.eventBus.on(
             InternalEventTypes.MOD_UPDATED,
-            this.handleModUpdated,
+            /* istanbul ignore next */ (e) => this.handleModUpdated(e),
         );
 
         this.eventBus.on(
             InternalEventTypes.GAME_UPDATED,
-            this.handleGameUpdated,
+            /* istanbul ignore next */ (e) => this.handleGameUpdated(e),
         );
 
         this.eventBus.on(
             InternalEventTypes.MONITOR_STATE_CHANGE,
-            this.handleServerState,
+            /* istanbul ignore next */ (s1, s2) => this.handleServerState(s1, s2),
         )
     }
 
     private async handleGameUpdated(status: GameUpdatedStatus): Promise<void> {
+
+        this.log.log(LogLevel.DEBUG, 'Received GameUpdatedStatus', status);
+
         if (!status.success) {
             this.eventBus.emit(
                 InternalEventTypes.DISCORD_MESSAGE,
@@ -62,6 +65,9 @@ export class DiscordEventConverter extends IService {
     }
 
     private async handleModUpdated(status: ModUpdatedStatus): Promise<void> {
+
+        this.log.log(LogLevel.DEBUG, 'Received ModUpdatedStatus', status);
+
         if (!status.success) {
             this.eventBus.emit(
                 InternalEventTypes.DISCORD_MESSAGE,
@@ -98,7 +104,7 @@ export class DiscordEventConverter extends IService {
                                     inline: true,
                                 });
                             }
-                            const embed = new RichEmbed({
+                            const embed = new MessageEmbed({
                                 color: 0x0099FF,
                                 title: `Successfully updated: ${modInfo.title}`,
                                 url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo.publishedfileid}`,
@@ -111,7 +117,7 @@ export class DiscordEventConverter extends IService {
                             });
                             return embed;
                         } else if (typeof modInfo === 'string') {
-                            return new RichEmbed({
+                            return new MessageEmbed({
                                 color: 0x0099FF,
                                 title: `Successfully updated: ${modInfo}`,
                                 url: `https://steamcommunity.com/sharedfiles/filedetails/?id=${modInfo}`,

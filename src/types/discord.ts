@@ -1,10 +1,10 @@
-import { RichEmbed } from "discord.js";
+import { MessageEmbed } from "discord.js";
 import { DiscordChannelType } from "../config/config";
 
 export interface DiscordMessage {
     type: DiscordChannelType,
     message: string,
-    embeds?: RichEmbed[],
+    embeds?: MessageEmbed[],
 }
 
 export const isDiscordChannelType = (test: DiscordChannelType | DiscordChannelType[], wanted: DiscordChannelType): boolean => {

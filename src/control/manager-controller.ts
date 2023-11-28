@@ -136,6 +136,7 @@ export class ManagerController {
         private ingameReport: IngameReport,
         private requirements: Requirements,
         private discord: DiscordBot,
+        private discordEvents: DiscordEventConverter,
     ) {
         this.log = loggerFactory.createLogger('Bootstrap');
     }
