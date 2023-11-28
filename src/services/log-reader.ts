@@ -143,7 +143,9 @@ export class LogReader extends IStatefulService {
                     });
                     logContainer.tail.on('line', (line) => {
                         if (line) {
-                            this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
+                            if (process.env['DZSM_DEBUG_LOG_READER'] === 'true') {
+                                this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
+                            }
                             const logEntry = {
                                 timestamp: new Date().valueOf(),
                                 message: line,
