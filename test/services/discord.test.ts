@@ -16,11 +16,11 @@ describe('Test class Discord', () => {
     let messageHandler: StubInstance<DiscordMessageHandler>
 
     before(() => {
-        disableConsole();
+        //disableConsole();
     });
 
     after(() => {
-        enableConsole();
+        //enableConsole();
     });
 
     beforeEach(() => {
@@ -58,7 +58,10 @@ describe('Test class Discord', () => {
         const listenerStub = sinon.stub();
         discordClientMock.set('on', listenerStub);
 
-        listenerStub.withArgs('ready').callsArg(1);
+        let onReadyCb;
+        listenerStub.withArgs('ready').callsFake((a1, a2) => {
+            onReadyCb = a2;
+        });;
         listenerStub.withArgs('invalidated').callsArg(1);
         listenerStub.withArgs('debug').callsArgWith(1, 'testdebug');
         listenerStub.withArgs('warn').callsArgWith(1, 'testwarn');
@@ -66,7 +69,7 @@ describe('Test class Discord', () => {
         listenerStub.withArgs('error').callsArgWith(1, 'testerror');
 
         let onMessageCb;
-        listenerStub.withArgs('message').callsFake((a1, a2) => {
+        listenerStub.withArgs('messageCreate').callsFake((a1, a2) => {
             onMessageCb = a2;
         });
 
@@ -89,7 +92,11 @@ describe('Test class Discord', () => {
         expect(loginStub.callCount).to.equal(1);
 
         expect(onMessageCb).to.be.not.undefined;
-
+        expect(onReadyCb).to.be.not.undefined;
+        
+        discord.client!.guilds = { cache: new discordModule.Collection() } as any;
+        await onReadyCb();
+ 
         onMessageCb({
             author: {
                 bot: true,
@@ -131,15 +138,17 @@ describe('Test class Discord', () => {
             name: 'channel2',
             send: sinon.stub(),
         };
-        const channels = [channel1, channel2];
-        (channels as any).filter2 = channels.filter;
-        (channels as any).filter = function (f) {
+        const channels = { cache: [channel1, channel2] };
+        (channels as any).cache.filter2 = channels.cache.filter;
+        (channels as any).cache.filter = function (f) {
             const ret = this.filter2(f);
             ret.array = function () { return this; };
             return ret;
         }
         const guilds = {
-            first: () => ({ channels })
+            cache: {
+                first: () => ({ channels })
+            }
         };
         discordClientMock.set('guilds', guilds as any);
 

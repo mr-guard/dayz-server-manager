@@ -80,7 +80,13 @@ export class DiscordBot extends IStatefulService {
 
     private onReady(): void {
         this.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
-        this.log.log(LogLevel.DEBUG, 'Guildes', this.client.guilds.cache.map((guild) => [guild.id, guild.name]));
+        this.log.log(
+            LogLevel.DEBUG,
+            'Guildes',
+            this.client.guilds.cache.map(
+                /* istanbul ignore next */ (guild) => [guild.id, guild.name],
+            ),
+        );
         this.ready = true;
         this.sendQueuedMessage();
     }
@@ -133,7 +139,12 @@ export class DiscordBot extends IStatefulService {
             }).map((x) => x) || [];
 
         if (!matching?.length) {
-            this.log.log(LogLevel.DEBUG, 'No channel found for: ' + channels.map((x) => x.channel).join(', '));
+            this.log.log(
+                LogLevel.DEBUG,
+                'No channel found for: ' + channels.map(
+                     /* istanbul ignore next */ (x) => x.channel,
+                ).join(', '),
+            );
         }
         for (const x of matching) {
             try {

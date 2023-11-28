@@ -16,6 +16,7 @@ import { Requirements } from '../../src/services/requirements';
 import { IStatefulService } from '../../src/types/service';
 import { Config } from '../../src/config/config';
 import { DiscordBot } from '../../src/services/discord';
+import { DiscordEventConverter } from '../../src/services/discord-event-converter';
 
 class TestMonitor {
     public startCalled = false;
@@ -120,6 +121,7 @@ describe('Test class ManagerController', () => {
         injector.register(IngameReport, stubClass(IngameReport), { lifecycle: Lifecycle.Singleton });
         injector.register(Requirements, stubClass(Requirements), { lifecycle: Lifecycle.Singleton });
         injector.register(DiscordBot, stubClass(DiscordBot), { lifecycle: Lifecycle.Singleton });
+        injector.register(DiscordEventConverter, stubClass(DiscordEventConverter), { lifecycle: Lifecycle.Singleton });
         
         configWatcher = injector.resolve(ConfigWatcher) as any;
         manager = injector.resolve(Manager) as any;
