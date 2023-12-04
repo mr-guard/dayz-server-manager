@@ -102,7 +102,7 @@ export class MaxPriceCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.MaxPriceThreshold || -1;
+        return detail?.item?.MaxPriceThreshold ?? undefined;
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -126,7 +126,7 @@ export class MinPriceCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.MinPriceThreshold || -1;
+        return detail?.item?.MinPriceThreshold ?? undefined;
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -150,7 +150,7 @@ export class SellPricePercentCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.SellPricePercent || -1;
+        return detail?.item?.SellPricePercent ?? undefined;
     };
     valueSetter = (params: ValueSetterParams) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -174,7 +174,7 @@ export class MaxStockCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.MaxStockThreshold || -1;
+        return detail?.item?.MaxStockThreshold ?? undefined;
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -198,7 +198,7 @@ export class MinStockCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.MinStockThreshold || -1;
+        return detail?.item?.MinStockThreshold ?? undefined;
     }
     valueSetter = (params: ValueSetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -222,7 +222,7 @@ export class QuantityPercentCol extends ColBase {
     editable = true;
     valueGetter = (params: ValueGetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
-        return detail?.item?.QuantityPercent || -1;
+        return detail?.item?.QuantityPercent ?? undefined;
     };
     valueSetter = (params: ValueSetterParams<string>) => {
         const detail = this.types.findItemInTraderfiles(params.data);
@@ -241,7 +241,7 @@ export class RarityCol extends ColBase {
         types: TypesComponent,
     ) {
         super(types, 'Rarity');
-        this.minWidth = this.types.minWidth(150);
+        this.minWidth = this.types.minWidth(100);
     }
     editable = true;
     cellRenderer = RarityRenderer;

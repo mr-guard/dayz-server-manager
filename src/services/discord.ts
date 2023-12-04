@@ -2,6 +2,7 @@ import {
     TextChannel,
     Client,
     Message,
+    Intents,
 } from 'discord.js';
 import { DiscordMessageHandler } from '../interface/discord-message-handler';
 import { IStatefulService } from '../types/service';
@@ -46,14 +47,21 @@ export class DiscordBot extends IStatefulService {
         }
 
         try {
-            const client = new Client();
-            client.on('ready', () => this.onReady());
+            const client = new Client({ intents: [
+                Intents.FLAGS.GUILDS,
+                Intents.FLAGS.GUILD_MESSAGES,
+                Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+                Intents.FLAGS.MESSAGE_CONTENT,
+            ] });
+            client.on('ready', (c) => {
+                this.onReady();
+            });
             if (this.debug) {
                 client.on('invalidated', () => this.log.log(LogLevel.ERROR, 'invalidated'));
                 client.on('debug', (m) => this.log.log(LogLevel.DEBUG, m));
                 client.on('warn', (m) => this.log.log(LogLevel.WARN, m));
             }
-            client.on('message', (m) => this.onMessage(m));
+            client.on('messageCreate', (m) => this.onMessage(m));
             client.on('disconnect', (d) => {
                 if (d?.wasClean) {
                     this.log.log(LogLevel.INFO, 'disconnect');
@@ -72,6 +80,13 @@ export class DiscordBot extends IStatefulService {
 
     private onReady(): void {
         this.log.log(LogLevel.IMPORTANT, 'Discord Ready!');
+        this.log.log(
+            LogLevel.DEBUG,
+            'Guildes',
+            this.client.guilds.cache.map(
+                /* istanbul ignore next */ (guild) => [guild.id, guild.name],
+            ),
+        );
         this.ready = true;
         this.sendQueuedMessage();
     }
@@ -118,10 +133,19 @@ export class DiscordBot extends IStatefulService {
 
         const channels = this.manager.config.discordChannels
             ?.filter((x) => isDiscordChannelType(x.mode, message.type));
-        const matching = this.client?.guilds?.first()?.channels
+        const matching = this.client.guilds?.cache?.first()?.channels?.cache
             ?.filter((channel) => {
                 return channels?.some((x) => x.channel === channel.name?.toLowerCase()) ?? false;
-            }).array() || [];
+            }).map((x) => x) || [];
+
+        if (!matching?.length) {
+            this.log.log(
+                LogLevel.DEBUG,
+                'No channel found for: ' + channels.map(
+                     /* istanbul ignore next */ (x) => x.channel,
+                ).join(', '),
+            );
+        }
         for (const x of matching) {
             try {
                 if (message.message) {
@@ -129,7 +153,7 @@ export class DiscordBot extends IStatefulService {
                 }
                 if (message.embeds?.length) {
                     for (const embed of message.embeds) {
-                        await (x as TextChannel).sendEmbed(embed);
+                        await (x as TextChannel).send({ embeds: [embed] });
                     }
                 }
             } catch (e) {

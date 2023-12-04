@@ -1,4 +1,4 @@
-import { CellDoubleClickedEvent, ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
+import { CellContextMenuEvent, CellDoubleClickedEvent, ColDef, ITooltipParams, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
 import { TypesComponent } from "./types.component";
 import { CheckboxRenderer, GenericListRenderer } from "./renderers";
 import { ExcludesFilter, ExcludesPartialFilter, IncludesFilter, IncludesPartialFilter } from "./filter";
@@ -356,39 +356,77 @@ export class ScoreCol extends ColBase {
 
     tooltipComponent = ListTooltipComponent;
     tooltipValueGetter = (params: ITooltipParams<string>): string | any => {
-        const scoreParams = this.calc.calcWeaponScoreParams(params.data);
-        if (!scoreParams) return undefined;
+        if (this.types.getWeaponEntry(params.data)) {
+            const scoreParams = this.calc.calcWeaponScoreParams(params.data);
+            if (!scoreParams) return undefined;
 
-        return [
-            {
-                label: `Combat Window (${scoreParams.combatWindow}s) Hit Chance`,
-                value: scoreParams.combatWindowChance,
-            },
-            {
-                label: `Damage Bonus`,
-                value: scoreParams.dmgScore,
-            },
-            {
-                label: `Armor Penetration Bonus`,
-                value: scoreParams.armorDmgBonus,
-            },
-            {
-                label: `Effective Range Bonus`,
-                value: scoreParams.effectiveRangeBonus,
-            },
-            {
-                label: `Max Magazine Size Bonus`,
-                value: scoreParams.maxMagSizeBonus,
-            },
-            {
-                label: `Can Attach Suppressor Bonus`,
-                value: scoreParams.canSuppressorBonus,
-            },
-            {
-                label: `Can Attach LongRangeScope Bonus`,
-                value: scoreParams.canLongRangeScopeBonus,
-            }
-        ] as { label: string; value: any }[];
+            return [
+                {
+                    label: `Combat Window (${scoreParams.combatWindow}s) Hit Chance`,
+                    value: scoreParams.combatWindowChance,
+                },
+                {
+                    label: `Damage Bonus`,
+                    value: scoreParams.dmgScore,
+                },
+                {
+                    label: `Armor Penetration Bonus`,
+                    value: scoreParams.armorDmgBonus,
+                },
+                {
+                    label: `Effective Range Bonus`,
+                    value: scoreParams.effectiveRangeBonus,
+                },
+                {
+                    label: `Max Magazine Size Bonus`,
+                    value: scoreParams.maxMagSizeBonus,
+                },
+                {
+                    label: `Can Attach Suppressor Bonus`,
+                    value: scoreParams.canSuppressorBonus,
+                },
+                {
+                    label: `Can Attach LongRangeScope Bonus`,
+                    value: scoreParams.canLongRangeScopeBonus,
+                }
+            ] as { label: string; value: any }[];
+        }
+
+        const clothing = this.calc.calcClothingScoreParams(params.data);
+        if (clothing) {
+            return [
+                {
+                    label: `Cargo`,
+                    value: clothing.cargo,
+                },
+                {
+                    label: `Armor`,
+                    value: clothing.armorAvg,
+                },
+                {
+                    label: `Heat Isolation`,
+                    value: clothing.isolation,
+                },
+                {
+                    label: `Visibility Bonus`,
+                    value: clothing.visibilityBonus,
+                },
+                {
+                    label: `Armor Projectile`,
+                    value: clothing.armorProjectile,
+                },
+                {
+                    label: `Armor Infected`,
+                    value: clothing.armorInfected,
+                },
+                {
+                    label: `Hitpoints`,
+                    value: clothing.hitpoints,
+                },
+            ];
+        }
+
+        return undefined;
     }
 }
 
@@ -733,7 +771,22 @@ export class AmmoCol extends ColBase {
         return false;
     }
     valueGetter = (params: ValueGetterParams<string>) => {
-        return this.types.getWeaponEntry(params.data)?.ammo?.join(', ');
+        const weapon = this.types.getWeaponEntry(params.data);
+        if (weapon) {
+            return weapon.ammo?.join(', ');
+        }
+        const mag = this.types.getMagEntry(params.data);
+        if (mag) {
+            return mag.ammo?.join(', ');
+        }
+        return undefined;
+    };
+
+    onCellDoubleClicked = (event: CellDoubleClickedEvent<string>) => {
+        const ammo = this.types.getWeaponEntry(event.data)?.ammo?.[0];
+        if (ammo) {
+            navigator.clipboard.writeText(ammo);
+        }
     };
 }
 
@@ -752,7 +805,15 @@ export class MagsCol extends ColBase {
         return this.types.getWeaponEntry(params.data)?.mags?.join(', ');
     };
 
+
     onCellDoubleClicked = (event: CellDoubleClickedEvent<string>) => {
+        const mag = this.types.getWeaponEntry(event.data)?.mags?.[0];
+        if (mag) {
+            navigator.clipboard.writeText(mag);
+        }
+    };
+    onCellContextMenu = (event: CellContextMenuEvent<string>) => {
+        // event.event
         const mag = this.types.getWeaponEntry(event.data)?.mags?.[0]?.toLowerCase();
         if (mag) {
             let node;
@@ -891,6 +952,38 @@ export class DamageArmorCol extends ColBase {
     }
     valueGetter = (params: ValueGetterParams<string>) => {
         return round(this.calc.calcWeaponAmmoProp('damageArmor', params.data), 1);
+    }
+}
+
+export class DamageMeleeCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Damage Melee')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getItemEntry(params.data)?.meleeDmg;
+    }
+}
+
+export class DamageMeleeHeavyCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Damage MeleeHeavy')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getItemEntry(params.data)?.meleeDmgHeavy;
     }
 }
 

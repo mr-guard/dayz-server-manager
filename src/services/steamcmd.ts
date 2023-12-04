@@ -589,6 +589,7 @@ export class SteamCMD extends IService {
                             isSuccess = true;
                         }
                         if (isSuccess !== null) {
+                            this.log.log(LogLevel.DEBUG, 'Sending mod updated with success:', isSuccess);
                             this.eventBus.emit(
                                 InternalEventTypes.MOD_UPDATED,
                                 {
@@ -664,11 +665,31 @@ export class SteamCMD extends IService {
         validate?: boolean,
         listener?: SteamCmdEventListener,
     }): Promise<boolean> {
-        const modIds = opts?.force
-            ?  this.manager.getCombinedModIdList()
-            : await this.metaData.modNeedsUpdate(
-                this.manager.getCombinedModIdList(),
-            );
+        const modIds: string[] = [];
+        if (opts?.force) {
+            modIds.push(...this.manager.getCombinedModIdList());
+        } else {
+            modIds.push(...new Set([
+                ...(await this.metaData.modNeedsUpdate(
+                    this.manager.getCombinedModIdList(),
+                )),
+                ...this.manager.getCombinedModIdList().filter((modId) => {
+                    const modDir = path.join(this.getWsPath(), modId);
+                    if (!this.fs.existsSync(modDir)) {
+                        return true;
+                    }
+                    const modName = this.getWsModName(modId);
+                    if (!modName) {
+                        return true;
+                    }
+                    const serverDir = path.join(this.manager.getServerPath(), modName);
+                    if (!this.fs.existsSync(serverDir)) {
+                        return true;
+                    }
+                    return false;
+                }),
+            ]));
+        }
 
         const modsMeta = (await this.metaData.getModsMetaData(modIds)) || [];
 

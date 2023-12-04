@@ -43,15 +43,10 @@ export class DiscordMessageHandler extends IService {
         }
 
         const channelName = (message.channel as GuildChannel).name;
-        const authorId = message.author.tag;
+        const authorId = message.author.id;
+        const authorUserName = message.author.username;
 
-        if (!authorId?.includes('#')) {
-            // safety
-            this.log.log(LogLevel.DEBUG, `Received command without valid author id`);
-            return;
-        }
-
-        this.log.log(LogLevel.INFO, `Command "${command}" from "${authorId}" in "${channelName}" with args: "${args?.join(' ')}"`);
+        this.log.log(LogLevel.INFO, `Command "${command}" from "${authorUserName}" (${authorId}) in "${channelName}" with args: "${args?.join(' ')}"`);
 
         const configChannel = this.manager.config.discordChannels.find((x) => x.channel.toLowerCase() === channelName?.toLowerCase());
         if (command === 'help') {
@@ -79,7 +74,7 @@ export class DiscordMessageHandler extends IService {
         const req = new Request();
         req.accept = 'text/plain';
         req.resource = command;
-        req.user = authorId;
+        req.user = authorUserName;
         req.body = {};
         req.query = {};
         req.canStream = true;

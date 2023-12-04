@@ -258,7 +258,7 @@ export class CheckboxRenderer implements ICellRendererAngularComp {
             <option *ngFor="let rarity of RARITY_LIST; let i = index"
                     [ngValue]="i"
             >
-                {{ rarity }}
+                {{i}} ({{ rarity }})
             </option>
         </select>
     `,

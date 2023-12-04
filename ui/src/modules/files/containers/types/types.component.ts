@@ -78,6 +78,9 @@ export class TypesComponent implements OnInit {
     public combinedClasses: string[] = [];
     public missingClasses: string[] = [];
     public missingTraderItems: string[] = [];
+    public unknownTraderItems: string[] = [];
+    public unknownClasses: string[] = [];
+    public traderOnlyItems: string[] = [];
 
     public weaponDataDump: Record<string, DZSMWeaponDumpEntry> = {};
     public magDataDump: Record<string, DZSMMagDumpEntry> = {};
@@ -363,6 +366,8 @@ export class TypesComponent implements OnInit {
                 new columns.DamageBloodCol(this),
                 new columns.DamageHPCol(this),
                 new columns.DamageArmorCol(this),
+                new columns.DamageMeleeCol(this),
+                new columns.DamageMeleeHeavyCol(this),
                 new columns.BulletSpeedCol(this),
                 new columns.MaxZeroCol(this),
                 new columns.RecoilCol(this),
@@ -508,13 +513,20 @@ export class TypesComponent implements OnInit {
             });
         this.combinedClasses = Object.keys(this.combinedTypes);
 
-        this.missingClasses = [
+        const knownClasses = new Set([
             ...Object.keys(this.weaponDataDump),
             ...Object.keys(this.magDataDump),
             ...Object.keys(this.clothingDataDump),
             ...Object.keys(this.itemDataDump),
-        ].filter((x) => !this.combinedClasses.includes(x));
+        ]);
+        this.unknownClasses = this.combinedClasses.filter((x) => !knownClasses.has(x));
+        this.missingClasses = [...knownClasses.keys()]
+        .filter((x) => !this.combinedClasses.includes(x))
+        .map((x) => this.getDumpEntry(x)?.classname)
+        .filter((x) => !!x) as string[]
+        ;
 
+        this.missingTraderItems = [];
         const traderFiles = this.files.filter((x) => x.type === 'traderjson') as TraderFileWrapper[];
         for (const type of this.combinedClasses) {
             if (!traderFiles.some(
@@ -524,7 +536,28 @@ export class TypesComponent implements OnInit {
                         || traderItem.Variants?.some((variant) => variant?.toLowerCase() === type.toLowerCase())
                 )
             )) {
-                this.missingTraderItems.push(type);
+                const entry = this.getDumpEntry(type)?.classname;
+                if (entry && !type.startsWith('zmbm_') && !type.startsWith('zmbf_')) {
+                    this.missingTraderItems.push(entry);
+                }
+            }
+        }
+
+        this.unknownTraderItems = [];
+        for (const file of traderFiles) {
+            for (const item of file.content.Items) {
+                if (!this.combinedClasses.includes(item.ClassName.toLowerCase())) {
+                    this.unknownTraderItems.push(item.ClassName);
+                }
+            }
+        }
+
+        this.traderOnlyItems = [];
+        for (const file of traderFiles) {
+            for (const item of file.content.Items) {
+                if (!Number(this.getTypeEntry(item.ClassName)?.nominal?.[0])) {
+                    this.traderOnlyItems.push(item.ClassName);
+                }
             }
         }
     }
@@ -564,6 +597,7 @@ export class TypesComponent implements OnInit {
         if (prepedValue === null || prepedValue === undefined) return;
 
         const selectedNodes = this.agGrid.api.getSelectedNodes();
+        let lastItem: string | undefined = undefined;
         if (selectedNodes?.length) {
             selectedNodes.forEach((x) => {
                 this.selectedOpertaion!.operation(
@@ -573,6 +607,7 @@ export class TypesComponent implements OnInit {
                     prepedValue,
                 );
             });
+            lastItem = selectedNodes[selectedNodes.length - 1].data!.toLowerCase();
         } else {
             this.agGrid.api.forEachNodeAfterFilter((x) => {
                 this.selectedOpertaion!.operation(
@@ -581,6 +616,7 @@ export class TypesComponent implements OnInit {
                     this.selectedOpertaionCol!,
                     prepedValue,
                 );
+                lastItem = x.data!.toLowerCase();
             });
         }
 
@@ -590,6 +626,20 @@ export class TypesComponent implements OnInit {
 
         if (this.selectedOpertaionCol!.colId === 'Nominal') {
             this.filterChanged();
+        }
+
+        if (lastItem) {
+            setTimeout(() => {
+                let node;
+                this.agGrid.api.forEachNode((x) => {
+                    if (x.data?.toLowerCase() === lastItem) {
+                        node = x;
+                    }
+                });
+                if (node) {
+                    this.agGrid.api.ensureNodeVisible(node);
+                }
+            }, 1000)
         }
     }
 

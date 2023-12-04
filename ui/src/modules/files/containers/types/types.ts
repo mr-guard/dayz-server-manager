@@ -120,6 +120,43 @@ export interface LimitsXml {
     },
 }
 
+export interface EventSpawnPos {
+    $: {
+        x: string,
+        y?: string,
+        z: string,
+        a: string,
+    }
+}
+
+export interface EventSpawn {
+    $: {
+        name: string
+    },
+    pos?: EventSpawnPos[];
+}
+
+export interface EventSpawnsXml {
+    eventposdef: {
+        event: EventSpawn[];
+    }
+}
+
+export interface MapGroup {
+    $: {
+        name: string,
+        pos: string,
+        rpy: string,
+        a: string,
+    }
+}
+
+export interface MapGroupPosXml {
+    map: {
+        group: MapGroup[]
+    }
+}
+
 export interface DZSMDumpEntry {
 	classname: string;
 	source: string;
@@ -254,6 +291,8 @@ export interface DZSMClothingDumpEntry extends DZSMBaseDumpEntry
 
 export interface DZSMItemDumpEntry extends DZSMBaseDumpEntry {
 	isMeleeWeapon: boolean;
+	meleeDmg: number;
+	meleeDmgHeavy: number;
 
 	repairKitType: number;
 

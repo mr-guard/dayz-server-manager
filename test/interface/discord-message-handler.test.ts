@@ -109,16 +109,6 @@ describe('Test Discord Message handler', () => {
         expect(interfaceService.execute.called).to.be.false;
     });
 
-    it('handleMessage-invalid user', async () => {
-        const handler = injector.resolve(DiscordMessageHandler);
-        
-        const message = new TestMessage();
-        message.author.tag = 'asdf';
-        await handler.handleCommandMessage(message as any);
-        expect(message.replyMsg).to.be.undefined;
-        expect(interfaceService.execute.called).to.be.false;
-    });
-
     it('handleMessage-wrong channel', async () => {
         const handler = injector.resolve(DiscordMessageHandler);
         

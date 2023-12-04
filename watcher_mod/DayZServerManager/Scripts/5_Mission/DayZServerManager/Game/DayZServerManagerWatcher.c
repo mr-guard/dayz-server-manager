@@ -562,6 +562,9 @@ class DZSMItemDumpEntry : DZSMBaseDumpEntry
 	float opticsDistanceZoomMax;
 	ref TFloatArray opticsDiscreteDistance;
 	
+	float meleeDmg;
+	float meleeDmgHeavy;
+	
 	void DZSMItemDumpEntry(string classname)
 	{
 		Init(classname, "cfgVehicles");
@@ -608,6 +611,15 @@ class DZSMItemDumpEntry : DZSMBaseDumpEntry
 			medicine.prevention = GetGame().ConfigGetFloat( "cfgVehicles " + classname + " Medicine prevention" );
 			medicine.treatment = GetGame().ConfigGetFloat( "cfgVehicles " + classname + " Medicine treatment" );
 			medicine.diseaseExit = GetGame().ConfigGetFloat( "cfgVehicles " + classname + " Medicine diseaseExit" );
+		}
+
+		if (GetGame().ConfigIsExisting("cfgVehicles " + classname + " MeleeModes"))
+		{
+			string meleeAmmo = GetGame().ConfigGetTextOut( "cfgVehicles " + classname + " MeleeModes Default ammo" );
+			string meleeAmmoHeavy = GetGame().ConfigGetTextOut( "cfgVehicles " + classname + " MeleeModes Heavy ammo" );
+
+			meleeDmg = GetGame().ConfigGetFloat( "cfgAmmo " + meleeAmmo + " DamageApplied Health damage" );
+			meleeDmgHeavy = GetGame().ConfigGetFloat( "cfgAmmo " + meleeDmgHeavy + " DamageApplied Health damage" );
 		}
 	}
 

@@ -36,7 +36,9 @@
                         ],
                         "styles": [
                             "src/styles/styles.scss",
-                            "./node_modules/leaflet/dist/leaflet.css"
+                            "./node_modules/leaflet/dist/leaflet.css",
+                            "./node_modules/leaflet.markercluster/dist/MarkerCluster.css",
+                            "./node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css"
                         ],
                         "stylePreprocessorOptions": {
                             "includePaths": ["src", "./node_modules"]
@@ -111,7 +113,9 @@
                         "assets": ["src/favicon.png", "src/assets"],
                         "styles": [
                             "src/styles/styles.scss",
-                            "./node_modules/leaflet/dist/leaflet.css"
+                            "./node_modules/leaflet/dist/leaflet.css",
+                            "./node_modules/leaflet.markercluster/dist/MarkerCluster.css",
+                            "./node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css"
                         ],
                         "stylePreprocessorOptions": {
                             "includePaths": ["src", "./node_modules"]

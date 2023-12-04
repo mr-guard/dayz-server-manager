@@ -481,12 +481,17 @@ describe('Test class SteamCMD', () => {
         fs = memfs(
             {
                 'testcwd/testwspath/steamapps/workshop/content': {
-                    [DAYZ_APP_ID]: {},
+                    [DAYZ_APP_ID]: {
+                        '3333333': {
+                            'meta.cpp': 'name = 3333333'
+                        }
+                    },
                 },
             },
             '/',
             injector,
         );
+        fs.mkdirSync('testserver/@3333333', { recursive: true });
         paths.cwd.returns('/testcwd');
 
         manager.config = {
@@ -788,6 +793,7 @@ describe('Test class SteamCMD', () => {
             linkModDirs: true,
         } as any;
         manager.getModIdList.returns(['1234567']);
+        manager.getCombinedModIdList.returns(['1234567']);
         steamMeta.modNeedsUpdate.resolves(['1234567']);
         manager.getServerPath.returns('/testcwd/testserver');
 
