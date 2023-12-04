@@ -472,12 +472,12 @@ export class Config {
      *  moderate - able to perform moderation tasks such as server messages, kicks and bans (and everything below)
      *  view - able to query the server status and ingame situation (ie. player list, objects, etc)
      *
-     * if the id does not contain a '#', the user is exclusive to webview
      * the password is only used for the web interface and API
+     * to link users to their discord user, provide the discord username (not the display name), which can be found in discord - settings - my account.
      *
      * example:
      * {
-     *     "userId": "Senfo#5128",
+     *     "userId": "senfo",
      *     "password": "admin",
      *     "userLevel": "admin"
      * }
