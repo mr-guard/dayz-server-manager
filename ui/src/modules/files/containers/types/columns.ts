@@ -955,6 +955,38 @@ export class DamageArmorCol extends ColBase {
     }
 }
 
+export class DamageMeleeCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Damage Melee')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getItemEntry(params.data)?.meleeDmg;
+    }
+}
+
+export class DamageMeleeHeavyCol extends ColBase {
+    public constructor(
+        types: TypesComponent,
+    ) {
+        super(types, 'Damage MeleeHeavy')
+        this.minWidth = this.types.minWidth(75);
+    }
+    editable = false;
+    valueSetter = (params: ValueSetterParams<string, any>) => {
+        return false;
+    }
+    valueGetter = (params: ValueGetterParams<string>) => {
+        return this.types.getItemEntry(params.data)?.meleeDmgHeavy;
+    }
+}
+
 export class BulletSpeedCol extends ColBase {
     public constructor(
         types: TypesComponent,

@@ -81,11 +81,62 @@
                                         </li>
                                     </ul>
                                 </div>
-
-                                <div *ngIf="missingTraderItems && missingTraderItems.length">
-                                    <span>Missing Trader Items</span>
+                            </div>
+                        </ng-template>
+                    </li>
+                    <li [ngbNavItem]="2" *ngIf="missingTraderItems && missingTraderItems.length">
+                        <a ngbNavLink>Missing Trader Items</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%">
+                                <div >
+                                    <span></span>
                                     <ul>
                                         <li *ngFor="let classname of missingTraderItems">
+                                            {{ classname }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </ng-template>
+                    </li>
+                    <li [ngbNavItem]="3" *ngIf="unknownTraderItems && unknownTraderItems.length">
+                        <a ngbNavLink>Unknown Trader Items</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%">
+                                <div >
+                                    <span></span>
+                                    <ul>
+                                        <li *ngFor="let classname of unknownTraderItems">
+                                            {{ classname }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </ng-template>
+                    </li>
+                    <li [ngbNavItem]="4" *ngIf="unknownClasses && unknownClasses.length">
+                        <a ngbNavLink>Unknown Items</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%">
+                                <div >
+                                    <span></span>
+                                    <ul>
+                                        <li *ngFor="let classname of unknownClasses">
+                                            {{ classname }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </ng-template>
+                    </li>
+                    <li [ngbNavItem]="5" *ngIf="traderOnlyItems && traderOnlyItems.length">
+                        <a ngbNavLink>Trader Only Items</a>
+                        <ng-template ngbNavContent>
+                            <div style="height: 100%">
+                                <div >
+                                    <span></span>
+                                    <ul>
+                                        <li *ngFor="let classname of traderOnlyItems">
                                             {{ classname }}
                                         </li>
                                     </ul>

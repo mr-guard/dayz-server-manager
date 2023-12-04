@@ -291,6 +291,8 @@ export interface DZSMClothingDumpEntry extends DZSMBaseDumpEntry
 
 export interface DZSMItemDumpEntry extends DZSMBaseDumpEntry {
 	isMeleeWeapon: boolean;
+	meleeDmg: number;
+	meleeDmgHeavy: number;
 
 	repairKitType: number;
 

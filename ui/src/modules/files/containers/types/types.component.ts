@@ -78,6 +78,9 @@ export class TypesComponent implements OnInit {
     public combinedClasses: string[] = [];
     public missingClasses: string[] = [];
     public missingTraderItems: string[] = [];
+    public unknownTraderItems: string[] = [];
+    public unknownClasses: string[] = [];
+    public traderOnlyItems: string[] = [];
 
     public weaponDataDump: Record<string, DZSMWeaponDumpEntry> = {};
     public magDataDump: Record<string, DZSMMagDumpEntry> = {};
@@ -363,6 +366,8 @@ export class TypesComponent implements OnInit {
                 new columns.DamageBloodCol(this),
                 new columns.DamageHPCol(this),
                 new columns.DamageArmorCol(this),
+                new columns.DamageMeleeCol(this),
+                new columns.DamageMeleeHeavyCol(this),
                 new columns.BulletSpeedCol(this),
                 new columns.MaxZeroCol(this),
                 new columns.RecoilCol(this),
@@ -508,12 +513,14 @@ export class TypesComponent implements OnInit {
             });
         this.combinedClasses = Object.keys(this.combinedTypes);
 
-        this.missingClasses = [...new Set([
+        const knownClasses = new Set([
             ...Object.keys(this.weaponDataDump),
             ...Object.keys(this.magDataDump),
             ...Object.keys(this.clothingDataDump),
             ...Object.keys(this.itemDataDump),
-        ]).keys()]
+        ]);
+        this.unknownClasses = this.combinedClasses.filter((x) => !knownClasses.has(x));
+        this.missingClasses = [...knownClasses.keys()]
         .filter((x) => !this.combinedClasses.includes(x))
         .map((x) => this.getDumpEntry(x)?.classname)
         .filter((x) => !!x) as string[]
@@ -532,6 +539,24 @@ export class TypesComponent implements OnInit {
                 const entry = this.getDumpEntry(type)?.classname;
                 if (entry && !type.startsWith('zmbm_') && !type.startsWith('zmbf_')) {
                     this.missingTraderItems.push(entry);
+                }
+            }
+        }
+
+        this.unknownTraderItems = [];
+        for (const file of traderFiles) {
+            for (const item of file.content.Items) {
+                if (!this.combinedClasses.includes(item.ClassName.toLowerCase())) {
+                    this.unknownTraderItems.push(item.ClassName);
+                }
+            }
+        }
+
+        this.traderOnlyItems = [];
+        for (const file of traderFiles) {
+            for (const item of file.content.Items) {
+                if (!Number(this.getTypeEntry(item.ClassName)?.nominal?.[0])) {
+                    this.traderOnlyItems.push(item.ClassName);
                 }
             }
         }
