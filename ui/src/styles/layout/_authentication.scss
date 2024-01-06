@@ -3,8 +3,9 @@
   flex-direction: column;
   min-height: 100vh;
   background-image: url("http://i.imgur.com/jIbjD.jpg");
-  background-repeat: round;
+  background-repeat: no-repeat;
   background-position-y: -3rem;
+  background-size: cover;
   #layoutAuthentication_content {
     min-width: 0;
     flex-grow: 1;
