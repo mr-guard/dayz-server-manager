@@ -31,8 +31,9 @@
     "mkdir:exec": "node scripts/mkdir.js exec",
     "start": "npm run build && npm run mkdir:exec && cd exec && node ../dist/index.js",
     "start:fast": "npm run build-backend-only && npm run mkdir:exec && cd exec && node ../dist/index.js",
-    "start:packed:windows": "npm run build && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
-    "start:packed:windows:fast": "npm run build-backend-only && npm run pack:windows && npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
+    "start:existing:windows": "npm run mkdir:exec && cd exec && bash -c './../build/dayz-server-manager.exe'",
+    "start:packed:windows": "npm run build && npm run pack:windows && npm run start:existing:windows",
+    "start:packed:windows:fast": "npm run build-backend-only && npm run pack:windows && npm run start:existing:windows",
     "lint": "eslint src --ext .ts",
     "test": "npm run generator && nyc --check-coverage --lines 85 --functions 100 mocha",
     "test:watch": "mocha -w --reporter min"
