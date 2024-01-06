@@ -196,7 +196,7 @@ export class Interface extends IService {
                 method: 'get',
                 level: 'admin',
                 disableDiscord: true,
-                action: () => this.manager.config,
+                action: () => this.configFileHelper.getConfigFileContent(this.configFileHelper.getConfigFilePath()),
             })],
             ['updateconfig', RequestTemplate.build({
                 method: 'post',

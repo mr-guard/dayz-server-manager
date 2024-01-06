@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Config, DiscordChannelType } from '../../../app-common/models';
 import { AppCommonService } from '../../../app-common/services/app-common.service';
+import * as commentJson from 'comment-json';
 
 import configschema from '../../../../../../src/config/config.schema.json';
 
@@ -41,7 +42,7 @@ export class SettingsComponent implements OnInit {
     public onSubmit(): void {
         this.loading = true;
         this.appCommon.updateManagerConfig(
-            this.config,
+            commentJson.stringify(this.config),
         ).toPromise().then(
             () => {
                 this.loading = false;
@@ -69,7 +70,7 @@ export class SettingsComponent implements OnInit {
         this.loading = true;
         this.appCommon.fetchManagerConfig().toPromise().then(
             (config) => {
-                this.config = config;
+                this.config = commentJson.parse(config) as any;
                 if (this.config.discordChannels?.length) {
                     this.config.discordChannels = this.config.discordChannels.map((x) => {
                         if (typeof x.mode === 'string') {

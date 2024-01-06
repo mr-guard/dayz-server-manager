@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Config, LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, ServerInfo, SystemReport, isSameServerInfo } from '../models';
+import { LogType, LogTypeEnum, MetricType, MetricTypeEnum, MetricWrapper, ServerInfo, SystemReport, isSameServerInfo } from '../models';
 import { AuthService } from '../../auth/services/auth.service';
 import Chart from 'chart.js';
 import { BehaviorSubject, Observable, of, Subject, Subscription, timer } from 'rxjs';
@@ -218,19 +218,20 @@ export class AppCommonService {
         return this.auth.getAuthHeaders();
     }
 
-    public fetchManagerConfig(): Observable<Config> {
-        return this.httpClient.get<Config>(
+    public fetchManagerConfig(): Observable<string> {
+        return this.httpClient.get(
             `/api/config`,
             {
                 headers: this.getAuthHeaders(),
                 withCredentials: true,
+                responseType: 'text'
             },
         ).pipe(
             catchError((e) => processError(e)),
         );
     }
 
-    public updateManagerConfig(config: Config): Observable<any> {
+    public updateManagerConfig(config: string): Observable<any> {
         return this.httpClient.post<any>(
             `/api/updateconfig`,
             {
