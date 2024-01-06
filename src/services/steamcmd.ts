@@ -441,16 +441,23 @@ export class SteamCMD extends IService {
         const serverPath = this.manager.getServerPath();
         this.fs.mkdirSync(serverPath, { recursive: true });
 
+        const steamAppId = this.manager.config?.experimentalServer
+            ? (this.manager.config?.dayzExperimentalServerSteamAppId || DAYZ_EXPERIMENTAL_SERVER_APP_ID)
+            : (this.manager.config?.dayzServerSteamAppId || DAYZ_SERVER_APP_ID);
+
+        const manifestPath = path.join(serverPath, 'steamapps', `appmanifest_${steamAppId}.acf`);
+        let currentBuildId: string = '';
+        if (this.fs.existsSync(manifestPath)) {
+            const manifest = this.fs.readFileSync(manifestPath, 'utf-8');
+            currentBuildId = /"buildid"\s*"(.*)"/.exec(manifest)?.[1] || '';
+        }
+
         const success = await this.execute([
             '+force_install_dir',
             serverPath,
             ...this.getLoginArgs(),
             '+app_update',
-            (
-                this.manager.config?.experimentalServer
-                    ? (this.manager.config?.dayzExperimentalServerSteamAppId || DAYZ_EXPERIMENTAL_SERVER_APP_ID)
-                    : (this.manager.config?.dayzServerSteamAppId || DAYZ_SERVER_APP_ID)
-            ),
+            steamAppId,
             ...((opts?.validate ?? this.manager.config?.validateServerAfterUpdate ?? true) ? ['validate'] : []),
             '+quit',
         ], {
@@ -462,10 +469,17 @@ export class SteamCMD extends IService {
                             { success: false },
                         );
                     } else if ((event as SteamCmdExitEvent).status !== SteamExitCodes.UP2DATE) {
-                        this.eventBus.emit(
-                            InternalEventTypes.GAME_UPDATED,
-                            { success: true },
-                        );
+                        if (this.fs.existsSync(manifestPath)) {
+                            const manifest = this.fs.readFileSync(manifestPath, 'utf-8');
+                            const newBuildId = /"buildid"\s*"(.*)"/.exec(manifest)?.[1] || '';
+
+                            if (newBuildId !== currentBuildId) {
+                                this.eventBus.emit(
+                                    InternalEventTypes.GAME_UPDATED,
+                                    { success: true },
+                                );
+                            }
+                        }
                     }
                 }
 
@@ -533,6 +547,21 @@ export class SteamCMD extends IService {
         return modName ? `@${modName}` : '';
     }
 
+    public async getWsModUpdatedTs(modId: string): Promise<string> {
+        const wsPath = this.getWsPath();
+        const modMeta = path.join(wsPath, modId, 'meta.cpp');
+        if (!this.fs.existsSync(modMeta)) {
+            return '';
+        }
+        const metaContent = await this.fs.promises.readFile(modMeta, { encoding: 'utf-8' });
+        // timestamp = 5250075451128136767;
+        return (metaContent.match(/timestamp\s*=.*/g) ?? [])
+            .pop()
+            ?.split('=')[1]
+            ?.trim()
+            ?.replace(';', '') || '';
+    }
+
     public buildWsModParams(): string[] {
         return this.manager.getModIdList()
             .map((x) => this.getWsModName(x));
@@ -558,6 +587,12 @@ export class SteamCMD extends IService {
         const wsBasePath = this.getWsBasePath();
         this.fs.mkdirSync(wsBasePath, { recursive: true });
 
+        const prevModTs = new Map(
+            await Promise.all(
+                modIds.map(async (modId) => [modId, await this.getWsModUpdatedTs(modId)] as [string, string]),
+            ),
+        );
+
         let lastDetectedMod: string;
         let success = await this.execute([
             '+force_install_dir',
@@ -580,6 +615,7 @@ export class SteamCMD extends IService {
             listener: (event: SteamCmdEvent) => {
 
                 if (event.type === 'exit') {
+                    (event as SteamCmdExitEvent).mods = [...modIds];
                     void (async () => {
                         this.log.log(LogLevel.DEBUG, 'Mod Update Outcome:', event);
                         let isSuccess = null;
@@ -590,13 +626,33 @@ export class SteamCMD extends IService {
                         }
                         if (isSuccess !== null) {
                             this.log.log(LogLevel.DEBUG, 'Sending mod updated with success:', isSuccess);
-                            this.eventBus.emit(
-                                InternalEventTypes.MOD_UPDATED,
-                                {
-                                    success: isSuccess,
-                                    modIds,
-                                },
-                            );
+                            if (isSuccess) {
+
+                                const newModTs = new Map(
+                                    await Promise.all(
+                                        modIds.map(async (modId) => [modId, await this.getWsModUpdatedTs(modId)] as [string, string]),
+                                    ),
+                                );
+
+                                const updatedMods = modIds.filter((modId) => prevModTs.get(modId) !== newModTs.get(modId) || (!prevModTs.get(modId) && !newModTs.get(modId)));
+                                if (updatedMods.length) {
+                                    this.eventBus.emit(
+                                        InternalEventTypes.MOD_UPDATED,
+                                        {
+                                            success: isSuccess,
+                                            modIds: updatedMods,
+                                        },
+                                    );
+                                }
+                            } else {
+                                this.eventBus.emit(
+                                    InternalEventTypes.MOD_UPDATED,
+                                    {
+                                        success: isSuccess,
+                                        modIds,
+                                    },
+                                );
+                            }
                         }
                     })();
                 }
@@ -622,9 +678,6 @@ export class SteamCMD extends IService {
                         } as SteamCmdModUpdateProgressEvent);
                         return;
                     }
-                }
-                if (event.type === 'exit') {
-                    (event as SteamCmdExitEvent).mods = [...modIds];
                 }
                 if (event.type === 'retry') {
                     (event as SteamCmdRetryEvent).mods = [...modIds];
