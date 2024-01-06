@@ -33,7 +33,7 @@ export class ConfigFileHelper extends IService {
 
     public getConfigFileContent(cfgPath: string): string {
         if (this.fs.existsSync(cfgPath)) {
-            return this.fs.readFileSync(cfgPath)?.toString();
+            return this.fs.readFileSync(cfgPath, { encoding: 'utf-8' });
         }
         throw new Error('Config file does not exist');
     }

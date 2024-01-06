@@ -518,6 +518,8 @@ describe('Test Interface', () => {
     });
 
     it('execute-config', async () => {
+        configFileHelper.getConfigFileContent.returns('{}');
+        
         const handler = injector.resolve(Interface);
         const request = {
             resource: 'config',
