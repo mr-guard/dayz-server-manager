@@ -127,98 +127,106 @@ export class RCON extends IStatefulService {
 
     private setupConnection(): void {
         // create connection
-        this.connection = this.socket.connection(
-            {
-                name: 'rcon',
-                password: this.getRconPassword(),
-                ip: this.getRconIP() ? this.getRconIP() : '127.0.0.1',
-                port: this.getRconPort(),
-            },
-            {
-                reconnect: true,              // reconnect on timeout
-                reconnectTimeout: 500,        // how long (in ms) to wait before trying to reconnect
-                keepAlive: true,              // send keepAlive packet
-                keepAliveInterval: 10000,     // keepAlive packet interval (in ms)
-                timeout: true,                // timeout packets
-                timeoutInterval: 1000,        // interval to check packets (in ms)
-                serverTimeout: 30000,         // timeout server connection (in ms)
-                packetTimeout: 1000,          // timeout packet check interval (in ms)
-                packetTimeoutThresholded: 5,  // packets to resend
-            },
-        );
-
-        this.connection.on('message', (message /* , packet */) => {
-
-            if (this.duplicateMessageCache.includes(message)) {
-                this.log.log(LogLevel.DEBUG, `duplicate message`, message);
-                return;
-            }
-            this.duplicateMessageCache.push(message);
-            if (this.duplicateMessageCache.length > this.duplicateMessageCacheSize) {
-                this.duplicateMessageCache.shift();
-            }
-
-            this.log.log(LogLevel.DEBUG, `message`, message);
-            this.eventBus.emit(
-                InternalEventTypes.DISCORD_MESSAGE,
+        try {
+            this.connection = this.socket.connection(
                 {
-                    type: 'rcon',
-                    message,
+                    name: 'rcon',
+                    password: this.getRconPassword(),
+                    ip: this.getRconIP() ? this.getRconIP() : '127.0.0.1',
+                    port: this.getRconPort(),
+                },
+                {
+                    reconnect: true,              // reconnect on timeout
+                    reconnectTimeout: 500,        // how long (in ms) to wait before trying to reconnect
+                    keepAlive: true,              // send keepAlive packet
+                    keepAliveInterval: 10000,     // keepAlive packet interval (in ms)
+                    timeout: true,                // timeout packets
+                    timeoutInterval: 1000,        // interval to check packets (in ms)
+                    serverTimeout: 30000,         // timeout server connection (in ms)
+                    packetTimeout: 1000,          // timeout packet check interval (in ms)
+                    packetTimeoutThresholded: 5,  // packets to resend
                 },
             );
-        });
 
-        this.connection.on('command', (data, resolved, packet) => {
-            this.log.log(LogLevel.DEBUG, `command packet`, packet);
-        });
+            this.connection.on('message', (message /* , packet */) => {
 
-        this.connection.on('disconnected', (reason) => {
-            if (reason instanceof Error && reason?.message?.includes('Server connection timed out')) {
-                this.log.log(LogLevel.ERROR, `disconnected`, reason.message);
-            } else {
-                this.log.log(LogLevel.ERROR, `disconnected`, reason);
-            }
+                if (this.duplicateMessageCache.includes(message)) {
+                    this.log.log(LogLevel.DEBUG, `duplicate message`, message);
+                    return;
+                }
+                this.duplicateMessageCache.push(message);
+                if (this.duplicateMessageCache.length > this.duplicateMessageCacheSize) {
+                    this.duplicateMessageCache.shift();
+                }
+
+                this.log.log(LogLevel.DEBUG, `message`, message);
+                this.eventBus.emit(
+                    InternalEventTypes.DISCORD_MESSAGE,
+                    {
+                        type: 'rcon',
+                        message,
+                    },
+                );
+            });
+
+            this.connection.on('command', (data, resolved, packet) => {
+                this.log.log(LogLevel.DEBUG, `command packet`, packet);
+            });
+
+            this.connection.on('disconnected', (reason) => {
+                if (reason instanceof Error && reason?.message?.includes('Server connection timed out')) {
+                    this.log.log(LogLevel.ERROR, `disconnected`, reason.message);
+                } else {
+                    this.log.log(LogLevel.ERROR, `disconnected`, reason);
+                }
+                this.connected = false;
+                this.duplicateMessageCache = [];
+            });
+
+            this.connection.on('debug', (data) => {
+                this.log.log(LogLevel.DEBUG, 'debug', data);
+            });
+
+            this.connection.on('error', (e) => this.handleError(e));
+
+            this.connection.on('connected', () => {
+                if (!this.connected) {
+                    this.connected = true;
+                    this.log.log(LogLevel.IMPORTANT, 'connected');
+                    void this.sendCommand('say -1 Big Brother Connected.');
+                }
+            });
+        } catch (e) {
+            void this.handleError(e);
             this.connected = false;
             this.duplicateMessageCache = [];
-        });
+        }
+    }
 
-        this.connection.on('debug', (data) => {
-            this.log.log(LogLevel.DEBUG, 'debug', data);
-        });
+    private async handleError(err: any): Promise<void> {
+        if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
+            this.log.log(LogLevel.ERROR, `connection error`, err.message);
 
-        this.connection.on('error', async (err) => {
-            if (err instanceof Error && err?.message?.includes('Server connection timed out')) {
-                this.log.log(LogLevel.ERROR, `connection error`, err.message);
+            // restart on connection errors (disabled for now)
+            // this.connectionErrorCounter++;
+            // if (this.connectionErrorCounter >= 5) {
+            //     await this.stop();
+            //     void this.start(true);
+            // }
 
-                // restart on connection errors (disabled for now)
-                // this.connectionErrorCounter++;
-                // if (this.connectionErrorCounter >= 5) {
-                //     await this.stop();
-                //     void this.start(true);
-                // }
-
-            } else {
-                let logged: any = err;
-                if (
-                    err instanceof Error
-                    && (
-                        err?.message?.includes('Packet Error: Cleanup')
-                        || err?.message?.includes('PacketCleanupError')
-                    )
-                ) {
-                    logged = err.message;
-                }
-                this.log.log(LogLevel.ERROR, `connection error`, logged);
+        } else {
+            let logged: any = err;
+            if (
+                err instanceof Error
+                && (
+                    err?.message?.includes('Packet Error: Cleanup')
+                    || err?.message?.includes('PacketCleanupError')
+                )
+            ) {
+                logged = err.message;
             }
-        });
-
-        this.connection.on('connected', () => {
-            if (!this.connected) {
-                this.connected = true;
-                this.log.log(LogLevel.IMPORTANT, 'connected');
-                void this.sendCommand('say -1 Big Brother Connected.');
-            }
-        });
+            this.log.log(LogLevel.ERROR, `connection error`, logged);
+        }
     }
 
     private getRconPassword(): string {
