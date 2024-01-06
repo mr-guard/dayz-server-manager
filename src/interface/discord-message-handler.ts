@@ -6,6 +6,7 @@ import { IService } from '../types/service';
 import { LoggerFactory } from '../services/loggerfactory';
 import { injectable, singleton } from 'tsyringe';
 import { Interface } from './interface';
+import { isDiscordChannelType } from '../types/discord';
 
 @singleton()
 @injectable()
@@ -66,7 +67,7 @@ export class DiscordMessageHandler extends IService {
             return;
         }
 
-        if (configChannel?.mode !== 'admin' && !handler.discordPublic) {
+        if (!isDiscordChannelType(configChannel?.mode || [], 'admin') && !handler.discordPublic) {
             await message.reply('This command is not allowed in this channel.');
             return;
         }
