@@ -435,6 +435,8 @@ export class WorkshopMod {
 
     public name?: string;
 
+    public disabled?: boolean;
+
 }
 
 export type DiscordChannelType =
@@ -855,11 +857,41 @@ export class Config {
 
     /**
      * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as mods.
+     *
+     * Can be either a list of strings i.e. ["123456","654321"]
+     * or a list of mod descriptors i.e.
+     * [
+     *   {
+     *     "workshopId": "123456",
+     *     "name": "MyMod",
+     *     "disabled": false
+     *   },
+     *   {
+     *     "workshopId": "654321",
+     *     "disabled": true
+     *   }
+     * ]
+     * The fields "name" and "disabled" are optional.
      */
     public steamWsMods: (string | WorkshopMod)[] = [];
 
     /**
      * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as server mods.
+     *
+     * Can be either a list of strings i.e. ["123456","654321"]
+     * or a list of mod descriptors i.e.
+     * [
+     *   {
+     *     "workshopId": "123456",
+     *     "name": "MyServerMod",
+     *     "disabled": false
+     *   },
+     *   {
+     *     "workshopId": "654321",
+     *     "disabled": true
+     *   }
+     * ]
+     * The fields "name" and "disabled" are optional.
      */
     public steamWsServerMods: (string | WorkshopMod)[] = [];
 

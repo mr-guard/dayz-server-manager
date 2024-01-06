@@ -124,7 +124,7 @@ export class Manager {
                     return !!x;
                 }
 
-                return !!x.workshopId;
+                return !!x.workshopId && !x.disabled;
             })
             .map((x) => {
                 if (typeof x === 'string') {
