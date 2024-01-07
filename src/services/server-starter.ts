@@ -1,6 +1,7 @@
 import { Manager } from '../control/manager';
 import { Processes } from '../services/processes';
-import { spawn } from 'child_process';
+// import { spawn } from 'child_process';
+import { spawn } from 'cross-spawn';
 import * as path from 'path';
 import { LogLevel } from '../util/logger';
 import { IService } from '../types/service';
@@ -235,12 +236,17 @@ export class ServerStarter extends IService {
         const args = await this.buildStartServerArgs();
         return new Promise<boolean>((res, rej) => {
             try {
+                let usedArgs = [
+                    ...spawnCmd.args,
+                    ...args,
+                ];
+                // if (detectOS() === 'windows') {
+                //     usedArgs = usedArgs.map((x) => x.replace(/ /g, '^ '));
+                // }
+                console.log(usedArgs)
                 const sub = spawn(
                     spawnCmd.cmd,
-                    [
-                        ...spawnCmd.args,
-                        ...args,
-                    ],
+                    usedArgs,
                     {
                         detached: true,
                         stdio: 'ignore',
