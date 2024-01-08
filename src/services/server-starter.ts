@@ -240,10 +240,6 @@ export class ServerStarter extends IService {
                     ...spawnCmd.args,
                     ...args,
                 ];
-                // if (detectOS() === 'windows') {
-                //     usedArgs = usedArgs.map((x) => x.replace(/ /g, '^ '));
-                // }
-                console.log(usedArgs)
                 const sub = spawn(
                     spawnCmd.cmd,
                     usedArgs,
