@@ -910,7 +910,7 @@ export class Config {
      * This can lead to mod files (files inside the mod folder) being reset, after manually editing them.
      * Only disable this, when that happens or you really want to skip validation.
      */
-    public validateModsAfterUpdate: boolean = true;
+    public validateModsAfterUpdate: boolean = false;
 
     /**
      * Whether or not to check for server updates on each server restart
@@ -931,7 +931,7 @@ export class Config {
      * To avoid this, rename your mission / use a different name for the server cfg.. etc.
      * Only disable this, when you need to use the default names or really want to skip validation.
      */
-    public validateServerAfterUpdate: boolean = true;
+    public validateServerAfterUpdate: boolean = false;
 
     /**
      * Whether or not to use hardlink for mods instead of copying them
