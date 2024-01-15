@@ -19,6 +19,9 @@ export class Manager {
     private config$!: Config;
     public initDone: boolean = false;
 
+    public reloading: boolean = false;
+    public reloadWaiting: boolean = false;
+
     public constructor(
         loggerFactory: LoggerFactory,
         private paths: Paths,
