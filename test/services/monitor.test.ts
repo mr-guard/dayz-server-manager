@@ -161,6 +161,10 @@ describe('Test class ServerStarter', () => {
     it('ServerStarter-killServer-rcon', async () => {
         const starter = injector.resolve(ServerStarter);
 
+        manager.config = {
+            useRconToRestart: true,
+        } as any;
+
         rcon.isConnected.returns(true);
         rcon.shutdown.resolves();
 

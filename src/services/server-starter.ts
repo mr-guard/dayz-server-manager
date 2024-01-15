@@ -37,7 +37,7 @@ export class ServerStarter extends IService {
     }
 
     public async killServer(force?: boolean): Promise<boolean> {
-        if (force || !this.rcon?.isConnected()) {
+        if (force || !this.rcon?.isConnected() || !this.manager.config.useRconToRestart) {
 
             const processes = await this.serverDetector.getDayZProcesses();
             const success = await Promise.all(

@@ -650,6 +650,12 @@ export class Config {
     public rconIP: string = '';
 
     /**
+     * Use RCon to perform server restarts.
+     * Shutdown is potentially more graceful, yet RCon is more error prone.
+     */
+    public useRconToRestart: boolean = false;
+
+    /**
      * Local mods
      * Actual modnames like '@MyAwesomeMod'
      */
