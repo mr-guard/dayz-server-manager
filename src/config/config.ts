@@ -397,6 +397,7 @@ export class Event {
 // eslint-disable-next-line no-shadow
 export enum HookTypeEnum {
     beforeStart = 'beforeStart',
+    afterStart = 'afterStart',
     missionChanged = 'missionChanged'
 }
 
