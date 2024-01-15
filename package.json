@@ -104,6 +104,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^5.4.1",
+    "@types/buffer-crc32": "^0.2.4",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
     "@types/compression": "^1.7.0",
@@ -143,9 +144,9 @@
     "websocket": "^1.0.34"
   },
   "dependencies": {
-    "@senfo/battleye": "^2.2.2",
     "@senfo/process-list": "^2.0.6",
     "better-sqlite3": "^7.4.0",
+    "buffer-crc32": "^0.2.13",
     "chokidar": "^3.5.2",
     "comment-json": "^4.2.3",
     "compression": "^1.7.4",

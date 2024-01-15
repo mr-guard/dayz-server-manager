@@ -3,7 +3,7 @@ import * as https from 'https';
 import * as childProcess from 'child_process';
 import * as chokidarModule from 'chokidar';
 import * as nodePty from 'node-pty';
-import { Socket } from '@senfo/battleye';
+import * as dgram from 'dgram';
 
 export type FSAPI = typeof fs;
 
@@ -15,7 +15,7 @@ export type PTYAPI = typeof nodePty;
 
 export type CHOKIDAR = typeof chokidarModule;
 
-export type RCONSOCKETFACTORY = () => Socket;
+export type RCONSOCKETFACTORY = () => dgram.Socket;
 
 export class InjectionTokens {
 
