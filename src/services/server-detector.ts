@@ -28,11 +28,13 @@ export class ServerDetector extends IService {
                 this.manager.getServerExePath(),
             );
 
-            this.log.log(
-                LogLevel.DEBUG,
-                'Fetched new Process list',
-                processList,
-            );
+            if (process.env['DZSM_DEBUG_PROCESS_LIST'] === 'true') {
+                this.log.log(
+                    LogLevel.DEBUG,
+                    'Fetched new Process list',
+                    processList,
+                );
+            }
 
             this.lastServerCheckResult = {
                 ts: new Date().valueOf(),

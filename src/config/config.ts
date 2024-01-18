@@ -651,9 +651,11 @@ export class Config {
 
     /**
      * Use RCon to perform server restarts.
-     * Shutdown is potentially more graceful, yet RCon is more error prone.
+     * Shutdown is potentially more graceful, yet RCon may not work for you.
+     * Setting this to false might cause server restarts to fail if the manager is registered as a service.
+     * This is a limititation of windows/taskkill as interactive service are not working anymore.
      */
-    public useRconToRestart: boolean = false;
+    public useRconToRestart: boolean = true;
 
     /**
      * Local mods

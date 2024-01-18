@@ -209,6 +209,7 @@ export class RCON extends IStatefulService {
     private lastCommand: number = 0
     private keepAliveInterval?: any;
     private reconnectTimeout?: any;
+    private loginTimeout?: any;
 
     private started: boolean = false;
     private connected: boolean = false;
@@ -330,6 +331,10 @@ export class RCON extends IStatefulService {
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = undefined;
+        }
+        if (this.loginTimeout) {
+            clearTimeout(this.loginTimeout);
+            this.loginTimeout = undefined;
         }
 
         if (err) {
@@ -545,7 +550,7 @@ export class RCON extends IStatefulService {
         if (!this.connected) return;
         this.lastCommand = new Date().getTime();
         if (packet.type === PacketType.COMMAND && (packet.sequence ?? -1) < 0) {
-            packet.sequence = this.sequenceNumber = (this.sequenceNumber + 1) % 255;
+            packet.sequence = this.sequenceNumber = (this.sequenceNumber + 1) % 256;
         }
         if (this.requests[packet.sequence] && this.requests[packet.sequence] != packet) {
             this.log.log(LogLevel.DEBUG, `Earlier packet with seq ${packet.sequence} will be resolved as failed`);
@@ -589,6 +594,10 @@ export class RCON extends IStatefulService {
 
     // send login packet
     private login(): void {
+        this.loginTimeout = setTimeout(/* istanbul ignore next */ () => {
+            this.log.log(LogLevel.WARN, 'Login TimeOut. Reconnecting..');
+            this.reset();
+        }, this.serverTimeoutTime);
         this.sendPacket(
             new Packet(
                 PacketType.LOGIN,
@@ -689,6 +698,10 @@ export class RCON extends IStatefulService {
 
         switch (packet.type) {
             case PacketType.LOGIN: {
+                if (this.loginTimeout) {
+                    clearTimeout(this.loginTimeout);
+                    this.loginTimeout = undefined;
+                }
                 if (!packet.login) {
                     this.log.log(LogLevel.ERROR, 'Invalid Password. Disconnected..');
                     this.reset();

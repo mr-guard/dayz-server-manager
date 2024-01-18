@@ -5,7 +5,7 @@ import { StubInstance, disableConsole, enableConsole, memfs, sleep, stubClass } 
 import * as path from 'path';
 import * as sinon from 'sinon';
 import { ServerState } from '../../src/types/monitor';
-import { BattleyeConf, Packet, PacketDirection, PacketType, RCON } from '../../src/services/rcon';
+import { BattleyeConf, RCON } from '../../src/services/rcon';
 import { DependencyContainer, Lifecycle, container } from 'tsyringe';
 import { Manager } from '../../src/control/manager';
 import { DiscordBot } from '../../src/services/discord';
@@ -15,7 +15,6 @@ import { InternalEventTypes } from '../../src/types/events';
 import { Monitor } from '../../src/services/monitor';
 import * as crc32 from 'buffer-crc32';
 import { Socket } from 'dgram';
-import { LogLevel, Logger } from '../../src/util/logger';
 
 describe('Test class RCON', () => {
 
@@ -313,9 +312,10 @@ describe('Test class RCON', () => {
     
         const rcon = injector.resolve(RCON);
         rcon.reconnectDelay = 0;
-        rcon.checkIntervalTime = 2;
-        rcon.keepAliveIntervalTime = 20;
+        rcon.checkIntervalTime = 1;
+        rcon.keepAliveIntervalTime = 10;
         rcon.serverTimeoutTime = 30;
+        rcon.packetDebug = true;
 
         await rcon.start(true);
 
@@ -327,16 +327,16 @@ describe('Test class RCON', () => {
         getSocketListener(socket, 'message')!(createResponse(createLoginBuffer()));
         expect(rcon.isConnected()).to.be.true;
         const curSeq = rcon['sequenceNumber'];
-
-        await sleep(rcon.serverTimeoutTime + 2 * rcon.checkIntervalTime);
-
-        expect(rcon.isConnected()).to.be.false;
+        await sleep(2 * rcon.keepAliveIntervalTime + 3 * rcon.checkIntervalTime);
         expect(
             socket.send.getCalls().some((packet) =>
                 (packet.firstArg as any as Buffer).readUInt8(7) === 0x01
                 && (packet.firstArg as any as Buffer).readUInt8(8) > curSeq
             )
         ).to.be.true;
+
+        await sleep(rcon.serverTimeoutTime + 3 * rcon.checkIntervalTime);
+        expect(rcon.isConnected()).to.be.false;
 
         await rcon.stop(); // cleanup
 
