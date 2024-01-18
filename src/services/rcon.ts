@@ -626,10 +626,12 @@ export class RCON extends IStatefulService {
                 { command },
             );
             packet.resolve = (data) => {
-                if (data === undefined || data === null) {
-                    this.log.log(LogLevel.WARN, `Command '${command}' (${packet.sequence}) failed`);
-                } else if (this.packetDebug) {
-                    this.log.log(LogLevel.DEBUG, `Command '${command}' (${packet.sequence}) succeed`);
+                if (command?.length || this.packetDebug) {
+                    if (data === undefined || data === null) {
+                        this.log.log(LogLevel.WARN, `Command '${command}' (${packet.sequence}) failed`);
+                    } else if (this.packetDebug) {
+                        this.log.log(LogLevel.DEBUG, `Command '${command}' (${packet.sequence}) succeed`);
+                    }
                 }
                 resolve(data);
             };
