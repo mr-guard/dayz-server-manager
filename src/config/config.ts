@@ -1085,7 +1085,7 @@ export class Config {
      * Time (in ms) after which metrics will be removed (tick by tick)
      * Default is 30 days
      */
-    public metricMaxAge: number = 2_592_000;
+    public metricMaxAge: number = 2_592_000_000;
 
     // /////////////////////////// Hooks ///////////////////////////////////////
     /**
