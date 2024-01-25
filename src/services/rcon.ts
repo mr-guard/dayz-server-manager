@@ -14,6 +14,8 @@ import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
 import { Listener } from 'eventemitter2';
 import { Monitor } from './monitor';
+import * as CryptoJS from 'crypto-js';
+import * as bigInt from 'big-integer';
 
 // eslint-disable-next-line no-shadow
 export enum PacketType {
@@ -762,6 +764,155 @@ export class RCON extends IStatefulService {
                 type: 'rcon',
                 message,
             },
+        );
+    }
+
+    public steam64ToDayZID(steam64Id: string): string {
+        if (!steam64Id || steam64Id.length !== 17) return '';
+        return CryptoJS.SHA256(steam64Id)
+            .toString(CryptoJS.enc.Base64)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_');
+    }
+
+    /* istanbul ignore next */
+    public steam64ToBEGUID(steam64Id: string): string {
+        if (!steam64Id || steam64Id.length !== 17) return '';
+        let steamId = bigInt(steam64Id);
+
+        const parts = [0x42, 0x45, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        for (var i = 2; i < 10; i++) {
+            var res = steamId.divmod(256);
+            steamId = res.quotient;
+            parts[i] = res.remainder.toJSNumber();
+        }
+
+        const wordArray = CryptoJS.lib.WordArray.create(new Uint8Array(parts) as any);
+        const hash = CryptoJS.MD5(wordArray);
+        return hash.toString();
+    }
+
+    private readGuidFile(file: string): ({ lines: string[]; linefeed: string }) {
+        if (!this.fs.existsSync(file)) {
+            return {
+                linefeed: '\r\n',
+                lines: [],
+            };
+        }
+        const content = this.fs.readFileSync(
+            file,
+            { encoding: 'utf-8' },
+        );
+        const linefeed = content.includes('\r\n') ? '\r\n' : '\n';
+        return {
+            linefeed,
+            lines: content.split(linefeed),
+        };
+    }
+
+    private removeGuidFromFile(steamId: string, file: string): void {
+        if (!steamId || !(steamId.length === 17 || steamId.length === 44)) return;
+        steamId = steamId.length === 17 ? this.steam64ToDayZID(steamId) : steamId;
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, file);
+        const content = this.readGuidFile(filePath);
+        content.lines = content.lines.filter((x) => !x.trim().startsWith(steamId));
+        this.fs.writeFileSync(
+            filePath,
+            content.lines.join(content.linefeed),
+        );
+    }
+
+    private readGuidsFromFile(file: string): string[] {
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, file);
+        const content = this.readGuidFile(filePath);
+        return content.lines
+            .map((x) => x.trim())
+            .filter((x) => !!x && !x.startsWith('//'))
+            .map((x) => x.includes('//') ? x.slice(0, x.indexOf('//')).trim() : x);
+    }
+
+    private addGuidToFile(steamId: string, file: string): void {
+        if (!steamId) return;
+        if (steamId.length !== 17 && steamId.length !== 44) return;
+        steamId = steamId.length === 17 ? this.steam64ToDayZID(steamId) : steamId;
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, file);
+        const content = this.readGuidFile(filePath);
+        if (!content.lines.some((x) => x.trim().startsWith(steamId))) {
+            content.lines.push(steamId);
+            this.fs.writeFileSync(
+                filePath,
+                content.lines.join(content.linefeed),
+            );
+        }
+    }
+
+    public readBanTxt(): string[] {
+        return this.readGuidsFromFile('ban.txt');
+    }
+
+    public banTxt(steamId: string): void {
+        this.addGuidToFile(steamId, 'ban.txt');
+    }
+
+    public unbanTxt(steamId: string): void {
+        this.removeGuidFromFile(steamId, 'ban.txt');
+    }
+
+    public readWhitelistTxt(): string[] {
+        return this.readGuidsFromFile('whitelist.txt');
+    }
+
+    public whitelistTxt(steamId: string): void {
+        this.addGuidToFile(steamId, 'whitelist.txt');
+    }
+
+    public unwhitelistTxt(steamId: string): void {
+        this.removeGuidFromFile(steamId, 'whitelist.txt');
+    }
+
+    public readPriorityTxt(): string[] {
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, 'priority.txt');
+        const guids = new Set<string>();
+        if (this.fs.existsSync(filePath)) {
+            const content = this.readGuidFile(filePath);
+            for (const line of content.lines) {
+                const lineGuids = line
+                    .split(';')
+                    .map((x) => x.trim())
+                    .filter((x) => !!x);
+                for (const guid of lineGuids) {
+                    guids.add(guid);
+                }
+            }
+        }
+        return [...guids.values()];
+    }
+
+    public priorityTxt(steamId: string): void {
+        if (!steamId || steamId.length !== 17) return;
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, 'priority.txt');
+        const guids = this.readPriorityTxt();
+        guids.push(steamId);
+        this.fs.writeFileSync(
+            filePath,
+            guids.join(';'),
+        );
+    }
+
+    public unpriorityTxt(steamId: string): void {
+        if (!steamId || steamId.length !== 17) return;
+        const baseDir = this.manager.getServerPath();
+        const filePath = path.join(baseDir, 'priority.txt');
+        const guids = this.readPriorityTxt();
+        this.fs.writeFileSync(
+            filePath,
+            guids.filter((x) => x !== steamId).join(';'),
         );
     }
 }

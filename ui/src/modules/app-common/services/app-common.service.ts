@@ -177,6 +177,9 @@ export class AppCommonService {
 
         void this.fetchServerInfo().toPromise();
         this.adjustRefreshRate(this.refreshRate$);
+        if (this.refreshRate$ < 0) {
+            this.triggerUpdate();
+        }
     }
 
     public get lastUpdate(): number {
@@ -216,6 +219,33 @@ export class AppCommonService {
 
     private getAuthHeaders(): { [k: string]: string } {
         return this.auth.getAuthHeaders();
+    }
+
+    public apiPOST(resource: string, body: any): Observable<string> {
+        return this.httpClient.post(
+            `/api/${resource}`,
+            body,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                responseType: 'text'
+            },
+        ).pipe(
+            catchError((e) => processError(e)),
+        );
+    }
+
+    public apiGET(resource: string): Observable<string> {
+        return this.httpClient.get(
+            `/api/${resource}`,
+            {
+                headers: this.getAuthHeaders(),
+                withCredentials: true,
+                responseType: 'text'
+            },
+        ).pipe(
+            catchError((e) => processError(e)),
+        );
     }
 
     public fetchManagerConfig(): Observable<string> {

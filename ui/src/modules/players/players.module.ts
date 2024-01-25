@@ -7,7 +7,7 @@ import { AppCommonModule } from '../app-common/app-common.module';
 import { NavigationModule } from '../navigation/navigation.module';
 import { SBSortableHeaderDirective } from './directives/sortable.directive';
 import { PlayersComponent } from './containers/players/players.component';
-import { AllPlayerTableComponent, PlayerTableComponent } from './components/player-table/player-table.component';
+import { PlayerTableComponent } from './components/player-table/player-table.component';
 import { SortIconComponent } from './components/sort-icon/sort-icon.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -31,13 +31,11 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
         SBSortableHeaderDirective,
         PlayersComponent,
         PlayerTableComponent,
-        AllPlayerTableComponent,
         SortIconComponent,
     ],
     exports: [
         PlayersComponent,
         PlayerTableComponent,
-        AllPlayerTableComponent,
         SortIconComponent,
     ],
 })

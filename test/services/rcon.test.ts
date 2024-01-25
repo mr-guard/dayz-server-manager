@@ -426,4 +426,115 @@ describe('Test class RCON', () => {
 
     });
 
+    it('RCON-prioritytxt', async () => {
+        const steamId = new Array(17).fill('0').join('');
+
+        fs = memfs(
+            {
+                'test': {},
+            },
+            '/',
+            injector,
+        );
+        manager.getServerPath.returns('/test');
+        
+        const rcon = injector.resolve(RCON);
+        
+        let guids = rcon.readPriorityTxt();
+        expect(guids).to.be.empty;
+
+        rcon.priorityTxt(steamId);
+        rcon.priorityTxt(steamId);
+        guids = rcon.readPriorityTxt();
+        expect(guids.length).to.equal(1);
+        expect(guids).to.include(steamId);
+        
+        rcon.unpriorityTxt(steamId);
+        guids = rcon.readPriorityTxt();
+        expect(guids).to.be.empty;
+
+        expect(
+            fs.existsSync(
+                path.join(
+                    '/test',
+                    'priority.txt',
+                ),
+            ),
+        ).to.be.true;
+    });
+
+    it('RCON-bantxt', async () => {
+        const steamId = new Array(17).fill('0').join('');
+
+        fs = memfs(
+            {
+                'test': {},
+            },
+            '/',
+            injector,
+        );
+        manager.getServerPath.returns('/test');
+        
+        const rcon = injector.resolve(RCON);
+        
+        let guids = rcon.readBanTxt();
+        expect(guids).to.be.empty;
+
+        rcon.banTxt(steamId);
+        rcon.banTxt(steamId);
+        guids = rcon.readBanTxt();
+        expect(guids.length).to.equal(1);
+        expect(guids).to.include(rcon.steam64ToDayZID(steamId));
+        
+        rcon.unbanTxt(steamId);
+        guids = rcon.readBanTxt();
+        expect(guids).to.be.empty;
+        
+        expect(
+            fs.existsSync(
+                path.join(
+                    '/test',
+                    'ban.txt',
+                ),
+            ),
+        ).to.be.true;
+    });
+
+    it('RCON-whitelisttxt', async () => {
+        const steamId = new Array(17).fill('0').join('');
+
+        fs = memfs(
+            {
+                'test': {},
+            },
+            '/',
+            injector,
+        );
+        manager.getServerPath.returns('/test');
+        
+        const rcon = injector.resolve(RCON);
+        
+        let guids = rcon.readWhitelistTxt();
+        expect(guids).to.be.empty;
+
+        rcon.whitelistTxt(steamId);
+        rcon.whitelistTxt(steamId);
+        guids = rcon.readWhitelistTxt();
+        expect(guids.length).to.equal(1);
+        expect(guids).to.include(rcon.steam64ToDayZID(steamId));
+        
+        rcon.unwhitelistTxt(steamId);
+        guids = rcon.readWhitelistTxt();
+        expect(guids).to.be.empty;
+
+        expect(
+            fs.existsSync(
+                path.join(
+                    '/test',
+                    'whitelist.txt',
+                ),
+            ),
+        ).to.be.true;
+    });
+
 });
