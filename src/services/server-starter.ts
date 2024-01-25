@@ -1,6 +1,7 @@
 import { Manager } from '../control/manager';
 import { Processes } from '../services/processes';
-import { spawn } from 'child_process';
+// import { spawn } from 'child_process';
+import { spawn } from 'cross-spawn';
 import * as path from 'path';
 import { LogLevel } from '../util/logger';
 import { IService } from '../types/service';
@@ -36,7 +37,7 @@ export class ServerStarter extends IService {
     }
 
     public async killServer(force?: boolean): Promise<boolean> {
-        if (force || !this.rcon?.isConnected()) {
+        if (force || !this.rcon?.isConnected() || !this.manager.config.useRconToRestart) {
 
             const processes = await this.serverDetector.getDayZProcesses();
             const success = await Promise.all(
@@ -235,12 +236,13 @@ export class ServerStarter extends IService {
         const args = await this.buildStartServerArgs();
         return new Promise<boolean>((res, rej) => {
             try {
+                let usedArgs = [
+                    ...spawnCmd.args,
+                    ...args,
+                ];
                 const sub = spawn(
                     spawnCmd.cmd,
-                    [
-                        ...spawnCmd.args,
-                        ...args,
-                    ],
+                    usedArgs,
                     {
                         detached: true,
                         stdio: 'ignore',

@@ -1,43 +1,50 @@
 <form>
     <div class="form-group form-inline">
-        Full text search:
-        <input class="form-control ml-2" type="text" name="searchTerm"
-            [(ngModel)]="playerService.searchTerm" />
+        Search:
+        <input class="form-control ml-2" type="text" name="searchTerm" #searchTerm
+            (change)="playerService.updateState({ searchTerm: searchTerm.value })" />
         <span class="ml-3" *ngIf="playerService.loading$ | async">Loading...</span>
     </div>
-    <span>SteamID and character values are only available when the player is online.</span>
+    <span>SteamID, DayZID and character values might only be available when the player is online.</span>
     <table class="table table-striped">
         <thead>
             <tr>
                 <th scope="col" sbSortable="id" (sort)="onSort($event)">
                     <span>#</span>
-                    <sb-sort-icon *ngIf='sortedColumn === "id"' [direction]="sortedDirection"></sb-sort-icon>
+                    <sb-sort-icon *ngIf='(playerService.state$ | async)!.sortColumn === "id"' [direction]="(playerService.state$ | async)!.sortDirection"></sb-sort-icon>
                 </th>
                 <th scope="col" sbSortable="name" (sort)="onSort($event)"><span>Name</span>
-                    <sb-sort-icon *ngIf='sortedColumn === "name"' [direction]="sortedDirection"></sb-sort-icon>
+                    <sb-sort-icon *ngIf='(playerService.state$ | async)!.sortColumn === "name"' [direction]="(playerService.state$ | async)!.sortDirection"></sb-sort-icon>
                 </th>
                 <th scope="col"><span>BE GUID</span></th>
                 <th scope="col"><span>IP</span></th>
                 <th scope="col" sbSortable="ping" (sort)="onSort($event)"><span>Ping</span>
-                    <sb-sort-icon *ngIf='sortedColumn === "ping"' [direction]="sortedDirection"></sb-sort-icon>
+                    <sb-sort-icon *ngIf='(playerService.state$ | async)!.sortColumn === "ping"' [direction]="(playerService.state$ | async)!.sortDirection"></sb-sort-icon>
                 </th>
                 <th scope="col"><span>SteamID</span></th>
+                <th scope="col"><span>DayZID</span></th>
                 <th scope="col"><span>Damage</span></th>
                 <th scope="col"><span>Position</span></th>
+                <th scope="col"><span>Banned</span></th>
+                <th scope="col"><span>Whitelisted</span></th>
+                <th scope="col"><span>Prio</span></th>
             </tr>
         </thead>
         <tbody>
-            <tr *ngFor="let player of players$ | async">
+            <tr *ngFor="let player of players$ | async"
+                (click)="playerService.selectPlayer(player.beguid)"
+                [ngStyle]="{ 'background': (playerService.selected$ | async)?.beguid === player.beguid ? '#00009999' : undefined }"
+            >
                 <th scope="row">{{ player.id }}</th>
                 <td>
                     <!-- <img class="mr-2"
                          [src]="'https://upload.wikimedia.org/wikipedia/commons/' + player.flag"
                             style="width: 20px"
                     /> -->
-                    <ngb-highlight [result]="player.name" [term]="playerService.searchTerm"></ngb-highlight>
+                    <ngb-highlight [result]="player.name" [term]="(playerService.state$ | async)!.searchTerm"></ngb-highlight>
                 </td>
                 <td>
-                    <ngb-highlight [result]="player.beguid" [term]="playerService.searchTerm"></ngb-highlight>
+                    <ngb-highlight [result]="player.beguid" [term]="(playerService.state$ | async)!.searchTerm"></ngb-highlight>
                 </td>
                 <td>
                     {{ player.ip + ':' + player.port }}
@@ -46,7 +53,10 @@
                     {{ player.ping | number }}
                 </td>
                 <td>
-                    <ngb-highlight [result]="player.steamid" [term]="playerService.searchTerm"></ngb-highlight>
+                    <ngb-highlight [result]="player.steamid" [term]="(playerService.state$ | async)!.searchTerm"></ngb-highlight>
+                </td>
+                <td>
+                    <ngb-highlight [result]="player.dayzid" [term]="(playerService.state$ | async)!.searchTerm"></ngb-highlight>
                 </td>
                 <td>
                     {{ player.damage }}
@@ -54,17 +64,30 @@
                 <td>
                     {{ player.position }}
                 </td>
+                <td>
+                    {{ player.banned ? 'YES' : 'NO' }}
+                </td>
+                <td>
+                    {{ player.whitelisted ? 'YES' : 'NO' }}
+                </td>
+                <td>
+                    {{ player.prio ? 'YES' : 'NO' }}
+                </td>
             </tr>
         </tbody>
     </table>
     <div class="d-flex justify-content-between p-2">
         <ngb-pagination [collectionSize]="(total$ | async) || 0"
-            [(page)]="playerService.page"
-            [pageSize]="playerService.pageSize"
+            [page]="(playerService.state$ | async)!.page"
+            (pageChange)="playerService.updateState({ page: $event })"
+            [pageSize]="(playerService.state$ | async)!.pageSize"
             [maxSize]="5"
         ></ngb-pagination>
         <select class="custom-select" style="width: auto"
-            name="pageSize" [(ngModel)]="playerService.pageSize">
+            name="pageSize"
+            [ngModel]="(playerService.state$ | async)!.pageSize"
+            (ngModelChange)="playerService.updateState({ pageSize: $event })"
+        >
             <option [ngValue]="10">10 items per page</option>
             <option [ngValue]="20">20 items per page</option>
             <option [ngValue]="MAX_ITEMS">All</option>

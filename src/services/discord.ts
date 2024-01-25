@@ -83,7 +83,7 @@ export class DiscordBot extends IStatefulService {
         this.log.log(
             LogLevel.DEBUG,
             'Guildes',
-            this.client.guilds.cache.map(
+            this.client?.guilds?.cache?.map(
                 /* istanbul ignore next */ (guild) => [guild.id, guild.name],
             ),
         );

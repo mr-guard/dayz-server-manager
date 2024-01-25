@@ -397,6 +397,7 @@ export class Event {
 // eslint-disable-next-line no-shadow
 export enum HookTypeEnum {
     beforeStart = 'beforeStart',
+    afterStart = 'afterStart',
     missionChanged = 'missionChanged'
 }
 
@@ -434,6 +435,8 @@ export class WorkshopMod {
     public workshopId!: string;
 
     public name?: string;
+
+    public disabled?: boolean;
 
 }
 
@@ -647,6 +650,14 @@ export class Config {
     public rconIP: string = '';
 
     /**
+     * Use RCon to perform server restarts.
+     * Shutdown is potentially more graceful, yet RCon may not work for you.
+     * Setting this to false might cause server restarts to fail if the manager is registered as a service.
+     * This is a limititation of windows/taskkill as interactive service are not working anymore.
+     */
+    public useRconToRestart: boolean = true;
+
+    /**
      * Local mods
      * Actual modnames like '@MyAwesomeMod'
      */
@@ -855,11 +866,41 @@ export class Config {
 
     /**
      * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as mods.
+     *
+     * Can be either a list of strings i.e. ["123456","654321"]
+     * or a list of mod descriptors i.e.
+     * [
+     *   {
+     *     "workshopId": "123456",
+     *     "name": "MyMod",
+     *     "disabled": false
+     *   },
+     *   {
+     *     "workshopId": "654321",
+     *     "disabled": true
+     *   }
+     * ]
+     * The fields "name" and "disabled" are optional.
      */
     public steamWsMods: (string | WorkshopMod)[] = [];
 
     /**
      * List of Mod IDs (workshop id, not modname!) to be downloaded from steam and used as server mods.
+     *
+     * Can be either a list of strings i.e. ["123456","654321"]
+     * or a list of mod descriptors i.e.
+     * [
+     *   {
+     *     "workshopId": "123456",
+     *     "name": "MyServerMod",
+     *     "disabled": false
+     *   },
+     *   {
+     *     "workshopId": "654321",
+     *     "disabled": true
+     *   }
+     * ]
+     * The fields "name" and "disabled" are optional.
      */
     public steamWsServerMods: (string | WorkshopMod)[] = [];
 
@@ -878,7 +919,7 @@ export class Config {
      * This can lead to mod files (files inside the mod folder) being reset, after manually editing them.
      * Only disable this, when that happens or you really want to skip validation.
      */
-    public validateModsAfterUpdate: boolean = true;
+    public validateModsAfterUpdate: boolean = false;
 
     /**
      * Whether or not to check for server updates on each server restart
@@ -899,7 +940,7 @@ export class Config {
      * To avoid this, rename your mission / use a different name for the server cfg.. etc.
      * Only disable this, when you need to use the default names or really want to skip validation.
      */
-    public validateServerAfterUpdate: boolean = true;
+    public validateServerAfterUpdate: boolean = false;
 
     /**
      * Whether or not to use hardlink for mods instead of copying them
@@ -1044,7 +1085,7 @@ export class Config {
      * Time (in ms) after which metrics will be removed (tick by tick)
      * Default is 30 days
      */
-    public metricMaxAge: number = 2_592_000;
+    public metricMaxAge: number = 2_592_000_000;
 
     // /////////////////////////// Hooks ///////////////////////////////////////
     /**

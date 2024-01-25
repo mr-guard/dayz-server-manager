@@ -260,10 +260,26 @@ export class ManagerController {
     /* istanbul ignore next */
     private reloadConfig(): void {
         if (!this.manager?.initDone) {
+            this.manager.reloadWaiting = true;
             return;
         }
+        if (this.manager?.reloading) {
+            this.manager.reloadWaiting = true;
+            return;
+        }
+        this.manager.reloading = true;
         this.log.log(LogLevel.IMPORTANT, 'Reloading config...');
-        void this.start();
+        this.start().then(
+            () => {
+                this.manager.reloading = false;
+                if (this.manager.reloadWaiting) {
+                    void this.reloadConfig();
+                }
+            },
+            (e) => {
+                this.log.log(LogLevel.ERROR, 'Reloading failed', e);
+            },
+        );
     }
 
     private async initialSetup(): Promise<void> {

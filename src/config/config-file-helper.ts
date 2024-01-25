@@ -31,9 +31,9 @@ export class ConfigFileHelper extends IService {
         return path.join(this.paths.cwd(), ConfigFileHelper.CFG_NAME);
     }
 
-    private getConfigFileContent(cfgPath: string): string {
+    public getConfigFileContent(cfgPath: string): string {
         if (this.fs.existsSync(cfgPath)) {
-            return this.fs.readFileSync(cfgPath)?.toString();
+            return this.fs.readFileSync(cfgPath, { encoding: 'utf-8' });
         }
         throw new Error('Config file does not exist');
     }
@@ -74,11 +74,11 @@ export class ConfigFileHelper extends IService {
         }
     }
 
-    public writeConfig(config: Config): void {
+    public writeConfig(newConfig: string): void {
         // apply defaults
-        config = commentJson.assign(
+        const config = commentJson.assign(
             this.readConfig() || commentJson.parse(generateConfigTemplate(configschema)) as any as Config,
-            config,
+            commentJson.parse(newConfig) as any as Config,
         );
 
         const configErrors = validateConfig(config);
@@ -87,19 +87,13 @@ export class ConfigFileHelper extends IService {
         }
 
         try {
-            this.writeConfigFile(
+            this.fs.writeFileSync(
+                this.getConfigFilePath(),
                 commentJson.stringify(config, null, 2),
             );
         } catch (e) {
             throw [`Error generating / writing config (${e?.message ?? 'Unknown'}). Cannot replace config.`];
         }
-    }
-
-    private writeConfigFile(content: string): void {
-        this.fs.writeFileSync(
-            this.getConfigFilePath(),
-            content,
-        );
     }
 
 }

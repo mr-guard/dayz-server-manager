@@ -19,6 +19,9 @@ export class Manager {
     private config$!: Config;
     public initDone: boolean = false;
 
+    public reloading: boolean = false;
+    public reloadWaiting: boolean = false;
+
     public constructor(
         loggerFactory: LoggerFactory,
         private paths: Paths,
@@ -124,7 +127,7 @@ export class Manager {
                     return !!x;
                 }
 
-                return !!x.workshopId;
+                return !!x.workshopId && !x.disabled;
             })
             .map((x) => {
                 if (typeof x === 'string') {

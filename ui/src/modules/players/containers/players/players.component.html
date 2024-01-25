@@ -1,5 +1,96 @@
 <sb-layout-dashboard>
     <sb-dashboard-head title="Players" [hideBreadcrumbs]="false"></sb-dashboard-head>
+    <div class="col-md-12">
+        <h3>ID Calculator</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="row">
+                    <div class="col">
+                        Steam64 ID:
+                    </div>
+                    <div class="col">
+                        <input class="form-control ml-2" type="text" name="Steam64ID"
+                            [(ngModel)]="steam64Input" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        DayZ ID:
+                    </div>
+                    <div class="col">
+                        <input
+                            class="form-control ml-2" type="text"
+                            [(ngModel)]="dayzId"
+                        />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        BE GUID:
+                    </div>
+                    <div class="col">
+                        <input
+                            class="form-control ml-2" type="text"
+                            [(ngModel)]="beGuid"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6" title="Either Steam64 or DayZ ID must be enetered to execute actions.">
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-danger"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="ban()"
+                        >BAN</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-danger"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="unban()"
+                        >UNBAN</button>
+                    </div>
+
+                    <div class="col">
+                        <button class="btn btn-primary"
+                            (click)="reloadRconBans()"
+                            title="Relaod RCON Bans"
+                        >RELOAD RCON BANS</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-primary"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="whitelist()"
+                        >WHITELIST</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-primary"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="unwhitelist()"
+                        >UNWHITELIST</button>
+                    </div>
+                    <div class="col"></div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-primary"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="prio()"
+                        >PRIO</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-primary"
+                            [disabled]="!steam64Input && !dayzId"
+                            (click)="unprio()"
+                        >UNPRIO</button>
+                    </div>
+                    <div class="col"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <ul class="nav-tabs" [(activeId)]="activeTab" ngbNav #nav="ngbNav">
         <li [ngbNavItem]="1">
             <a ngbNavLink>Current Players</a>
@@ -9,7 +100,10 @@
                         <fa-icon class="mr-1" [icon]='["fas", "table"]'></fa-icon>Current Players
                     </div> -->
                     <div class="card-body">
-                        <sb-player-table></sb-player-table>
+                        <sb-player-table
+                            [players$]="playerService.players$"
+                            [total$]="playerService.total$"
+                        ></sb-player-table>
                     </div>
                 </sb-card>
             </ng-template>
@@ -22,7 +116,114 @@
                         <fa-icon class="mr-1" [icon]='["fas", "table"]'></fa-icon>All Players
                     </div> -->
                     <div class="card-body">
-                        <sb-all-player-table [pageSize]="20"></sb-all-player-table>
+                        <sb-player-table
+                            [players$]="playerService.allPlayers$"
+                            [total$]="playerService.allTotal$"
+                        ></sb-player-table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+        <li [ngbNavItem]="3">
+            <a ngbNavLink>Bans</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span>ID</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of playerService.bans"
+                                    [ngStyle]="{ 'background': (playerService.selected$ | async)?.dayzid === item ? '#00009999' : undefined }"
+                                    (click)="playerService.selectPlayer(item)"
+                                >
+                                    <th scope="row">{{ item }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+        <li [ngbNavItem]="4">
+            <a ngbNavLink>Whitelist</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span>ID</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of playerService.whitelisted"
+                                    [ngStyle]="{ 'background': (playerService.selected$ | async)?.dayzid === item ? '#00009999' : undefined }"
+                                    (click)="playerService.selectPlayer(item)"
+                                >
+                                    <th scope="row">{{ item }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+        <li [ngbNavItem]="5">
+            <a ngbNavLink>Priority</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span>ID</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of playerService.priority"
+                                    [ngStyle]="{ 'background': (playerService.selected$ | async)?.steamid === item ? '#00009999' : undefined }"
+                                    (click)="playerService.selectPlayer(item)"
+                                >
+                                    <th scope="row">{{ item }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </sb-card>
+            </ng-template>
+        </li>
+        <li [ngbNavItem]="6">
+            <a ngbNavLink>RCON Bans</a>
+            <ng-template ngbNavContent>
+                <sb-card background="card-no-top">
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col"><span>ID</span></th>
+                                    <th scope="col"><span>Ban</span></th>
+                                    <th scope="col"><span>Type</span></th>
+                                    <th scope="col"><span>Time</span></th>
+                                    <th scope="col"><span>Reason</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of playerService.rconBans.values()"
+                                    [ngStyle]="{ 'background': (playerService.selected$ | async)?.beguid === item.ban ? '#00009999' : undefined }"
+                                    (click)="playerService.selectPlayer(item.ban)"
+                                >
+                                    <th scope="row">{{ item.id }}</th>
+                                    <th scope="row">{{ item.ban }}</th>
+                                    <th scope="row">{{ item.type }}</th>
+                                    <th scope="row">{{ item.time }}</th>
+                                    <th scope="row">{{ item.reason }}</th>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </sb-card>
             </ng-template>

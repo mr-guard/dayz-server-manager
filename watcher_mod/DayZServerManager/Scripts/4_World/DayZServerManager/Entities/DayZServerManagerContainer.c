@@ -6,21 +6,27 @@ class DayZServerManagerContainer
 	
     static void registerVehicle(EntityAI vehicle)
 	{
-		#ifdef DZSM_DEBUG_CONTAINER
-		Print("DZSM ~ Registered: " + vehicle.GetType());
-		#endif
-		m_vehicles.Insert(vehicle);
+		if (vehicle)
+		{
+			#ifdef DZSM_DEBUG_CONTAINER
+			Print("DZSM ~ Registered: " + vehicle.GetType());
+			#endif
+			m_vehicles.Insert(vehicle);
+		}
 	}
 
     static void unregisterVehicle(EntityAI vehicle)
 	{
-		#ifdef DZSM_DEBUG_CONTAINER
-		Print("DZSM ~ UnRegistered: " + vehicle.GetType());
-		#endif
-		int i = m_vehicles.Find(vehicle);
-		if (i >= 0)
+		if (vehicle)
 		{
-			m_vehicles.Remove(i);
+			#ifdef DZSM_DEBUG_CONTAINER
+			Print("DZSM ~ UnRegistered: " + vehicle.GetType());
+			#endif
+			int i = m_vehicles.Find(vehicle);
+			if (i >= 0)
+			{
+				m_vehicles.Remove(i);
+			}
 		}
     }
 

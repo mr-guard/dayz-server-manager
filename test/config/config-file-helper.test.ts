@@ -2,6 +2,7 @@ import 'reflect-metadata';
 
 import { expect } from '../expect';
 import * as sinon from 'sinon';
+import * as commentJson from 'comment-json';
 import { Config } from '../../src/config/config';
 import { disableConsole, enableConsole, memfs, stubClass } from '../util';
 import { DATA_ERROR_CONFIG, PARSER_ERROR_CONFIG, VALID_CONFIG } from './config-validate.test';
@@ -81,18 +82,20 @@ describe('Test class ConfigFileHelper', () => {
         const helper = injector.resolve(ConfigFileHelper);
         
         helper.writeConfig(
-            Object.assign(
-                new Config(),
-                <Partial<Config>>{
-                    instanceId: 'test-instance',
-                    admins: [{
-                        userId: 'test-admin',
-                        userLevel: 'admin',
-                        password: 'admin'
-                    }],
-                    rconPassword: 'test123',
-                    steamUsername: 'testuser'
-                }
+            commentJson.stringify(
+                Object.assign(
+                    new Config(),
+                    <Partial<Config>>{
+                        instanceId: 'test-instance',
+                        admins: [{
+                            userId: 'test-admin',
+                            userLevel: 'admin',
+                            password: 'admin'
+                        }],
+                        rconPassword: 'test123',
+                        steamUsername: 'testuser'
+                    }
+                ),
             ),
         );
 
@@ -138,18 +141,20 @@ describe('Test class ConfigFileHelper', () => {
         const stub = sinon.stub(files, 'writeFileSync').throwsException();
         
         expect(() => injector.resolve(ConfigFileHelper).writeConfig(
-            Object.assign(
-                new Config(),
-                {
-                    instanceId: 'test',
-                    admins: [{
-                        userId: 'test-admin',
-                        userLevel: 'admin',
-                        password: 'admin'
-                    }],
-                    rconPassword: 'test123',
-                    steamUsername: 'testuser'
-                }
+            commentJson.stringify(
+                Object.assign(
+                    new Config(),
+                    {
+                        instanceId: 'test',
+                        admins: [{
+                            userId: 'test-admin',
+                            userLevel: 'admin',
+                            password: 'admin'
+                        }],
+                        rconPassword: 'test123',
+                        steamUsername: 'testuser'
+                    }
+                ),
             ),
         )).to.throw();
 

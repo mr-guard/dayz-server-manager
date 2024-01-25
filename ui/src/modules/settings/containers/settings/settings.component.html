@@ -239,6 +239,14 @@
                                                 [ngModelOptions]="{standalone: true}"
                                         >
                                     </div>
+                                    <div class="prefixed-input">
+                                        <label>Disabled?</label>
+                                        <input  type="checkbox"
+                                                class="form-control"
+                                                [(ngModel)]="config.steamWsMods[idx]['disabled']"
+                                                [ngModelOptions]="{standalone: true}"
+                                        >
+                                    </div>
                                 </div>
                                 <div class="col-md-1">
                                     <button class="btn btn-danger form-control" type="button" (click)="config.steamWsMods.splice(idx, 1)">

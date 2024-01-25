@@ -923,6 +923,94 @@ class DayZServerManagerWatcher
 			Print("DZSM ~ DayZServerManagerWatcher() - DATA DUMP DONE");
 			#endif
 		}
+
+		CrashTest();
+	}
+
+	void CrashTest()
+	{
+		string crashCheckItemsPath = "$profile:itemsforcrashcheck.json";
+		if (!FileExist(crashCheckItemsPath))
+		{
+			return;
+		}
+		ref array<string> crashCheckItems = new array<string>;
+		JsonFileLoader<array<string>>.JsonLoadFile(crashCheckItemsPath, crashCheckItems);
+		
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ DayZServerManagerWatcher() - STARTING CRASH TEST");
+		#endif
+
+		string crashingItemsPath = "$profile:crashingitems.json";
+		ref array<string> crashingItems = new array<string>;
+
+		if (!FileExist(crashingItemsPath))
+		{
+			for (int i = 0; i < DZSMWeaponDumpEntry.m_ItemsThatCrash.Count(); i++)
+			{
+				string knownCrashItem = DZSMWeaponDumpEntry.m_ItemsThatCrash[i];
+				knownCrashItem.ToLower();
+				crashingItems.Insert(knownCrashItem);
+			}
+			JsonFileLoader<array<string>>.JsonSaveFile(crashingItemsPath, crashingItems); 
+		}
+		else
+		{
+			JsonFileLoader<array<string>>.JsonLoadFile(crashingItemsPath, crashingItems);
+		}
+
+		int totalRuns = crashCheckItems.Count();
+		for (int x = 0; x < totalRuns; x++)
+		{
+			// remove from queue and save
+			string itemToTest = crashCheckItems.Get(0);
+			itemToTest.ToLower();
+			crashCheckItems.Remove(0);
+			JsonFileLoader<array<string>>.JsonSaveFile(crashCheckItemsPath, crashCheckItems);
+
+			Print("Check for crash: " + itemToTest);
+
+			// check if not already known to crash
+			bool knownToCrash = false;
+			for (int j = 0; j < crashingItems.Count(); j++)
+			{
+				if ( crashingItems[j] == itemToTest )
+				{
+					knownToCrash = true;
+					break;
+				}
+			}
+			if (knownToCrash)
+			{
+				Print("Item already known to crash: " + itemToTest);
+				continue;
+			}
+
+			// insert and save
+			crashingItems.Insert(itemToTest);
+			JsonFileLoader<array<string>>.JsonSaveFile(crashingItemsPath, crashingItems);
+			
+			// test
+			EntityAI ent;
+			if ( !Class.CastTo( ent, GetGame().CreateObjectEx( itemToTest, "0 0 0", ECE_NONE ) ) )
+			{
+				Print("Failed to create item to check for crash: " + itemToTest);
+			}
+			else {
+
+				Print("Item crash check completed successfully: " + itemToTest);
+				GetGame().ObjectDelete( ent );
+				// at this point its propbably safe.. so remove it again and save
+				crashingItems.Remove(crashingItems.Count() - 1);
+				JsonFileLoader<array<string>>.JsonSaveFile(crashingItemsPath, crashingItems);
+			}
+			
+		}
+
+
+		#ifdef DZSM_DEBUG
+		Print("DZSM ~ DayZServerManagerWatcher() - CRASH TEST DONE");
+		#endif
 	}
 
     float GetInterval()
@@ -964,32 +1052,35 @@ class DayZServerManagerWatcher
 			for (i = 0; i < allVehicles.Count(); i++)
 			{
 				EntityAI itrCar = allVehicles.Get(i);
-				
-				ref ServerManagerEntry entry = new ServerManagerEntry();
-				
-				entry.entryType = "VEHICLE";
-				
-				if (itrCar.IsKindOf("ExpansionHelicopterScript"))
+				if (itrCar)
 				{
-					entry.category = "AIR";
-				}
-				else if (itrCar.IsKindOf("ExpansionBoatScript"))
-				{
-					entry.category = "SEA";
-				}
-				else
-				{
-					entry.category = "GROUND";
+					ref ServerManagerEntry entry = new ServerManagerEntry();
+					
+					entry.entryType = "VEHICLE";
+					
+					if (itrCar.IsKindOf("ExpansionHelicopterScript"))
+					{
+						entry.category = "AIR";
+					}
+					else if (itrCar.IsKindOf("ExpansionBoatScript"))
+					{
+						entry.category = "SEA";
+					}
+					else
+					{
+						entry.category = "GROUND";
+					}
+					
+					entry.name = itrCar.GetName();
+					entry.damage = itrCar.GetDamage();
+					entry.type = itrCar.GetType();
+					entry.id = itrCar.GetID();
+					entry.speed = itrCar.GetSpeed().ToString(false);
+					entry.position = itrCar.GetPosition().ToString(false);
+					
+					container.vehicles.Insert(entry);
 				}
 				
-				entry.name = itrCar.GetName();
-				entry.damage = itrCar.GetDamage();
-				entry.type = itrCar.GetType();
-				entry.id = itrCar.GetID();
-				entry.speed = itrCar.GetSpeed().ToString(false);
-				entry.position = itrCar.GetPosition().ToString(false);
-				
-				container.vehicles.Insert(entry);
 			}
 		}
 		
