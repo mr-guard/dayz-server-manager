@@ -111,7 +111,7 @@ export class ServerStarter extends IService {
                 await this.steamCmd.updateServer();
             }
             if (!await this.steamCmd.checkServer()) {
-                throw new Error('Server installation failed');
+                throw new Error('Server installation failed. Server executable not found. Check the steam cmd logs and your settings for wrong paths or wrong executable names');
             }
 
             // Mods
