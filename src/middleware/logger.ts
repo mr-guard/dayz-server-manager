@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import { Logger, LogLevel } from '../util/logger';
+import { dzsmDebugHttp } from '../config/constants';
 
 const logger = new Logger('HTTP API');
 
 /* istanbul ignore next */
 export const loggerMiddleware = (req: Request, resp: Response, next: any): void => {
-    if (process.env['DZSM_DEBUG_HTTP'] === 'true') {
+    if (process.env['DZSM_DEBUG_HTTP'] === 'true' || dzsmDebugHttp) {
         logger.log(
             LogLevel.DEBUG,
             'Request:',
