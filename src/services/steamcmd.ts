@@ -293,10 +293,29 @@ export class SteamCMD extends IService {
     }
 
     private getLoginArgs(): string[] {
-        return [
+        const loginArgs = [
             '+login',
             this.manager.config.steamUsername,
             this.manager.config.steamPassword ?? '',
+        ];
+
+        let guardCode: string = this.manager.config.steamGuardCode;
+
+        if (!guardCode) {
+            const guardCodePath = path.join(this.paths.cwd(), 'STEAM_GUARD_CODE');
+            if (this.fs.existsSync(guardCodePath)) {
+                guardCode = this.fs.readFileSync(guardCodePath, { encoding: 'utf-8' });
+                this.fs.rmSync(guardCodePath);
+            }
+        }
+
+        return [
+            ...(
+                guardCode
+                    ? ['+set_steam_guard_code', guardCode]
+                    : []
+            ),
+            ...loginArgs,
         ];
     }
 

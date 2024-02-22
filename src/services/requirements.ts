@@ -167,6 +167,14 @@ export class Requirements extends IService {
                 `\n\n${libname} was not found.\n`
                     + 'You can install it by:\n\n'
                     + `apt-get install ${libname}\n\n`
+                    + (
+                        alternativeLib
+                            ? (
+                                `or\n\n`
+                                + `apt-get install ${alternativeLib}\n\n`
+                            )
+                            : ''
+                    )
                     + `Install it and restart the manager`,
             );
         }

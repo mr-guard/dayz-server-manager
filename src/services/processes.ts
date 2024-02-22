@@ -198,7 +198,7 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                     process.stdin.on('data', /* istanbul ignore next */ (data) => {
                         pty.write(data.toString());
                     });
-                    process.stdin.unref();
+                    process.stdin?.unref?.();
                 }
 
                 let stdout = '';

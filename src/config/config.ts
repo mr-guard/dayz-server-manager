@@ -845,6 +845,12 @@ export class Config {
     public steamPassword: string = '';
 
     /**
+     * Optional only needed if steam guard is enabled and not cached (manually logged in once)
+     * Only EMail Guard Codes can be cached
+     */
+    public steamGuardCode: string = '';
+
+    /**
      * Path to where the downloaded mods are located (relative or absolute)
      * Default is current directory (PWD / CWD) + Workshop
      *
