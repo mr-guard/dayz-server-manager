@@ -145,7 +145,6 @@
     "websocket": "^1.0.34"
   },
   "dependencies": {
-    "@senfo/process-list": "^2.0.6",
     "better-sqlite3": "^7.4.0",
     "big-integer": "^1.6.52",
     "buffer-crc32": "^0.2.13",

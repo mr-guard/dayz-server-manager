@@ -796,7 +796,7 @@ export class SteamCMD extends IService {
 
             // if this mod would exceed the download limit, then execute the batch first
             if (curBatch.length && (curBatchFileSize + (mod.file_size || 0)) >= maxDownloadSize) {
-                const curBatchIds = curBatch.map((x) => x.publishedfileid);
+                const curBatchIds = curBatch.map(/* istanbul ignore next */ (x) => x.publishedfileid);
                 this.log.log(LogLevel.INFO, `Batching mod update for ids: ${curBatchIds.join(', ')}, because the maximum download size per batch (${maxDownloadSize}) would be exceed with the next mod. Current download size: ${curBatchFileSize}`);
                 if (!await this.updateMod(curBatchIds)) {
                     return false;
