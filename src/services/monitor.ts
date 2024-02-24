@@ -10,6 +10,8 @@ import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
 import { ServerStarter } from './server-starter';
 import { ServerDetector } from './server-detector';
+import { Paths } from './paths';
+import * as path from 'path';
 
 export type ServerStateListener = (state: ServerState) => any;
 
@@ -39,9 +41,14 @@ export class Monitor extends IStatefulService {
         private processes: Processes,
         private serverStarter: ServerStarter,
         private serverDetector: ServerDetector,
+        private paths: Paths,
         @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('Monitor'));
+
+        if (process.argv.includes('--start-locked')) {
+            this.restartLock = true;
+        }
     }
 
     private get internalServerState(): ServerState {
@@ -84,7 +91,10 @@ export class Monitor extends IStatefulService {
     }
 
     public async start(): Promise<void> {
-        if (this.timers.getTimer('tick')) return;
+        if (this.timers.getTimer('tick')) return; // already started
+
+        this.lockPath = path.join(this.paths.cwd(), 'SERVER_LOCK');
+
         this.lastTick = 0;
         this.tickRunning = false;
         this.timers.addInterval(

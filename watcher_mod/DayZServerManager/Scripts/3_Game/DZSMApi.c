@@ -16,9 +16,7 @@ ref DZSMApiOptions GetDZSMApiOptions()
 		string jsonConfigPath = "$profile:\\DZSMApiOptions.json";
 		if (FileExist(jsonConfigPath))
 		{
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ Loading API Config");
-			#endif
 			JsonFileLoader<ref DZSMApiOptions>.JsonLoadFile(jsonConfigPath, m_dzsmApiOptions);
 		}
 		else

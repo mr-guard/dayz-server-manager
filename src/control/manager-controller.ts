@@ -29,6 +29,7 @@ import { MetricsCollector } from '../services/metrics-collector';
 import { IngameREST } from '../interface/ingame-rest';
 import { SyberiaCompat } from '../services/syberia-compat';
 import { DiscordEventConverter } from '../services/discord-event-converter';
+import { ConfigFileHelper } from '../config/config-file-helper';
 
 @singleton()
 @registry([
@@ -123,7 +124,8 @@ export class ManagerController {
 
     private working = false;
     private started = false;
-    private skipInitialCheck: boolean = false;
+
+    private skipInit: boolean = process.argv.includes('--skip-init');
 
     private log: Logger;
 
@@ -137,6 +139,7 @@ export class ManagerController {
         private requirements: Requirements,
         private discord: DiscordBot,
         private discordEvents: DiscordEventConverter,
+        private configFileHelper: ConfigFileHelper,
     ) {
         this.log = loggerFactory.createLogger('Bootstrap');
     }
@@ -200,6 +203,8 @@ export class ManagerController {
 
     public async start(): Promise<void> {
 
+        this.configFileHelper.createDefaultConfig();
+
         if (this.working) {
             this.log.log(LogLevel.DEBUG, `Start called while ${this.started ? 'stopping' : 'starting'}`);
             return;
@@ -225,7 +230,9 @@ export class ManagerController {
         process.title = `Server-Manager ${this.manager.getServerExePath()}`;
 
         // check any requirements before even starting
-        await this.requirements.check();
+        if (!this.skipInit) {
+            await this.requirements.check();
+        }
 
         this.log.log(LogLevel.DEBUG, 'Setting up services..');
 
@@ -233,7 +240,9 @@ export class ManagerController {
         this.log.log(LogLevel.DEBUG, 'Services are set up');
         try {
 
-            await this.initialSetup();
+            if (!this.skipInit) {
+                await this.initialSetup();
+            }
 
             this.log.log(LogLevel.DEBUG, 'Initial Check done. Starting Init..');
             for (const service of this.getStatefulServices()) {
@@ -284,7 +293,7 @@ export class ManagerController {
 
     private async initialSetup(): Promise<void> {
 
-        if (this.skipInitialCheck || await this.serverDetector.isServerRunning()) {
+        if (await this.serverDetector.isServerRunning()) {
             this.log.log(LogLevel.IMPORTANT, 'Skipping initial SteamCMD check because the server is already running');
             return;
         }

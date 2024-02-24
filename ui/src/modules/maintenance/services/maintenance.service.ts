@@ -59,7 +59,7 @@ export class MaintenanceService {
     }
 
     public async unlockRestarts(): Promise<boolean> {
-        return this.execute('updateserver');
+        return this.execute('unlockrestart');
     }
 
     public async restartServer(force?: boolean): Promise<boolean> {

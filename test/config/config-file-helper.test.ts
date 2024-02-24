@@ -163,4 +163,17 @@ describe('Test class ConfigFileHelper', () => {
         
     });
 
+    it('ConfigFileHelper-writeConfig', () => {
+        const helper = injector.resolve(ConfigFileHelper);
+        
+        helper.createDefaultConfig();
+
+        // Expect result
+        const cfgPath = helper.getConfigFilePath();
+        expect(files.existsSync(cfgPath)).to.be.true;
+
+        const config = helper.readConfig();
+        expect(config?.admins[0].password).not.to.equal('admin');
+    });
+
 });

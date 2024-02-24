@@ -115,7 +115,7 @@ Also supports linux server (See [Linux Server Usage](#linux-server))
 <br><a name="requirements"></a>
 ## Installation Requirements <hr>  
 
-* A Windows (Root) Server with RDP/Shell access
+* A Windows or linux (Root) Server with RDP/Shell access
   * hosted instances (like nitrado) cannot use this EXCEPT they can run arbitrary programs
 * To download mods: A steam account that owns DayZ and has SteamGuard set to EMAIL or DEACTIVATED!
 * That's it!
@@ -124,26 +124,27 @@ Also supports linux server (See [Linux Server Usage](#linux-server))
 ## Usage <hr>  
 
 * Download the [latest version](https://github.com/mr-guard/dayz-server-manager/releases/latest) of the manager
-* Extract the manager and the config template
-* Copy and rename the config template to `server-manager.json`
+* Extract the manager in the directory where you want your serverfiles to be
+* Start the manager once to create a new config with default values
 * Edit the `server-manager.json` config to fit your needs
   * Fill the required fields (everything is described in the file)
 `!IMPORTANT! Change the admin and rcon password`
   * Other than that the defaults will probably fit your needs
   * You can also checkout the [configuration guides](#configuration)
-* Start the manager in the folder where the config is situated
-
+* Start the manager and it will use the updated config
+<br>
 * It is recommended to create a separate Steam account which owns DayZ. You need to set SteamGuard to EMAIL or DEACTIVATED! Do not use Mobile authenticator because those codes will not be saved on the server and need to be entered on every download/update. 
-
-* Optionally you can add it as Windows Service instead of launching it manually
+<br>
+* Optionally you can add it as Windows/Linux Service instead of launching it manually
+<br>
 * Make sure the "Execution Location" is the folder, where the config is located (this is not necessarily the folder where the manager executable is located)
 
 <br><a name="updating"></a>
 ## Updating <hr>  
 
 This app was written with backwards compatibility in mind.<br>
-Sometimes, however, some bracking changes to the server manager config will occur.<br>
-The best strategy to update is to take the config template of the new version and and modify it to match your old version.<br>
+Sometimes, however, some breaking changes to the server manager config will occur.<br>
+The best strategy to update, is to take the config template of the new version and modify it to match your old values.<br>
 This way you can not miss out on new properties which might be required.<br>
 
 <br><a name="configuration"></a>
@@ -205,17 +206,17 @@ The example snippet shows how to add an admin, a manager and a moderator.<br>
     ...
     "admins": [
         {
-            "userId": "FunkyDude#1234",
+            "userId": "FunkyDude",
             "userLevel": "admin",
             "password": "admin"
         },
         {
-            "userId": "TheDude#4242",
+            "userId": "the-discord-dude",
             "userLevel": "manage",
             "password": "somecoolpassword"
         },
         {
-            "userId": "InternDude#4321",
+            "userId": "InternDude",
             "userLevel": "moderate",
             "password": "somoderatormuchwow"
         }
@@ -420,7 +421,7 @@ If the manager crashes or shuts down, your dayz server will also be shut down.
    Replace `/dayz` with the directory you want your server to be in, but make sure its already created
   ```sh
     useradd --system -m -d /dayz -s /bin/bash dayz
-    chown dayz:dayz /dayz && \
+    chown dayz:dayz /dayz
   ```
 3. Download and extract the latest linux release from the releases page
 4. Setup the manager files
@@ -534,7 +535,6 @@ If you are really paranoid about pasting your password somewhere, or you use ste
 * Provide self generated/signed certificates for HTTPS
 * More script hooks
 * Custom discord commands
-* Edit/View Bans in WebUI
 * Examples and integration scripts for Workbench (for mod Development)
 
 <br><a name="folder-layout"></a>  
@@ -550,6 +550,8 @@ If you are really paranoid about pasting your password somewhere, or you use ste
 ----- steamcmd.exe
 ----- ..
 -- Workshop // contains the actual workshop mods
+-- STEAM_GUARD_CODE // Optional text file. Containing only your steam guard code. will be deleted after usage. See Known Issues / Limitations for more details.
+-- SERVER_LOCK // Optional file. If exists server restarts will be skipped
 ```
 
 You can, however, change these paths to fit your needs
@@ -560,8 +562,9 @@ You can, however, change these paths to fit your needs
 The server manager is a self contained NodeJS-App written in TypeScript and packaged with pkg.  
 You DON'T need to install NodeJS or anything else.  
 Everything you need is contained in the single executable (exe).  
-However, due to that the exe is around 50MB in size.  
-This tool makes use of the windows commandline tools (namely netsh and wmic) to determine installation requirements and the state of the server.  
+However, due to that the exe is around 90MB in size.  
+This tool makes use of the windows commandline tools (namely netsh and wmic) or the linux cli tools and procfs to determine installation requirements and the state of the server.  
+It is recommended NOT to use an elevated user for running it.
 
 <br><a name="security"></a>  
 ## Security <hr>
@@ -601,6 +604,14 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
   * this depends on your hardware and the network
   * steamcmd CANNOT be configured to use a timeout greater than 300 seconds
   * the server-manager expects failures like that and retries mod downloads respectively
+
+<br>
+
+* SteamCMD Rate-Limit:
+  * The SteamCMD rate limit might occur if you download many mods at once (i.e. first setup)
+  * You will see an error that includes status code = 5 or rate limit
+  * this is nothing bad.. you are not banned.. you just need to wait some time and retry
+  * the manager already tries to downloads mods in batches to prevent this by default, but sometimes thats not enough
 
 <br>
 

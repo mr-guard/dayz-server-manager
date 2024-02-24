@@ -480,8 +480,8 @@ export class Config {
      *
      * example:
      * {
-     *     "userId": "senfo",
-     *     "password": "admin",
+     *     "userId": "admin",
+     *     "password": "my-password",
      *     "userLevel": "admin"
      * }
      *
@@ -536,14 +536,12 @@ export class Config {
      * Whether or not to publish the Ingame Rest API
      *
      * Same as publish webport but for the Ingame REST API.
-     * Can be used for shared hives / provide the api for external servers.
      */
     public publishIngameApi: boolean = false;
 
     /**
      * Alternative host for the Ingame Rest API.
      *
-     * Can be used for shared hives.
      * Provide "ip:port" to make the addon connect to another Ingame API.
      */
     public ingameApiHostOverride: string | null = null;

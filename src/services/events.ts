@@ -3,6 +3,7 @@ import { Manager } from '../control/manager';
 import * as cron from 'node-schedule';
 import { LogLevel } from '../util/logger';
 import { ServerState } from '../types/monitor';
+import { Event } from '../config/config';
 import { injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
 import { RCON } from './rcon';
@@ -16,6 +17,8 @@ import { InternalEventTypes } from '../types/events';
 export class Events extends IStatefulService {
 
     private tasks: cron.Job[] = [];
+
+    private skipEvents: boolean = process.argv.includes('--skip-events');
 
     public constructor(
         logerFactory: LoggerFactory,
@@ -31,67 +34,23 @@ export class Events extends IStatefulService {
     public async start(): Promise<void> {
         for (const event of (this.manager.config.events ?? [])) {
 
-            const runTask = async (task: () => Promise<any>): Promise<any> => {
-                void task()
-                    ?.then(() => {
-                        this.log.log(LogLevel.DEBUG, `Successfully executed task '${event.name}'`);
-                    })
-                    ?.catch(/* istanbul ignore next */ () => {
-                        this.log.log(LogLevel.WARN, `Failed to execute task '${event.name}'`);
-                    });
-            };
-
-            const checkAndRun = async (task: () => Promise<any>): Promise<void> => {
-                if (this.monitor.serverState !== ServerState.STARTED) {
-                    this.log.log(LogLevel.WARN, `Skipping '${event.name}' because server is not in STARTED state`);
-                    return;
-                }
-
-                void runTask(task);
-            };
-
             const job = cron.scheduleJob(
                 event.name,
                 event.cron,
                 () => {
-                    this.log.log(LogLevel.DEBUG, `Executing task '${event.name}' (${event.type})`);
-                    switch (event.type) {
-                        case 'restart': {
-                            void checkAndRun(async () => {
-                                this.eventBus.emit(
-                                    InternalEventTypes.DISCORD_MESSAGE,
-                                    {
-                                        type: 'notification',
-                                        message: 'Executing planned Restart!',
-                                    },
-                                );
-                                await this.monitor.killServer();
-                            });
-                            break;
-                        }
-                        case 'message': {
-                            void checkAndRun(() => this.rcon.global(event.params[0]));
-                            break;
-                        }
-                        case 'kickAll': {
-                            void checkAndRun(() => void this.rcon.kickAll());
-                            break;
-                        }
-                        case 'lock': {
-                            void checkAndRun(() => void this.rcon.lock());
-                            break;
-                        }
-                        case 'unlock': {
-                            void checkAndRun(() => void this.rcon.unlock());
-                            break;
-                        }
-                        case 'backup': {
-                            void runTask(() => this.backup.createBackup());
-                            break;
-                        }
-                        default: {
-                            break;
-                        }
+                    if (this.skipEvents) {
+                        this.log.log(LogLevel.IMPORTANT, `Skipping task '${event.name}' (${event.type}) because events are skipped`);
+                        return;
+                    }
+
+                    try {
+                        this.execute(event);
+                    } catch (e) {
+                        this.log.log(
+                            LogLevel.ERROR,
+                            `Error executing task '${event.name}' (${event.type}). Check your config for errors!`,
+                            e,
+                        );
                     }
                 },
             );
@@ -114,6 +73,73 @@ export class Events extends IStatefulService {
             }
         }
         this.tasks = [];
+    }
+
+    private runTask(event: Event, task: () => Promise<any>): void {
+        void task()
+            ?.then(() => {
+                this.log.log(LogLevel.DEBUG, `Successfully executed task '${event.name}'`);
+            })
+            ?.catch(/* istanbul ignore next */ () => {
+                this.log.log(LogLevel.WARN, `Failed to execute task '${event.name}'`);
+            });
+    };
+
+    private checkStartedAndRun(event: Event, task: () => Promise<any>): void {
+        if (this.monitor.serverState !== ServerState.STARTED) {
+            this.log.log(LogLevel.WARN, `Skipping '${event.name}' because server is not in STARTED state`);
+            return;
+        }
+
+        this.runTask(event, task);
+    };
+
+    private execute(event: Event): void {
+        this.log.log(LogLevel.DEBUG, `Executing task '${event.name}' (${event.type})`);
+        switch (event.type) {
+            case 'restart': {
+                this.checkStartedAndRun(event, async () => {
+                    this.eventBus.emit(
+                        InternalEventTypes.DISCORD_MESSAGE,
+                        {
+                            type: 'notification',
+                            message: 'Executing planned Restart!',
+                        },
+                    );
+                    await this.monitor.killServer();
+                });
+                break;
+            }
+            case 'message': {
+                if (!event.params?.[0]) {
+                    this.log.log(
+                        LogLevel.ERROR,
+                        `Message task '${event.name}' (${event.type}) is missing the message. Check your config!`,
+                    );
+                }
+                this.checkStartedAndRun(event, () => this.rcon.global(event.params[0]));
+                break;
+            }
+            case 'kickAll': {
+                this.checkStartedAndRun(event, () => void this.rcon.kickAll());
+                break;
+            }
+            case 'lock': {
+                this.checkStartedAndRun(event, () => void this.rcon.lock());
+                break;
+            }
+            case 'unlock': {
+                this.checkStartedAndRun(event, () => void this.rcon.unlock());
+                break;
+            }
+            case 'backup': {
+                this.runTask(event, () => this.backup.createBackup());
+                break;
+            }
+            default: {
+                break;
+            }
+        }
     }
 
 }
