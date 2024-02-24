@@ -17,6 +17,7 @@ import { IStatefulService } from '../../src/types/service';
 import { Config } from '../../src/config/config';
 import { DiscordBot } from '../../src/services/discord';
 import { DiscordEventConverter } from '../../src/services/discord-event-converter';
+import { ConfigFileHelper } from '../../src/config/config-file-helper';
 
 class TestMonitor {
     public startCalled = false;
@@ -93,6 +94,7 @@ describe('Test class ManagerController', () => {
     let injector: DependencyContainer;
 
     let configWatcher: StubInstance<ConfigWatcher>;
+    let configHelper: StubInstance<ConfigFileHelper>;
     let manager: StubInstance<Manager>;
     let serverDetector: StubInstance<ServerDetector>;
     let steamCmd: StubInstance<SteamCMD>;
@@ -115,6 +117,7 @@ describe('Test class ManagerController', () => {
         injector = container.createChildContainer();
 
         injector.register(ConfigWatcher, stubClass(ConfigWatcher), { lifecycle: Lifecycle.Singleton });
+        injector.register(ConfigFileHelper, stubClass(ConfigFileHelper), { lifecycle: Lifecycle.Singleton });
         injector.register(Manager, stubClass(Manager), { lifecycle: Lifecycle.Singleton });
         injector.register(ServerDetector, stubClass(ServerDetector), { lifecycle: Lifecycle.Singleton });
         injector.register(SteamCMD, stubClass(SteamCMD), { lifecycle: Lifecycle.Singleton });
@@ -124,6 +127,7 @@ describe('Test class ManagerController', () => {
         injector.register(DiscordEventConverter, stubClass(DiscordEventConverter), { lifecycle: Lifecycle.Singleton });
         
         configWatcher = injector.resolve(ConfigWatcher) as any;
+        configHelper = injector.resolve(ConfigFileHelper) as any;
         manager = injector.resolve(Manager) as any;
         serverDetector = injector.resolve(ServerDetector) as any;
         steamCmd = injector.resolve(SteamCMD) as any;

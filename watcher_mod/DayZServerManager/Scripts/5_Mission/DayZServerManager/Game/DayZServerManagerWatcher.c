@@ -9,10 +9,10 @@ class DZSMDumpEntry : Managed
 		delete parents;
 	}
 
-	void Init(string classname, string source)
+	void Init(string classnameParam, string sourceParam)
 	{
-		this.classname = classname;
-		this.source = source;
+		classname = classnameParam;
+		source = sourceParam;
 
 		parents = new TStringArray;
 		string child = classname;
@@ -21,7 +21,7 @@ class DZSMDumpEntry : Managed
 		{
 			if (parent && child != parent)
 			{
-				parents.Insert(parent)
+				parents.Insert(parent);
 			}
 			else
 			{
@@ -58,9 +58,9 @@ class DZSMBaseDumpEntry : DZSMDumpEntry
 		delete itemInfo;
 	}
 
-	void Init(string classname, string source)
+	override void Init(string classnameParam, string sourceParam)
 	{
-		super.Init(classname, source);
+		super.Init(classnameParam, sourceParam);
 
 		displayName = GetGame().ConfigGetTextOut( source + " " + classname + " displayName" );
 		hitPoints = GetGame().ConfigGetFloat( source + " " + classname + " DamageSystem GlobalHealth Health hitpoints" );
@@ -120,9 +120,9 @@ class DZSMAmmoDumpEntry : DZSMDumpEntry
 	float damageArmor;
 
 
-	void DZSMAmmoDumpEntry(string classname)
+	void DZSMAmmoDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgMagazines");
+		Init(classnameParam, "cfgMagazines");
 
 		displayName = GetGame().ConfigGetTextOut( "cfgMagazines " + classname + " displayName" );
 		projectile = GetGame().ConfigGetTextOut( "cfgMagazines " + classname + " ammo" );
@@ -190,9 +190,9 @@ class DZSMMagDumpEntry : DZSMDumpEntry
 	ref TIntArray size;
 	ref TStringArray ammo;
 	
-	void DZSMMagDumpEntry(string classname)
+	void DZSMMagDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgMagazines");
+		Init(classnameParam, "cfgMagazines");
 
 		displayName = GetGame().ConfigGetTextOut( "cfgMagazines " + classname + " displayName" );
 		projectile = GetGame().ConfigGetTextOut( "cfgMagazines " + classname + " ammo" );
@@ -241,18 +241,18 @@ class DZSMWeaponModeDumpEntry : Managed
 	float dispersion;
 	float rounds;
 
-	void DZSMWeaponModeDumpEntry(string name, float rpm, float dispersion, float rounds)
+	void DZSMWeaponModeDumpEntry(string nameParam, float rpmParam, float dispersionParam, float roundsParam)
 	{
-		this.name = name;
-		this.rpm = rpm;
-		this.dispersion = dispersion;
-		if (rounds)
+		name = nameParam;
+		rpm = rpmParam;
+		dispersion = dispersionParam;
+		if (roundsParam)
 		{
-			this.rounds = rounds;
+			rounds = roundsParam;
 		}
 		else
 		{
-			this.rounds = 1;
+			rounds = 1;
 		}
 	}
 }
@@ -303,9 +303,9 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 
 	ref array<ref DZSMWeaponModeDumpEntry> modes;
 	
-	void DZSMWeaponDumpEntry(string classname)
+	void DZSMWeaponDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgWeapons");
+		Init(classnameParam, "cfgWeapons");
 
 		noise = GetGame().ConfigGetFloat( "cfgWeapons " + classname + " NoiseShoot strength" );
 		magazineSwitchTime = GetGame().ConfigGetFloat( "cfgWeapons " + classname + " magazineSwitchTime" );
@@ -357,9 +357,7 @@ class DZSMWeaponDumpEntry : DZSMBaseDumpEntry
 
 		if (!CheckItemCrash(classname))
 		{
-			#ifdef DZSM_DEBUG
 			Print("DZSM Dump ~ Determining recoil for " + classname);
-			#endif
 			Weapon_Base ent;
 			if ( !Class.CastTo( ent, GetGame().CreateObjectEx( classname, "0 0 0", ECE_CREATEPHYSICS ) ) )
 				return;
@@ -429,9 +427,9 @@ static void DZSMWeaponDump()
 			list.Insert(new DZSMWeaponDumpEntry(className));
 		}
     }
-	#ifdef DZSM_DEBUG
+	
 	Print(string.Format("DZSM Dump ~ Weapon dump: %1 classes", list.Count()));
-	#endif
+	
 	JsonFileLoader<array<ref DZSMWeaponDumpEntry>>.JsonSaveFile(filepath, list);
 }
 
@@ -462,9 +460,9 @@ class DZSMClothingDumpEntry : DZSMBaseDumpEntry
 	
 	ref TStringArray attachments;
 	
-	void DZSMClothingDumpEntry(string classname)
+	void DZSMClothingDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgVehicles");
+		Init(classnameParam, "cfgVehicles");
 
 		heatIsolation = GetGame().ConfigGetFloat( "cfgVehicles " + classname + " heatIsolation" );
 		visibilityModifier = GetGame().ConfigGetFloat( "cfgVehicles " + classname + " visibilityModifier" );
@@ -565,9 +563,9 @@ class DZSMItemDumpEntry : DZSMBaseDumpEntry
 	float meleeDmg;
 	float meleeDmgHeavy;
 	
-	void DZSMItemDumpEntry(string classname)
+	void DZSMItemDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgVehicles");
+		Init(classnameParam, "cfgVehicles");
 
 		isMeleeWeapon = GetGame().ConfigGetInt( "cfgVehicles " + classname + " isMeleeWeapon" ) == 1;
 		repairKitType = GetGame().ConfigGetInt( "cfgVehicles " + classname + " repairKitType" );
@@ -686,9 +684,9 @@ class DZSMContainerDumpEntry : DZSMBaseDumpEntry
 	
 	ref TStringArray attachments;
 	
-	void DZSMContainerDumpEntry(string classname)
+	void DZSMContainerDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgVehicles");
+		Init(classnameParam, "cfgVehicles");
 
 		canBeDigged = GetGame().ConfigGetInt( "cfgVehicles " + classname + " canBeDigged" );
 		heavyItem = GetGame().ConfigGetInt( "cfgVehicles " + classname + " heavyItem" );
@@ -744,9 +742,9 @@ static void DZSMContainerDump()
 class DZSMZombieDumpEntry : DZSMDumpEntry
 {
 	
-	void DZSMZombieDumpEntry(string classname)
+	void DZSMZombieDumpEntry(string classnameParam)
 	{
-		Init(classname, "cfgVehicles");
+		Init(classnameParam, "cfgVehicles");
 
 	}
 
@@ -788,16 +786,12 @@ class ServerManagerCallback: RestCallback
 	
 	override void OnError(int errorCode)
 	{
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ OnError: " + errorCode);
-		#endif
 	}
 	
 	override void OnTimeout()
 	{
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ OnTimeout");
-		#endif
 	}
 };
 
@@ -854,9 +848,7 @@ class DayZServerManagerWatcher
 
     void DayZServerManagerWatcher()
     {
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ DayZServerManagerWatcher()");
-		#endif
 
         m_InitTimer = new Timer(CALL_CATEGORY_GAMEPLAY);
 		m_InitTimer.Run(2.0 * 60.0, this, "init", null, false);
@@ -864,9 +856,7 @@ class DayZServerManagerWatcher
 
 	void init()
 	{
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ DayZServerManagerWatcher() - INIT");
-		#endif
 
 		m_RestApi = CreateRestApi();
         m_RestContext = m_RestApi.GetRestContext(GetDZSMApiOptions().host);
@@ -874,54 +864,35 @@ class DayZServerManagerWatcher
         m_RestApi.EnableDebug(false);
 		
 		StartLoop();
-		#ifdef DZSM_DEBUG
+		
 		Print("DZSM ~ DayZServerManagerWatcher() - INIT DONE");
-		#endif
 
 		if (GetDZSMApiOptions().dataDump)
 		{
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - DATA DUMP");
-			#endif
-
-			#ifdef DZSM_DEBUG
+			
 			Print("DZSM ~ DayZServerManagerWatcher() - AMMO DUMP");
-			#endif
 			DZSMAmmoDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - MAG DUMP");
-			#endif
 			DZSMMagDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - WEAPON DUMP");
-			#endif
 			DZSMWeaponDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - CLOTHING DUMP");
-			#endif
 			DZSMClothingDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - ITEM DUMP");
-			#endif
 			DZSMItemDump();
 			
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - CONTAINER DUMP");
-			#endif
 			DZSMContainerDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - ZOMBIE DUMP");
-			#endif
 			DZSMZombieDump();
 
-			#ifdef DZSM_DEBUG
 			Print("DZSM ~ DayZServerManagerWatcher() - DATA DUMP DONE");
-			#endif
 		}
 
 		CrashTest();
@@ -937,9 +908,7 @@ class DayZServerManagerWatcher
 		ref array<string> crashCheckItems = new array<string>;
 		JsonFileLoader<array<string>>.JsonLoadFile(crashCheckItemsPath, crashCheckItems);
 		
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ DayZServerManagerWatcher() - STARTING CRASH TEST");
-		#endif
 
 		string crashingItemsPath = "$profile:crashingitems.json";
 		ref array<string> crashingItems = new array<string>;
@@ -1007,10 +976,7 @@ class DayZServerManagerWatcher
 			
 		}
 
-
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ DayZServerManagerWatcher() - CRASH TEST DONE");
-		#endif
 	}
 
     float GetInterval()
@@ -1144,26 +1110,20 @@ modded class MissionServer
 
     void MissionServer()
     {
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ MissionServer");
-		#endif
     }
 
 	override void OnInit()
 	{
 		super.OnInit();
 		
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ MissionServer.OnInit");
-		#endif
 	}
 
 	override void OnMissionStart()
 	{
 		super.OnMissionStart();
-		#ifdef DZSM_DEBUG
 		Print("DZSM ~ MissionServer.OnMissionStart");
-		#endif
 
 		if (!GetGame().IsClient())
 		{

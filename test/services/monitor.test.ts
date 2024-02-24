@@ -1,6 +1,6 @@
 import { expect } from '../expect';
 import { ImportMock } from 'ts-mock-imports'
-import { StubInstance, disableConsole, enableConsole, memfs, sleep, stubClass } from '../util';
+import { StubInstance, disableConsole, enableConsole, fakeChildProcess, memfs, sleep, stubClass } from '../util';
 import { Monitor } from '../../src/services/monitor';
 import { SystemReporter } from '../../src/services/system-reporter';
 import { ServerDetector } from '../../src/services/server-detector';
@@ -20,6 +20,7 @@ import { IngameReport } from '../../src/services/ingame-report';
 import { Hooks } from '../../src/services/hooks';
 import { EventBus } from '../../src/control/event-bus';
 import { InternalEventTypes } from '../../src/types/events';
+import { Paths } from '../../src/services/paths';
 
 describe('Test class ServerDetector', () => {
 
@@ -285,6 +286,7 @@ describe('Test class Monitor', () => {
     let serverStarter: StubInstance<ServerStarter>;
     let serverDetector: StubInstance<ServerDetector>;
     let fs: FSAPI;
+    let paths: Paths;
 
 
     before(() => {
@@ -308,7 +310,9 @@ describe('Test class Monitor', () => {
         injector.register(ServerStarter, stubClass(ServerStarter), { lifecycle: Lifecycle.Singleton });
         injector.register(ServerDetector, stubClass(ServerDetector), { lifecycle: Lifecycle.Singleton });
         injector.register(EventBus, EventBus, { lifecycle: Lifecycle.Singleton });
-        
+        injector.register(Paths, Paths, { lifecycle: Lifecycle.Singleton });
+        fakeChildProcess(injector); // for paths
+
         fs = memfs({}, '/', injector);
 
         manager = injector.resolve(Manager) as any;
@@ -316,6 +320,7 @@ describe('Test class Monitor', () => {
         eventBus = injector.resolve(EventBus) as any;
         serverStarter = injector.resolve(ServerStarter) as any;
         serverDetector = injector.resolve(ServerDetector) as any;
+        paths = injector.resolve(Paths);
     });
 
     it('Monitor-startStop', async () => {

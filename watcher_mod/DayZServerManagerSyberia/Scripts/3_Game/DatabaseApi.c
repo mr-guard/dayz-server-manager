@@ -28,16 +28,12 @@ class SyberiaDatabaseCallback: RestCallback
 	
 	override void OnError(int errorCode)
 	{
-		#ifdef DZSM_DEBUG
 		Print("DZSM Syberia ~ OnError: " + errorCode);
-		#endif
 	}
 	
 	override void OnTimeout()
 	{
-		#ifdef DZSM_DEBUG
 		Print("DZSM Syberia ~ OnTimeout");
-		#endif
 	}
 };
 
