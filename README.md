@@ -13,7 +13,7 @@
 This tool aims to simplify the process of setting up a DayZ Standalone Server on a Windows Server.  
 The goal was to break down the initial effort to a minimum while providing configuration to nearly all aspects of the server administration process.
 
-Also supports experimental linux server (See [Known Issues and Limitations](#limitations))
+Also supports linux server (See [Linux Server Usage](#linux-server))
 
 ## Content <hr>
 
@@ -33,16 +33,17 @@ Also supports experimental linux server (See [Known Issues and Limitations](#lim
     8. [Change the server port](#guide-change-server-port)
     9. [Add scheduled events](#guide-add-events)
     10. [Add Hooks](#guide-add-hooks)
-6. [Steam CMD](#steam-cmd)
-7. [TODOs](#todo)
-8. [Default folder layout](#folder-layout)
-9. [Technical details](#technical-details)
-10. [Security](#security)
+6. [Linux Server](#linux-server)
+7. [Steam CMD](#steam-cmd)
+8. [TODOs](#todo)
+9. [Default folder layout](#folder-layout)
+10. [Technical details](#technical-details)
+11. [Security](#security)
     1. [Discord](#security-discord)
     2. [Web](#security-web)
-11. [Known Issues and Limitations](#limitations)
-12. [Development](#development)
-13. [Disclaimer](#disclaimer)
+12. [Known Issues and Limitations](#limitations)
+13. [Development](#development)
+14. [Disclaimer](#disclaimer)
 
 <br><a name="features"></a>
 ## Features <hr>  
@@ -394,6 +395,123 @@ In the server manager config add a hook object to the hooks array like so:
 ...
 ```
 
+<br><a name="linux-server"></a>  
+## Linux Server <hr>
+
+The manager was tested on Ubuntu 22 (latest).
+Other up2date debian variants should work as well.
+<br>
+The DayZServer only works on x86 platforms, ARM is NOT supported!
+<br>
+The manager can be run via the binary (recommended) or docker.<br>
+The main downside when run with docker:  
+If the manager crashes or shuts down, your dayz server will also be shut down.
+
+### Binary
+
+(the commands below might be needed to be run as root/with sudo)
+
+1. Install  the required libs for dayz and steamcmd
+  ```sh
+  apt-get install libcap-dev lib32gcc-s1 libcurl4  libcurl4-openssl-dev
+  ```
+2. Create a user for the server (highly recommended for security reasons)
+   The user should have the home directory set to where the server files will reside
+   Replace `/dayz` with the directory you want your server to be in, but make sure its already created
+  ```sh
+    useradd --system -m -d /dayz -s /bin/bash dayz
+    chown dayz:dayz /dayz && \
+  ```
+3. Download and extract the latest linux release from the releases page
+4. Setup the manager files
+  4.1. Copy the `dayz-server-manager` binary to your `/dayz` directory
+  4.2. Copy the `server-manager-template.json` to the `/dayz`
+  4.3. Rename the `server-manager-template.json` to the `server-manager.json`
+  4.4. Edit the `server-manager.json` with a text editor to fit your needs
+       (Make sure its valid json. Its recommended to use VSCode for editing and set the file type to jsonc / json with comments)
+
+5. Switch to the `/dayz` dir
+   ```sh
+   cd /dayz
+   ```
+6. Make the binary executable and owned by the dayz user
+   ```sh
+   chown dayz:dayz dayz-server-manager
+   chmod +x dayz-server-manager
+   ```
+7. Switch to the dayz user
+   ```sh
+   su dayz
+   ```
+8. Run the manager
+   ```sh
+   ./dayz-server-manager
+   ```
+
+#### Creating a daemon / service
+
+1. Create the service file `/etc/systemd/system/dayz-server-manager.service`
+    ```sh
+    [Unit]
+    Description=DayZ Server Manager
+    Wants=network-online.target
+    After=syslog.target network.target nss-lookup.target network-online.target
+
+    [Service]
+    ExecStart=/dayz/dayz-server-manager
+    WorkingDirectory=/dayz/
+    LimitNOFILE=100000
+    ExecReload=/bin/kill -s HUP $MAINPID
+    ExecStop=/bin/kill -s INT $MAINPID
+    User=dayz
+    Group=users
+    Restart=on-failure
+    RestartSec=5s
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+2. Daemon realod and enable the service
+   ```sh
+   systemctl daemon-reload
+   service dayz-server-manager enable
+   ```
+3. Start the service
+   ```sh
+   service dayz-server-manager start
+   ```
+4. Check the service status
+   ```sh
+   service dayz-server-manager status
+   ```
+
+### Docker
+
+The manager is also published as a docker image:  
+`ghcr.io/mr-guard/dayz-server-manager:latest`
+<br>
+If you run the manager inside docker, the dayz server will also start in the same container.
+If you stop the manager, the dayz server will stop as well.
+
+How-To:
+
+1. Create a directory for your server and make sure its accessible
+   ```sh
+   mkdir /dayz
+   chmod 777 /dayz
+   ```
+
+2. Copy your `server-manager.json` inside that dir
+
+3. Copy the `docker-compose.yml` from the repository to that dir.
+
+4. Start the server manager:
+   ```sh
+   docker compose up -d
+   ```
+
+You can run the image without compose, but you will need to figure that out on your own...
+
 <br><a name="steam-cmd"></a>
 ## SteamCMD <hr>  
 
@@ -518,13 +636,6 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 * This app has been tested but is very complex
   * if you have any issues please report them to get them fixed
 
-<br>
-
-* Linux Server Support
-  * .. is limited to the experimental server version only
-  * The linux server has not been released to the stable version of DayZ yet (as of 27.10.2023)
-  * The Linux server also only supports Ubuntu 18 and Debian Buster due to the required glib versions (https://feedback.bistudio.com/T170140)
-    * I cannot do something about that.. you will need to beg the DayZ devs to fix/update that
 
 <br><a name="development"></a>  
 ## Development <hr>

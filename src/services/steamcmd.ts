@@ -293,10 +293,29 @@ export class SteamCMD extends IService {
     }
 
     private getLoginArgs(): string[] {
-        return [
+        const loginArgs = [
             '+login',
             this.manager.config.steamUsername,
             this.manager.config.steamPassword ?? '',
+        ];
+
+        let guardCode: string = this.manager.config.steamGuardCode;
+
+        if (!guardCode) {
+            const guardCodePath = path.join(this.paths.cwd(), 'STEAM_GUARD_CODE');
+            if (this.fs.existsSync(guardCodePath)) {
+                guardCode = this.fs.readFileSync(guardCodePath, { encoding: 'utf-8' });
+                this.fs.rmSync(guardCodePath);
+            }
+        }
+
+        return [
+            ...(
+                guardCode
+                    ? ['+set_steam_guard_code', guardCode]
+                    : []
+            ),
+            ...loginArgs,
         ];
     }
 
@@ -452,13 +471,16 @@ export class SteamCMD extends IService {
             currentBuildId = /"buildid"\s*"(.*)"/.exec(manifest)?.[1] || '';
         }
 
+        const validate = opts?.validate ?? this.manager.config?.validateServerAfterUpdate ?? true;
+
+        this.log.log(LogLevel.IMPORTANT, `Updating DayZ Server using app id: ${steamAppId}, validating: ${validate}`);
         const success = await this.execute([
             '+force_install_dir',
             serverPath,
             ...this.getLoginArgs(),
             '+app_update',
             steamAppId,
-            ...((opts?.validate ?? this.manager.config?.validateServerAfterUpdate ?? true) ? ['validate'] : []),
+            ...((validate) ? ['validate'] : []),
             '+quit',
         ], {
             listener: (event: SteamCmdEvent) => {
@@ -593,7 +615,11 @@ export class SteamCMD extends IService {
             ),
         );
 
+        const validate = opts?.validate ?? this.manager.config?.validateModsAfterUpdate ?? true;
+
         let lastDetectedMod: string;
+
+        this.log.log(LogLevel.IMPORTANT, `Updating Mods with ids: ${modIds.join(', ')}, validating: ${validate}`);
         let success = await this.execute([
             '+force_install_dir',
             wsBasePath,
@@ -604,7 +630,7 @@ export class SteamCMD extends IService {
                         '+workshop_download_item',
                         this.manager.config?.dayzSteamAppId || DAYZ_APP_ID,
                         modId,
-                        ...((opts?.validate ?? this.manager.config?.validateModsAfterUpdate ?? true) ? ['validate'] : []),
+                        ...((validate) ? ['validate'] : []),
                     );
                     return acc;
                 },
@@ -766,11 +792,13 @@ export class SteamCMD extends IService {
         const maxDownloadSize = this.manager.config.updateModsMaxBatchFileSize || 1_000_000_000; // ~1 GB
         let curBatch: Partial<PublishedFileDetail>[] = [];
         for (const mod of bySize) {
-            const curBatchFileSize = curBatch.reduce((acc, x) => acc + (x.file_size || 0), 0);
+            let curBatchFileSize = curBatch.reduce((acc, x) => acc + (x.file_size || 0), 0);
 
             // if this mod would exceed the download limit, then execute the batch first
             if (curBatch.length && (curBatchFileSize + (mod.file_size || 0)) >= maxDownloadSize) {
-                if (!await this.updateMod(curBatch.map((x) => x.publishedfileid))) {
+                const curBatchIds = curBatch.map(/* istanbul ignore next */ (x) => x.publishedfileid);
+                this.log.log(LogLevel.INFO, `Batching mod update for ids: ${curBatchIds.join(', ')}, because the maximum download size per batch (${maxDownloadSize}) would be exceed with the next mod. Current download size: ${curBatchFileSize}`);
+                if (!await this.updateMod(curBatchIds)) {
                     return false;
                 }
                 curBatch = [];
@@ -779,9 +807,17 @@ export class SteamCMD extends IService {
             curBatch.push(mod);
 
             // check if batch is full or exceeds size limit
+            curBatchFileSize = curBatch.reduce((acc, x) => acc + (x.file_size || 0), 0);
             if (curBatchFileSize >= maxDownloadSize || curBatch.length >= maxBatchSize) {
+                const curBatchIds = curBatch.map((x) => x.publishedfileid);
+                if (curBatchFileSize >= maxDownloadSize) {
+                    this.log.log(LogLevel.INFO, `Batching mod update for ids: ${curBatchIds.join(', ')}, because the maximum download size per batch (${maxDownloadSize}) was reached. Current download size: ${curBatchFileSize}`);
+                } else if (curBatch.length >= maxBatchSize) {
+                    this.log.log(LogLevel.INFO, `Batching mod update for ids: ${curBatchIds.join(', ')}, because the maximum number items per batch (${maxBatchSize}) was reached. Current batch size: ${curBatch.length}`);
+                }
+
                 if (!await this.updateMod(
-                    curBatch.map((x) => x.publishedfileid),
+                    curBatchIds,
                     {
                         validate: opts?.validate,
                         listener: opts?.listener,

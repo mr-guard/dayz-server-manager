@@ -17,7 +17,7 @@ class DayZServerManagerContainer
 
     static void unregisterVehicle(EntityAI vehicle)
 	{
-		if (vehicle)
+		if (m_vehicles && vehicle)
 		{
 			#ifdef DZSM_DEBUG_CONTAINER
 			Print("DZSM ~ UnRegistered: " + vehicle.GetType());
@@ -27,6 +27,14 @@ class DayZServerManagerContainer
 			{
 				m_vehicles.Remove(i);
 			}
+		}
+		else if (!m_vehicles)
+		{
+			Print("DZSM ~ UnRegistered: Failed: vehicle container already gone");
+		}
+		else if (!vehicle)
+		{
+			Print("DZSM ~ UnRegistered: Failed: vehicle was null");
 		}
     }
 

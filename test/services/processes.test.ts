@@ -10,11 +10,11 @@ import * as childProcess from 'child_process';
 import * as nodePty from 'node-pty';
 import * as os from 'os';
 import * as sinon from 'sinon';
-import { disableConsole, enableConsole, stubClass } from '../util';
+import { disableConsole, enableConsole, memfs, stubClass } from '../util';
 import { DependencyContainer, container } from 'tsyringe';
 import { Paths } from '../../src/services/paths';
 import { LoggerFactory } from '../../src/services/loggerfactory';
-import { InjectionTokens } from '../../src/util/apis';
+import { FSAPI, InjectionTokens } from '../../src/util/apis';
 
 export const WMIC_OUTPUT = `
 
@@ -320,6 +320,7 @@ describe('Test class ProcessesSpawner', () => {
 describe('Test class Processes', () => {
 
     let injector: DependencyContainer;
+    let fs: FSAPI;
 
     before(() => {
         disableConsole();
@@ -335,6 +336,7 @@ describe('Test class Processes', () => {
         injector.register(ProcessSpawner, stubClass(ProcessSpawner));
         injector.register(WindowsProcessFetcher, stubClass(WindowsProcessFetcher));
         injector.register(Paths, stubClass(Paths));
+        fs = memfs({}, '/', injector);
     });
 
     it('Processes-getProcessList', async () => {

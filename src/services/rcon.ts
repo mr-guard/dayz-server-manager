@@ -16,6 +16,7 @@ import { Listener } from 'eventemitter2';
 import { Monitor } from './monitor';
 import * as CryptoJS from 'crypto-js';
 import * as bigInt from 'big-integer';
+import { detectOS } from '../util/detect-os';
 
 // eslint-disable-next-line no-shadow
 export enum PacketType {
@@ -196,7 +197,7 @@ export class RCON extends IStatefulService {
     public checkIntervalTime = 1000; // check interval (in ms)
     public keepAliveIntervalTime = 10000; // keepAlive packet interval (in ms)
     public serverTimeoutTime = 30000; // timeout server connection (in ms)
-    public packetDebug = false; // debug raw packages
+    public packetDebug = process.env['DZSM_DEBUG_RCON_PACKETS'] === 'true'; // debug raw packages
 
     private readonly RND_RCON_PW: string = `RCON${Math.floor(Math.random() * 100000)}`;
 
@@ -394,17 +395,27 @@ export class RCON extends IStatefulService {
             battleyePath = 'battleye';
         }
         let baseDir = this.manager.getServerPath();
-        const profiles = this.manager.config?.profilesPath;
-        if (profiles) {
-            if (path.isAbsolute(profiles)) {
-                baseDir = profiles;
-            } else {
-                baseDir = path.join(baseDir, profiles);
+
+        if (detectOS() === 'windows') {
+            const profiles = this.manager.config?.profilesPath;
+            if (profiles) {
+                if (path.isAbsolute(profiles)) {
+                    baseDir = profiles;
+                } else {
+                    baseDir = path.join(baseDir, profiles);
+                }
             }
         }
         battleyePath = path.join(baseDir, battleyePath);
 
-        const battleyeConfPath = path.join(battleyePath, 'BEServer_x64.cfg');
+        let beConfName = 'BEServer_x64.cfg';
+        if (detectOS() !== 'windows') {
+            beConfName = beConfName.toLowerCase(); // who would have thought...
+        }
+        const battleyeConfPath = path.join(
+            battleyePath,
+            beConfName,
+        );
         const rConPassword = this.getRconPassword();
         const rConPort = this.getRconPort();
         const rConIP = this.getRconIP();
@@ -614,7 +625,7 @@ export class RCON extends IStatefulService {
 
     public command(command: string): Promise<string | null> {
         if (!this.connected || !this.loggedIn) {
-            this.log.log(LogLevel.DEBUG, `Cannot send ${command}. Not connected`);
+            this.log.log(LogLevel.DEBUG, `Cannot send command '${command}'. Not connected`);
             return Promise.resolve(null);
         }
         if (this.packetDebug) {

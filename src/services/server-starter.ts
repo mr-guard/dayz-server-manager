@@ -111,7 +111,7 @@ export class ServerStarter extends IService {
                 await this.steamCmd.updateServer();
             }
             if (!await this.steamCmd.checkServer()) {
-                throw new Error('Server installation failed');
+                throw new Error('Server installation failed. Server executable not found. Check the steam cmd logs and your settings for wrong paths or wrong executable names');
             }
 
             // Mods
@@ -228,9 +228,13 @@ export class ServerStarter extends IService {
     }
 
     public async startServer(skipPrep?: boolean): Promise<boolean> {
+        this.log.log(LogLevel.DEBUG, 'Start server');
+
         await this.prepareServerStart(skipPrep);
+        this.log.log(LogLevel.DEBUG, 'Server start prep done');
 
         await this.hooks.executeHooks(HookTypeEnum.beforeStart);
+        this.log.log(LogLevel.DEBUG, 'Server start hooks done');
 
         const spawnCmd = this.buildServerSpawnCmd();
         const args = await this.buildStartServerArgs();
@@ -240,6 +244,7 @@ export class ServerStarter extends IService {
                     ...spawnCmd.args,
                     ...args,
                 ];
+                this.log.log(LogLevel.DEBUG, 'Spawning server process');
                 const sub = spawn(
                     spawnCmd.cmd,
                     usedArgs,
@@ -249,19 +254,27 @@ export class ServerStarter extends IService {
                         cwd: spawnCmd.cwd,
                     },
                 );
+                this.log.log(LogLevel.DEBUG, 'Server process spawned');
                 sub.unref();
+                this.log.log(LogLevel.DEBUG, 'Server process unrefed');
 
                 sub.on('error', /* istanbul ignore next */ (e) => {
                     this.log.log(LogLevel.IMPORTANT, 'Error while trying to start server', e);
                     res(false);
                 });
 
-                sub.on(
-                    'exit',
-                    (code) => {
-                        res(code === 0);
-                    },
-                );
+                if (detectOS() === 'windows') {
+                    sub.on(
+                        'exit',
+                        (code) => {
+                            this.log.log(LogLevel.DEBUG, `Server start process response: ${code}`);
+                            res(code === 0);
+                        },
+                    );
+                } else {
+                    this.log.log(LogLevel.DEBUG, 'Server start done');
+                    res(true);
+                }
 
             } catch (e) {
                 rej(e);

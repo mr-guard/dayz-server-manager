@@ -4,9 +4,8 @@ import { detectOS } from '../util/detect-os';
 import { LogLevel } from '../util/logger';
 import { merge } from '../util/merge';
 import { Paths } from './paths';
-import * as ps from '@senfo/process-list';
 import { inject, injectable, singleton } from 'tsyringe';
-import { CHILDPROCESSAPI, InjectionTokens, PTYAPI } from '../util/apis';
+import { CHILDPROCESSAPI, FSAPI, InjectionTokens, PTYAPI } from '../util/apis';
 import { IService } from '../types/service';
 import { LoggerFactory } from './loggerfactory';
 
@@ -198,7 +197,7 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
                     process.stdin.on('data', /* istanbul ignore next */ (data) => {
                         pty.write(data.toString());
                     });
-                    process.stdin.unref();
+                    process.stdin?.unref?.();
                 }
 
                 let stdout = '';
@@ -335,11 +334,14 @@ export class WindowsProcessFetcher extends IService implements IProcessFetcher {
 @injectable()
 export class Processes extends IService implements IProcessSpawner, IProcessFetcher {
 
+    public static pageSize: number | null = null;
+
     public constructor(
         loggerFactory: LoggerFactory,
         private spawner: ProcessSpawner,
         private windowsProcessFetcher: WindowsProcessFetcher,
         private paths: Paths,
+        @inject(InjectionTokens.fs) private fs: FSAPI,
     ) {
         super(loggerFactory.createLogger('Processes'));
     }
@@ -351,25 +353,65 @@ export class Processes extends IService implements IProcessSpawner, IProcessFetc
             return this.windowsProcessFetcher.getProcessList(exeName);
         }
 
-        const snapshot = await ps.snapshot();
-        return snapshot
-            .map(
-                /* istanbul ignore next */
-                (x) => ({
-                    /* eslint-disable @typescript-eslint/naming-convention */
-                    Name: x.name,
-                    ProcessId: String(x.pid),
-                    ExecutablePath: x.path,
-                    CommandLine: x.cmdline,
-                    PrivatePageCount: x.vmem, // TODO
-                    CreationDate: String(x.starttime.valueOf()), // TODO
-                    UserModeTime: x.utime, // TODO
-                    KernelModeTime: x.stime, // TODO
-                    /* eslint-enable @typescript-eslint/naming-convention */
-                }),
+        if (!Processes.pageSize) {
+            const pageSizeOutput = await this.spawner.spawnForOutput(
+                'getconf',
+                ['PAGESIZE'],
+                {
+                    dontThrow: true,
+                },
+            );
+            if (pageSizeOutput.status === 0 && Number(pageSizeOutput.stdout)) {
+                Processes.pageSize = Number(pageSizeOutput.stdout);
+            } else {
+                Processes.pageSize = 4096; // some default
+            }
+        }
+        return await this.fs.promises.readdir('/proc')
+            .then(
+                /* istanbul ignore next */ (result) => Promise.all(
+                    result.map(
+                        /* istanbul ignore next */ async (pid) => {
+                            if (!Number(pid)) return;
+                            try {
+                                const stat = await this.fs.promises.stat(`/proc/${pid}`);
+                                if (stat?.isDirectory() && stat.uid === process.getuid()) {
+                                    const now = new Date().valueOf();
+                                    const uptime = os.uptime();
+                                    const details = await Promise.all([
+                                        this.fs.promises.readlink(`/proc/${pid}/exe`, { encoding: 'utf-8' }),
+                                        this.fs.promises.readFile(`/proc/${pid}/cmdline`, { encoding: 'utf-8' }),
+                                        this.fs.promises.readFile(`/proc/${pid}/stat`, { encoding: 'utf-8' }),
+                                        this.fs.promises.readFile(`/proc/${pid}/statm`, { encoding: 'utf-8' }),
+                                    ]);
+
+                                    // see https://man7.org/linux/man-pages/man5/proc.5.html
+                                    const pstat = details[2].split(' ');
+                                    const pstatm = details[3].split(' ');
+
+                                    /* eslint-disable @typescript-eslint/naming-convention */
+                                    return {
+                                        Name: pid,
+                                        ProcessId: pid,
+                                        ExecutablePath: details[0],
+                                        CommandLine: details[1].split('\0').join(' ').trim(),
+                                        PrivatePageCount: String(Number(pstatm[0]) * Processes.pageSize),
+                                        CreationDate: String(now - (uptime - Number(pstat[21]) / 100) * 1000),
+                                        UserModeTime: String(Number(pstat[13]) * 1000),
+                                        KernelModeTime: String(Number(pstat[14]) * 1000),
+                                    }
+                                    /* eslint-enable @typescript-eslint/naming-convention */
+                                }
+                            } catch {}
+                            return null;
+                        },
+                    ),
+                ),
             )
-            .filter(/* istanbul ignore next */ (x) => !!x?.ExecutablePath)
-            .filter(/* istanbul ignore next */ (x) => this.paths.samePath(x?.ExecutablePath, exeName));
+            .then( /* istanbul ignore next */(list) => list
+                .filter(/* istanbul ignore next */ (x) => !!x?.ExecutablePath)
+                .filter(/* istanbul ignore next */ (x) => this.paths.samePath(x?.ExecutablePath, exeName)),
+            );
     }
 
     public getProcessCPUSpent(proc: ProcessEntry): number {

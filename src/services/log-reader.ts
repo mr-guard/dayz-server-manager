@@ -12,6 +12,7 @@ import { LoggerFactory } from './loggerfactory';
 import { FSAPI, InjectionTokens } from '../util/apis';
 import { EventBus } from '../control/event-bus';
 import { InternalEventTypes } from '../types/events';
+import { dzsmDebugLogReader } from '../config/constants';
 
 export interface LogContainer {
     logFiles?: FileDescriptor[];
@@ -143,7 +144,7 @@ export class LogReader extends IStatefulService {
                     });
                     logContainer.tail.on('line', (line) => {
                         if (line) {
-                            if (process.env['DZSM_DEBUG_LOG_READER'] === 'true') {
+                            if (process.env['DZSM_DEBUG_LOG_READER'] === 'true' || dzsmDebugLogReader) {
                                 this.log.log(LogLevel.DEBUG, `${type} - ${line}`);
                             }
                             const logEntry = {

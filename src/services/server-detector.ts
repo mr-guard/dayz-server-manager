@@ -4,6 +4,7 @@ import { LogLevel } from '../util/logger';
 import { IService } from '../types/service';
 import { injectable, singleton } from 'tsyringe';
 import { LoggerFactory } from './loggerfactory';
+import { dzsmDebugProcessList } from '../config/constants';
 
 @singleton()
 @injectable()
@@ -28,7 +29,7 @@ export class ServerDetector extends IService {
                 this.manager.getServerExePath(),
             );
 
-            if (process.env['DZSM_DEBUG_PROCESS_LIST'] === 'true') {
+            if (process.env['DZSM_DEBUG_PROCESS_LIST'] === 'true' || dzsmDebugProcessList) {
                 this.log.log(
                     LogLevel.DEBUG,
                     'Fetched new Process list',

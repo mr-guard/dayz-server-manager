@@ -168,6 +168,7 @@ export class Monitor extends IStatefulService {
                 this.log.log(LogLevel.IMPORTANT, 'Server not found. Starting...');
                 this.internalServerState = ServerState.STARTING;
                 await this.serverStarter.startServer(this.initialStart);
+                this.log.log(LogLevel.IMPORTANT, 'Server start initiated...');
                 this.lastServerUsages = [];
                 this.initialStart = false;
 
