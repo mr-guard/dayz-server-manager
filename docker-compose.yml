@@ -2,12 +2,12 @@ version: "3.8"
 
 services:
   dayz:
-    build: ghcr.io/mr-guard/dayz-server-manager:experimental
+    build: ghcr.io/mr-guard/dayz-server-manager:latest
     ports:
       - "2302-2312:2302-2312"
       - "8766:8766"
       - "27016:27016"
       - "80:8080" # publish the web server on port 8080 in your config
     volumes:
-      - "./server:/dayz" # make sure your server-manager.json is in there
+      - "./:/dayz" # make sure your server-manager.json is in there
     tty: true # needed for inputs
