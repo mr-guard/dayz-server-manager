@@ -420,7 +420,7 @@ If the manager crashes or shuts down, your dayz server will also be shut down.
    Replace `/dayz` with the directory you want your server to be in, but make sure its already created
   ```sh
     useradd --system -m -d /dayz -s /bin/bash dayz
-    chown dayz:dayz /dayz && \
+    chown dayz:dayz /dayz
   ```
 3. Download and extract the latest linux release from the releases page
 4. Setup the manager files
