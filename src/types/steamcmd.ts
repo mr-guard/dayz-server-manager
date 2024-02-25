@@ -38,7 +38,7 @@ export interface PublishedFileDetail {
     creator_app_id: number;
     consumer_app_id: number;
     filename: string;
-    file_size: number;
+    file_size: string;
     file_url: string;
     hcontent_file: string;
     preview_url: string;
