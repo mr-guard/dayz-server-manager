@@ -230,7 +230,7 @@ export class ProcessSpawner extends IService implements IProcessSpawner {
 
                     if (inputHandlerSet) {
                         process.stdin.removeAllListeners('data');
-                        process.stdin.ref();
+                        process.stdin?.ref?.();
                     }
 
                     setTimeout(
