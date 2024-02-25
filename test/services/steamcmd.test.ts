@@ -504,7 +504,7 @@ describe('Test class SteamCMD', () => {
         steamMeta.getModsMetaData.resolves([
             {
                 'publishedfileid': '1234567',
-                'file_size': 9_999_999_999,
+                'file_size': String(9_999_999_999),
             } as PublishedFileDetail
         ]);
 
