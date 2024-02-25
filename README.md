@@ -630,7 +630,7 @@ This way the traffic is handled securely until terminated at the reverse proxy.<
 <br>
 
 * Process State:
-  * since the dayz server is immediately detached after starting, we cannot determine the processid (PID) of it (if anyone knows a way to do that let me know :) )
+  * since the dayz server is immediately detached after starting, we cannot determine the processid (PID) of it
   * because of this the manager queries all running processes via wmic and determines the server process by executable path
   * wmic can be a very CPU demanding tool and because of this the check interval should be a bit longer
   
