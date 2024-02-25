@@ -462,6 +462,7 @@ If the manager crashes or shuts down, your dayz server will also be shut down.
     ExecStart=/dayz/dayz-server-manager
     WorkingDirectory=/dayz/
     LimitNOFILE=100000
+    KillMode=process
     ExecReload=/bin/kill -s HUP $MAINPID
     ExecStop=/bin/kill -s INT $MAINPID
     User=dayz
