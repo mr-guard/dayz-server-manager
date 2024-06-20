@@ -565,7 +565,7 @@ export class Config {
     /**
      * URL to load the map images from.
      */
-    public mapHost: string = 'https://mr-guard.de/dayz-maps';
+    public mapHost: string | any = 'https://mr-guard.de/dayz-maps';
 
     // /////////////////////////// Discord ////////////////////////////////////
 
