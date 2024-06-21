@@ -33,10 +33,10 @@ export interface Location {
 }
 
 export interface MapInfo {
-    title: string;
-    worldName: string;
     tilePattern: string;
     fullImage?: string;
+    worldSize: number;
+
     fullImageMinZoom?: number;
     fullImageMaxZoom?: number;
     maxZoom: number;
@@ -46,10 +46,12 @@ export interface MapInfo {
     tileSize: number;
     scale: number;
     center: [number, number];
-    worldSize: number;
+
     preview: string;
     fullSize: string;
     locations: Location[];
+    title: string;
+    worldName: string;
 }
 
 export interface MarkerWithId {
@@ -103,7 +105,7 @@ export class MapComponent implements OnInit, OnDestroy {
     public curCoordinatesX: number = 0;
     public curCoordinatesY: number = 0;
 
-    protected mapHost = 'https://mr-guard.de/dayz-maps';
+    protected mapHost: string | any = 'https://mr-guard.de/dayz-maps';
     protected mapName?: string;
 
     protected layerControl?: Control;
@@ -154,20 +156,8 @@ export class MapComponent implements OnInit, OnDestroy {
         if (this.info!.fullImage) {
             this.baseLayers = {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
-                Satelite: tileLayer(
-                    `${this.mapHost}/${this.mapName}/${this.info!.tilePattern ?? 'tiles/{z}/{x}/{y}.png'}`,
-                    {
-                        attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
-                        bounds: [
-                            [0, 0],
-                            [bounds.lat, bounds.lng],
-                        ],
-                        maxNativeZoom: this.info!.maxZoom ?? 7,
-                        maxZoom: 20,
-                    },
-                ),
-                Single: imageOverlay(
-                    `${this.mapHost}/${this.mapName}/${this.info!.fullImage}`,
+                Map: imageOverlay(
+                    `${this.info!.fullImage}`,
                     [
                         [0, 0],
                         [bounds.lat, bounds.lng],
@@ -180,7 +170,7 @@ export class MapComponent implements OnInit, OnDestroy {
         } else {
             this.baseLayers = {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
-                Satelite: tileLayer(
+                Map: tileLayer(
                     `${this.mapHost}/${this.mapName}/${this.info!.tilePattern ?? 'tiles/{z}/{x}/{y}.png'}`,
                     {
                         attribution: `Leaflet${this.info!.attribution ? `, ${this.info!.attribution}` : ''}`,
@@ -200,10 +190,15 @@ export class MapComponent implements OnInit, OnDestroy {
     protected async setUpWorld(name: string): Promise<void> {
 
         this.mapName = name;
-        const urlBase = `${this.mapHost}/${this.mapName}`;
-        this.info = (await this.http.get(
-            `${urlBase}/data.json`,
-        ).toPromise()) as MapInfo;
+
+        if (typeof this.mapHost === 'string') {
+            const urlBase = `${this.mapHost}/${this.mapName}`;
+            this.info = (await this.http.get(
+                `${urlBase}/data.json`,
+            ).toPromise()) as MapInfo;
+        } else {
+            this.info = this.mapHost as MapInfo;
+        }
 
         this.mapScale = Math.ceil(
             Math.log(
@@ -289,7 +284,7 @@ export class MapComponent implements OnInit, OnDestroy {
             locationLayer.markers = [];
         }
 
-        for (const x of this.info!.locations) {
+        for (const x of (this.info!.locations || [])) {
             if (x.name) {
                 const pos = this.unproject([x.position[0], this.info!.worldSize - x.position[1]]);
                 const { name, icon } = this.getLocationTooltip(x);
@@ -344,8 +339,16 @@ export class MapComponent implements OnInit, OnDestroy {
         this.map.on('zoomend', () => this.zoomChange());
 
         this.createBaseLayers();
-        this.map!.addLayer(this.baseLayers!['Satelite']);
-        this.map.setView(this.unproject(this.info!.center ?? [0, 0]));
+        this.map!.addLayer(this.baseLayers!['Map']);
+        this.map.setView(
+            this.unproject(
+                this.info!.center ?? (
+                    this.info!.worldSize
+                    ? [this.info!.worldSize / 2, this.info!.worldSize / 2]
+                    : [0, 0]
+                ),
+            ),
+        );
 
         for (const x of this.layers) {
             this.map.addLayer(x[1].layer);

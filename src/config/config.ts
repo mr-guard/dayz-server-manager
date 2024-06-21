@@ -564,8 +564,23 @@ export class Config {
 
     /**
      * URL to load the map images from.
+     *
+     * Can also be an object of the following form:
+     * {
+     *   "fullImage": "https://github.com/Shawminator/DayZeEditor/blob/master/dayzlootmanager/Maps/DeerIsle_Map.png?raw=true",
+     *   "worldSize": 16384
+     * }
+     * fullImage is a link to the image of the map.
+     * worldSize is the size of the map in meters. This can usually be found in the map config or by exploring the maximum coordinates ingame before going "out of bounds"
+     *
+     * Examples:
+     *   Chernarus: 15360
+     *   Livonia: 12800
+     *   DeerIsland: 16384
+     *   Namalsk: 12800
      */
-    public mapHost: string = 'https://mr-guard.de/dayz-maps';
+    @Reflect.metadata('config-type-skip', true)
+    public mapHost: string | any = 'https://mr-guard.de/dayz-maps';
 
     // /////////////////////////// Discord ////////////////////////////////////
 

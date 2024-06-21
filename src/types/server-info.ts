@@ -6,7 +6,7 @@ export interface ServerInfo {
     password: boolean;
     battleye: boolean;
     maxPlayers: number;
-    mapHost?: string;
+    mapHost?: string | any;
 
 }
 
