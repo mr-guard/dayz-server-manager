@@ -36,7 +36,7 @@ export interface MapInfo {
     tilePattern: string;
     fullImage?: string;
     worldSize: number;
-    
+
     fullImageMinZoom?: number;
     fullImageMaxZoom?: number;
     maxZoom: number;
@@ -46,7 +46,7 @@ export interface MapInfo {
     tileSize: number;
     scale: number;
     center: [number, number];
-    
+
     preview: string;
     fullSize: string;
     locations: Location[];
@@ -157,7 +157,7 @@ export class MapComponent implements OnInit, OnDestroy {
             this.baseLayers = {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
                 Map: imageOverlay(
-                    `${this.mapHost}/${this.mapName}/${this.info!.fullImage}`,
+                    `${this.info!.fullImage}`,
                     [
                         [0, 0],
                         [bounds.lat, bounds.lng],
@@ -190,7 +190,7 @@ export class MapComponent implements OnInit, OnDestroy {
     protected async setUpWorld(name: string): Promise<void> {
 
         this.mapName = name;
-        
+
         if (typeof this.mapHost === 'string') {
             const urlBase = `${this.mapHost}/${this.mapName}`;
             this.info = (await this.http.get(

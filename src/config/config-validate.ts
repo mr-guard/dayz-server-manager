@@ -50,7 +50,7 @@ export const validateConfig = (config: Config): string[] => {
 
     // check types
     for (const configKey in config) {
-        if (typeof config[configKey] !== typeof refConfig[configKey]) {
+        if (typeof config[configKey] !== typeof refConfig[configKey] && !Reflect.getMetadata('config-type-skip', refConfig, configKey)) {
             errors.push(`Wrong config type: ${configKey}, allowed ${typeof refConfig[configKey]}`);
         } else if (typeof config[configKey] === 'number') {
             const range: [number, number] | undefined = Reflect.getMetadata('config-range', refConfig, configKey);
