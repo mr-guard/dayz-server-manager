@@ -95,7 +95,7 @@ export class ServerStarter extends IService {
             const maxcores = this.manager.config.dayzsettingpcmaxcores || 2;
             content = content.replace(/maxcores="\d+"/g, `maxcores="${maxcores}"`);
 
-            const reservedcores = this.manager.config.dayzsettingpcmaxcores || 1;
+            const reservedcores = this.manager.config.dayzsettingreservedcores || 1;
             content = content.replace(/reservedcores="\d+"/g, `reservedcores="${reservedcores}"`);
 
             this.log.log(LogLevel.INFO, `Adjusting dayzsetting.xml`);
